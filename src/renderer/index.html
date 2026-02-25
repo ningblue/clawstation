@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawStation - AI数字员工</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #root {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background-color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #2563eb;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background-color: #2563eb;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background-color: #f9fafb;
+      color: #374151;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #f3f4f6;
+      border-color: #9ca3af;
+    }
+
+    .btn-primary {
+      background-color: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+      border-color: #1e40af;
+    }
+
+    .main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      background-color: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .conversations-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .conversation-item {
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .conversation-item:hover {
+      background-color: #f3f4f6;
+    }
+
+    .conversation-item.active {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: #fafafa;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: bold;
+      color: white;
+    }
+
+    .user-avatar {
+      background-color: #2563eb;
+    }
+
+    .assistant-avatar {
+      background-color: #10b981;
+    }
+
+    .message-content {
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    .message-content p {
+      margin: 0 0 8px 0;
+      line-height: 1.5;
+    }
+
+    .input-area {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+      background-color: #ffffff;
+    }
+
+    .input-container {
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .chat-input {
+      width: 100%;
+      padding: 12px 48px 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      resize: none;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.5;
+      max-height: 200px;
+      min-height: 56px;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .send-btn {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background-color: #2563eb;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn:hover {
+      background-color: #1d4ed8;
+    }
+
+    .info-panel {
+      padding: 20px;
+      text-align: center;
+      color: #6b7280;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .info-panel h2 {
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background-color: #f3f4f6;
+      border-radius: 12px;
+      width: fit-content;
+      margin-top: 8px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #9ca3af;
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: 0s; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">C</div>
+        <span>ClawStation</span>
+      </div>
+      <div class="controls">
+        <button class="btn" id="settingsBtn">设置</button>
+        <button class="btn" id="helpBtn">帮助</button>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <button class="new-chat-btn" id="newChatBtn">
+            <span>+ 新建对话</span>
+          </button>
+        </div>
+        <div class="conversations-list" id="conversationsList">
+          <!-- Conversations will be populated here -->
+          <div class="conversation-item active">
+            <span> 🤖️ AI助手</span>
+            <span>欢迎使用ClawStation!</span>
+          </div>
+          <div class="conversation-item">
+            <span> 📧 邮件助手</span>
+            <span>帮我整理今天的邮件</span>
+          </div>
+          <div class="conversation-item">
+            <span> 📊 报告生成</span>
+            <span>创建月度销售报告</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-area">
+        <div class="messages-container" id="messagesContainer">
+          <div class="info-panel">
+            <h2>欢迎使用 ClawStation</h2>
+            <p>AI数字员工桌面应用</p>
+            <p>开始一个新对话或选择现有对话</p>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="input-container">
+            <textarea
+              class="chat-input"
+              id="chatInput"
+              placeholder="输入消息... (按 Enter 发送, Shift+Enter 换行)"
+            ></textarea>
+            <button class="send-btn" id="sendBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 从preload脚本中获取Electron API
+    const { electronAPI } = window;
+
+    if (!electronAPI) {
+      console.error('Electron API not available');
+    }
+
+    // DOM元素
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const messagesContainer = document.getElementById('messagesContainer');
+    const conversationsList = document.getElementById('conversationsList');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const helpBtn = document.getElementById('helpBtn');
+
+    // 当前活动对话ID
+    let currentConversationId = null;
+
+    // 初始化应用
+    function initApp() {
+      setupEventListeners();
+      loadAppInfo();
+    }
+
+    // 设置事件监听器
+    function setupEventListeners() {
+      sendBtn.addEventListener('click', sendMessage);
+
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      newChatBtn.addEventListener('click', createNewConversation);
+      settingsBtn.addEventListener('click', openSettings);
+      helpBtn.addEventListener('click', openHelp);
+    }
+
+    // 加载应用信息
+    async function loadAppInfo() {
+      try {
+        const appInfo = await electronAPI.getAppInfo();
+        console.log('App Info:', appInfo);
+      } catch (error) {
+        console.error('Failed to get app info:', error);
+      }
+    }
+
+    // 发送消息
+    async function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      // 清空输入框
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+
+      // 如果没有当前对话，创建一个新对话
+      if (!currentConversationId) {
+        await createNewConversation(false); // 不自动聚焦
+      }
+
+      // 添加用户消息到界面
+      addMessageToUI('user', message);
+
+      // 显示打字指示器
+      showTypingIndicator();
+
+      try {
+        // 这里应该调用实际的AI服务
+        // 模拟AI响应
+        setTimeout(() => {
+          hideTypingIndicator();
+          addMessageToUI('assistant', '这是AI助手的模拟回复。实际集成将在后续开发中完成。');
+        }, 1500);
+      } catch (error) {
+        console.error('Failed to send message:', error);
+        hideTypingIndicator();
+        addMessageToUI('assistant', '抱歉，发送消息时出现错误。');
+      }
+    }
+
+    // 添加消息到UI
+    function addMessageToUI(role, content) {
+      // 移除初始信息面板（如果存在）
+      const infoPanel = messagesContainer.querySelector('.info-panel');
+      if (infoPanel) {
+        infoPanel.remove();
+      }
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = `avatar ${role}-avatar`;
+      avatarDiv.textContent = role === 'user' ? 'U' : 'AI';
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+
+      // 将换行符转换为<p>标签
+      const paragraphs = content.split('\n').filter(p => p.trim() !== '');
+      paragraphs.forEach(paragraph => {
+        const p = document.createElement('p');
+        p.textContent = paragraph;
+        contentDiv.appendChild(p);
+      });
+
+      messageDiv.appendChild(avatarDiv);
+      messageDiv.appendChild(contentDiv);
+      messagesContainer.appendChild(messageDiv);
+
+      // 滚动到底部
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // 显示打字指示器
+    function showTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'message';
+      typingDiv.id = 'typingIndicator';
+
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = 'avatar assistant-avatar';
+      avatarDiv.textContent = 'AI';
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      indicator.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      `;
+
+      contentDiv.appendChild(indicator);
+      typingDiv.appendChild(avatarDiv);
+      typingDiv.appendChild(contentDiv);
+      messagesContainer.appendChild(typingDiv);
+
+      // 滚动到底部
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+      const typingIndicator = document.getElementById('typingIndicator');
+      if (typingIndicator) {
+        typingIndicator.remove();
+      }
+    }
+
+    // 创建新对话
+    async function createNewConversation(focusInput = true) {
+      try {
+        // 在实际实现中，这里会调用IPC来创建新对话
+        // 暂时使用模拟实现
+        currentConversationId = Date.now(); // 模拟ID
+
+        // 清空消息容器
+        messagesContainer.innerHTML = '';
+
+        // 添加欢迎消息
+        addMessageToUI('assistant', '你好！我是你的AI助手。请问我有什么可以帮助你的吗？');
+
+        if (focusInput) {
+          chatInput.focus();
+        }
+
+        // 更新对话列表UI - 实际应从数据库加载
+        updateConversationsList();
+      } catch (error) {
+        console.error('Failed to create new conversation:', error);
+      }
+    }
+
+    // 更新对话列表
+    function updateConversationsList() {
+      // 这里在实际实现中会从数据库加载对话列表
+      // 暂时保持静态列表
+    }
+
+    // 打开设置
+    function openSettings() {
+      alert('设置功能将在后续版本中实现');
+    }
+
+    // 打开帮助
+    function openHelp() {
+      electronAPI.openExternalUrl('https://docs.clawstation.ai');
+    }
+
+    // 初始化应用
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
