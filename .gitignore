@@ -4,9 +4,10 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Local dependencies (openclaw AI engine - must be set up manually or via script)
-lib/openclaw/
-lib/lobehub/
+# Local dependencies
+# lib/openclaw/ - required for build, clone or copy manually
+# lib/lobehub/ - required for build, clone or copy manually
+lib/
 
 # Build outputs
 dist/

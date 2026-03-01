@@ -23,29 +23,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup lib directory
+        run: |
+          mkdir -p lib
+          if [ -d "${{ secrets.OPENCLAW_PATH }}" ]; then
+            cp -r "${{ secrets.OPENCLAW_PATH }}" lib/openclaw
+          elif [ -n "${{ secrets.OPENCLAW_REPO }}" ]; then
+            git clone "${{ secrets.OPENCLAW_REPO }}" lib/openclaw
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
-      - name: Cache lib dependencies
-        uses: actions/cache@v3
-        with:
-          path: lib
-          key: ${{ runner.os }}-lib-${{ hashFiles('lib/**') }}
-          restore-keys: |
-            ${{ runner.os }}-lib-
-
       - name: Install dependencies
-        run: npm install
+        run: npm install --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-builder install-app-deps --arch ${{ matrix.arch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build macOS
         run: npm run build:mac
@@ -65,29 +63,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup lib directory
+        run: |
+          New-Item -ItemType Directory -Force -Path lib
+          if (Test-Path "$env:OPENCLAW_PATH") {
+            Copy-Item -Recurse -Force "$env:OPENCLAW_PATH" "lib\openclaw"
+          }
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
-      - name: Cache lib dependencies
-        uses: actions/cache@v3
-        with:
-          path: lib
-          key: ${{ runner.os }}-lib-${{ hashFiles('lib/**') }}
-          restore-keys: |
-            ${{ runner.os }}-lib-
-
       - name: Install dependencies
-        run: npm install
+        run: npm install --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-builder install-app-deps --arch x64
 
       - name: Build Windows
         run: npm run build:win
