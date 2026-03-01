@@ -14,12 +14,16 @@ export class OpenClawManager {
       let openclawPath: string;
 
       if (app.isPackaged) {
-        // 生产环境中，OpenClaw可能被打包在资源目录中
-        openclawPath = path.join(process.resourcesPath, 'openclaw', 'bin', 'openclaw');
+        // 生产环境中，从 app.asar.unpacked 中获取
+        // 打包后 app.getAppPath() 返回 app.asar 的路径
+        // 资源在 app.asar.unpacked 中
+        const appPath = app.getAppPath();
+        const resourcesPath = appPath.replace('app.asar', 'app.asar.unpacked');
+        openclawPath = path.join(resourcesPath, 'node_modules/openclaw/dist/index.js');
 
-        // 如果不存在，则尝试从node_modules获取
+        // 备用方案：直接从已知路径尝试
         if (!fs.existsSync(openclawPath)) {
-          openclawPath = path.join(__dirname, '../../../node_modules/openclaw/dist/index.js');
+          openclawPath = '/Applications/ClawStation.app/Contents/Resources/app.asar.unpacked/node_modules/openclaw/dist/index.js';
         }
       } else {
         // 开发环境中，使用源码路径
@@ -31,18 +35,21 @@ export class OpenClawManager {
         throw new Error(`OpenClaw executable not found at: ${openclawPath}`);
       }
 
+      console.log('[OpenClawManager] Using OpenClaw at:', openclawPath);
+
       // 准备环境变量
       const env = {
         ...process.env,
         OPENCLAW_MODE: 'embedded',
-        OPENCLAW_GATEWAY_BIND: 'localhost',
-        OPENCLAW_GATEWAY_PORT: '18789',
+        // 不使用环境变量设置绑定地址，而是使用 CLI 参数
+        // OPENCLAW_GATEWAY_BIND: 'localhost',  // 改为 CLI 参数
+        OPENCLAW_GATEWAY_PORT: '18791',
       };
 
       // 启动OpenClaw子进程
       this.childProcess = spawn(
         process.execPath, // 使用Electron内置的Node.js
-        [openclawPath, 'gateway', 'run', '--bind', 'localhost', '--port', '18789'],
+        [openclawPath, 'gateway', 'run', '--bind', 'loopback', '--port', '18791', '--force'],
         {
           env,
           stdio: ['pipe', 'pipe', 'pipe'],

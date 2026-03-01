@@ -1,0 +1,430 @@
+/**
+ * ModelSelector 组件样式
+ * 参考LobeHub ModelSwitchPanel设计
+ */
+
+/* 主容器 */
+.model-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.model-selector.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 触发按钮 */
+.model-selector__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.model-selector__trigger:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.model-selector__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.model-selector__trigger-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-selector__trigger-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector__trigger-arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  color: #6b7280;
+}
+
+.model-selector__trigger-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* 下拉面板 */
+.model-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  width: 520px;
+  max-height: 600px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 搜索栏 */
+.model-selector__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  background-color: #fafafa;
+}
+
+.model-selector__search-icon {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.model-selector__search input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.model-selector__search input:focus {
+  border-color: #3b82f6;
+}
+
+/* 内容区 */
+.model-selector__content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 300px;
+}
+
+/* 服务商列表 */
+.model-selector__providers {
+  width: 160px;
+  border-right: 1px solid #f3f4f6;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: #fafafa;
+}
+
+.model-selector__provider-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.model-selector__provider-item:hover {
+  background-color: #f3f4f6;
+}
+
+.model-selector__provider-item.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.model-selector__provider-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-selector__provider-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.model-selector__provider-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector__provider-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #d1d5db;
+}
+
+.model-selector__provider-status.configured {
+  background-color: #10b981;
+}
+
+/* 模型列表 */
+.model-selector__models {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.model-selector__group {
+  margin-bottom: 16px;
+}
+
+.model-selector__group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-selector__group-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* 模型项 */
+.model-selector__model-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  margin-bottom: 4px;
+}
+
+.model-selector__model-item:hover {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.model-selector__model-item.selected {
+  background-color: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.model-selector__model-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-selector__model-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.model-selector__model-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-selector__model-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-selector__model-check {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.model-selector__model-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.model-selector__model-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.model-selector__model-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.model-selector__model-tag.vision {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.model-selector__model-tag.tools {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.model-selector__model-tag.reasoning {
+  background-color: #fce7f3;
+  color: #db2777;
+}
+
+/* 底部 */
+.model-selector__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid #f3f4f6;
+  background-color: #fafafa;
+}
+
+.model-selector__footer-info {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.model-selector__footer-action {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2563eb;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.model-selector__footer-action:hover {
+  background-color: #eff6ff;
+}
+
+/* 加载状态 */
+.model-selector__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  color: #6b7280;
+}
+
+.model-selector__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 错误状态 */
+.model-selector__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 8px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* 空状态 */
+.model-selector__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 响应式适配 */
+@media (max-width: 640px) {
+  .model-selector__dropdown {
+    width: 360px;
+  }
+
+  .model-selector__providers {
+    width: 120px;
+  }
+}
+
+/* 滚动条样式 */
+.model-selector__providers::-webkit-scrollbar,
+.model-selector__models::-webkit-scrollbar {
+  width: 6px;
+}
+
+.model-selector__providers::-webkit-scrollbar-track,
+.model-selector__models::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.model-selector__providers::-webkit-scrollbar-thumb,
+.model-selector__models::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.model-selector__providers::-webkit-scrollbar-thumb:hover,
+.model-selector__models::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}

@@ -7,9 +7,13 @@ import {
   deleteConversation,
   getMessagesByConversationId,
   createMessage,
+  deleteMessage,
+  updateMessage,
+  getMessage,
   getUserById,
   getUserByUsername,
-  createUser
+  createUser,
+  updateUser
 } from './database';
 import { validateInput } from './security';
 import {
@@ -66,6 +70,73 @@ function setupUserHandlers(): void {
 
   // 创建用户
   ipcMain.handle('create-user', async (event: IpcMainInvokeEvent, userData: { username: string; email: string; preferences?: object }) => {
+    try {
+      const validatedUsername = validateInput(userData.username, 50);
+      const validatedEmail = validateInput(userData.email, 100);
+
+      const newUser = createUser(validatedUsername, validatedEmail, userData.preferences);
+
+      // 记录审计日志
+      logConfigUpdate(newUser.id, 'USER_CREATION', 'PENDING', 'COMPLETED');
+
+      return newUser;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  });
+
+  // 更新用户 (user:update - 匹配preload中的命名)
+  ipcMain.handle('user:update', async (event: IpcMainInvokeEvent, userId: number, userData: { username?: string; email?: string; preferences?: object }) => {
+    try {
+      const updateData: any = {};
+
+      if (userData.username !== undefined) {
+        updateData.username = validateInput(userData.username, 50);
+      }
+      if (userData.email !== undefined) {
+        updateData.email = validateInput(userData.email, 100);
+      }
+      if (userData.preferences !== undefined) {
+        updateData.preferences = userData.preferences;
+      }
+
+      const updatedUser = updateUser(userId, updateData);
+
+      if (updatedUser) {
+        // 记录审计日志
+        logConfigUpdate(userId, 'USER_UPDATE', 'PENDING', 'COMPLETED');
+      }
+
+      return updatedUser;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  });
+
+  // 获取用户 (user:get - 匹配preload中的命名)
+  ipcMain.handle('user:get', async (event: IpcMainInvokeEvent, userId: number) => {
+    try {
+      return getUserById(userId);
+    } catch (error) {
+      console.error('Error getting user:', error);
+      throw error;
+    }
+  });
+
+  // 通过用户名获取用户 (user:get-by-username - 匹配preload中的命名)
+  ipcMain.handle('user:get-by-username', async (event: IpcMainInvokeEvent, username: string) => {
+    try {
+      return getUserByUsername(username);
+    } catch (error) {
+      console.error('Error getting user by username:', error);
+      throw error;
+    }
+  });
+
+  // 创建用户 (user:create - 匹配preload中的命名)
+  ipcMain.handle('user:create', async (event: IpcMainInvokeEvent, userData: { username: string; email: string; preferences?: object }) => {
     try {
       const validatedUsername = validateInput(userData.username, 50);
       const validatedEmail = validateInput(userData.email, 100);
@@ -167,11 +238,42 @@ function setupMessageHandlers(): void {
       );
 
       // 记录消息发送审计
-      logMessageSend(undefined, message.conversationId, message.id, message.content.length);
+      logMessageSend(message.conversationId, message.conversationId, message.id, message.content.length);
 
       return message;
     } catch (error) {
       console.error('Error creating message:', error);
+      throw error;
+    }
+  });
+
+  // 删除消息
+  ipcMain.handle('message:delete', async (event: IpcMainInvokeEvent, messageId: number) => {
+    try {
+      return deleteMessage(messageId);
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      throw error;
+    }
+  });
+
+  // 更新消息
+  ipcMain.handle('message:update', async (event: IpcMainInvokeEvent, messageId: number, content: string) => {
+    try {
+      const validatedContent = validateInput(content, 10000);
+      return updateMessage(messageId, validatedContent);
+    } catch (error) {
+      console.error('Error updating message:', error);
+      throw error;
+    }
+  });
+
+  // 获取单条消息
+  ipcMain.handle('message:get', async (event: IpcMainInvokeEvent, messageId: number) => {
+    try {
+      return getMessage(messageId);
+    } catch (error) {
+      console.error('Error getting message:', error);
       throw error;
     }
   });

@@ -34,17 +34,6 @@ export function setupSecurity(): void {
     });
   });
 
-  // 验证远程内容加载
-  app.on('remote-require', (event, webContents, moduleName) => {
-    // 记录尝试使用远程模块的行为
-    console.warn(`Remote module require attempted: ${moduleName}`);
-    event.preventDefault();
-  });
-
-  app.on('remote-get-global', (event, webContents, globalName) => {
-    console.warn(`Remote global get attempted: ${globalName}`);
-    event.preventDefault();
-  });
 }
 
 /**
@@ -123,7 +112,7 @@ export class PermissionChecker {
     try {
       // 在Linux/macOS上检查
       if (process.platform !== 'win32') {
-        return process.getuid() !== 0;
+        return (process as any).getuid ? (process as any).getuid() !== 0 : true;
       }
       // Windows上检查
       return true; // 简化的检查

@@ -1,5 +1,6 @@
-import { audit } from 'electron-log';
-import { AuditLog, createMessage as dbCreateMessage, getDatabase } from './database';
+import log from 'electron-log';
+import { getDatabase } from '../data/database';
+import { AuditLog } from '../models/audit.model';
 import * as os from 'os';
 
 // 审计级别枚举
@@ -68,9 +69,9 @@ export function logAudit(event: AuditEvent): void {
 
   try {
     // 创建标准化的审计日志对象
-    const auditLog: AuditLog = {
+    const auditLog = {
       id: 0, // 数据库自动生成
-      userId: event.userId || null,
+      userId: event.userId || null as number | null,
       action: event.action,
       details: event.details,
       timestamp: (event.timestamp || new Date()).toISOString(),

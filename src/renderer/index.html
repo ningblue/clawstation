@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' http://127.0.0.1:18791; img-src 'self' data:;">
   <title>ClawStation - AI数字员工</title>
+  <link rel="stylesheet" href="./styles/chat.css">
+  <!-- 引入 highlight.js 用于代码高亮 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -25,6 +30,15 @@
       flex-direction: column;
     }
 
+    .app-header {
+      height: 36px;
+      flex-shrink: 0;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
     .header {
       background-color: #ffffff;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -32,8 +46,157 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 60px;
+      height: 64px;
       flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 24px;
+      background-color: #e5e7eb;
+      margin: 0 4px;
+    }
+
+    .header-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      background-color: #ffffff;
+      border-radius: 8px;
+      color: #374151;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .header-btn:hover {
+      background-color: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    /* 当前模型显示 */
+    .current-model-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      background-color: #f9fafb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .current-model-display:hover {
+      background-color: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    .current-model-icon {
+      font-size: 16px;
+    }
+
+    .current-model-text {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .current-model-arrow {
+      color: #9ca3af;
+      margin-left: 4px;
+    }
+
+    .engine-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .engine-status.running {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .engine-status.stopped {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .engine-status.checking {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .engine-status.running .status-indicator {
+      background-color: #10b981;
+    }
+
+    .engine-status.stopped .status-indicator {
+      background-color: #ef4444;
+      animation: none;
+    }
+
+    .engine-status.checking .status-indicator {
+      background-color: #f59e0b;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .engine-status-btn {
+      margin-left: 8px;
+      padding: 2px 8px;
+      border: none;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      color: inherit;
+    }
+
+    .engine-status-btn:hover {
+      background: rgba(0, 0, 0, 0.15);
     }
 
     .logo {
@@ -60,6 +223,7 @@
     .controls {
       display: flex;
       gap: 12px;
+      align-items: center;
     }
 
     .btn {
@@ -89,56 +253,200 @@
       border-color: #1e40af;
     }
 
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .main-content {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
+    /* 左侧可伸缩侧边栏 */
     .sidebar {
-      width: 260px;
       background-color: #ffffff;
       border-right: 1px solid #e5e7eb;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transition: width 0.3s ease;
     }
 
+    .sidebar.collapsed {
+      width: 60px;
+    }
+
+    /* 第一行：Logo + 伸缩按钮 */
     .sidebar-header {
       padding: 16px;
-      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid #f3f4f6;
     }
 
-    .new-chat-btn {
-      width: 100%;
-      padding: 10px;
+    .sidebar.collapsed .sidebar-header {
+      padding: 16px 8px;
+      justify-content: center;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
       border-radius: 8px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      font-weight: 500;
-      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display: flex;
       align-items: center;
       justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-weight: 600;
+      font-size: 16px;
+      color: #111827;
+      white-space: nowrap;
+    }
+
+    .sidebar-toggle-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: #6b7280;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .sidebar-toggle-btn:hover {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+
+    .sidebar.collapsed .sidebar-toggle-btn {
+      transform: rotate(180deg);
+    }
+
+    /* 第二行：新建任务按钮 */
+    .sidebar-actions {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .sidebar.collapsed .sidebar-actions {
+      padding: 12px;
+    }
+
+    .new-task-btn {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background-color: transparent;
+      color: #6b7280;
+      border: none;
+      font-weight: 400;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
       gap: 8px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .new-task-btn:hover {
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+
+    .new-task-btn svg {
+      width: 16px;
+      height: 16px;
+      color: #9ca3af;
+    }
+
+    .new-task-btn:hover svg {
+      color: #374151;
+    }
+
+    .sidebar.collapsed .new-task-btn {
+      padding: 10px;
+    }
+
+    .sidebar.collapsed .new-task-btn span {
+      display: none;
+    }
+
+    /* 第三部分：任务记录 */
+    .sidebar-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar.collapsed .sidebar-section {
+      padding: 12px 8px;
+    }
+
+    .sidebar-section-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
     }
 
     .conversations-list {
       flex: 1;
       overflow-y: auto;
-      padding: 8px;
+    }
+
+    .conversation-group {
+      margin-bottom: 16px;
+    }
+
+    .group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding: 0 4px;
     }
 
     .conversation-item {
       padding: 10px 12px;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       margin-bottom: 4px;
       font-size: 14px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      transition: all 0.2s;
+      position: relative;
     }
 
     .conversation-item:hover {
@@ -146,8 +454,255 @@
     }
 
     .conversation-item.active {
-      background-color: #dbeafe;
-      color: #1e40af;
+      background-color: #eff6ff;
+      color: #2563eb;
+    }
+
+    .conversation-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .conversation-icon {
+      flex-shrink: 0;
+    }
+
+    .conversation-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 对话项菜单（三个点） */
+    .conversation-menu-wrapper {
+      position: relative;
+    }
+
+    .conversation-menu-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      opacity: 0;
+      transition: all 0.2s;
+    }
+
+    .conversation-item:hover .conversation-menu-btn {
+      opacity: 1;
+    }
+
+    .conversation-menu-btn:hover {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+
+    .conversation-item.active .conversation-menu-btn:hover {
+      background-color: rgba(37, 99, 235, 0.1);
+    }
+
+    /* 下拉菜单 */
+    .conversation-menu-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      min-width: 120px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      z-index: 100;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .conversation-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      border: none;
+      background: none;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-align: left;
+    }
+
+    .conversation-menu-item:hover {
+      background-color: #f3f4f6;
+    }
+
+    .conversation-menu-item.danger {
+      color: #dc2626;
+    }
+
+    .conversation-menu-item.danger:hover {
+      background-color: #fee2e2;
+    }
+
+    .conversation-title-input {
+      flex: 1;
+      border: 1px solid #2563eb;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 14px;
+      outline: none;
+      background: white;
+    }
+
+    /* 收起状态的对话项图标 */
+    .sidebar-item-icon {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      font-size: 18px;
+      transition: all 0.2s;
+    }
+
+    .sidebar-item-icon:hover {
+      background-color: #f3f4f6;
+    }
+
+    .sidebar-item-icon.active {
+      background-color: #eff6ff;
+      color: #2563eb;
+    }
+
+    .empty-conversations {
+      padding: 20px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+    }
+
+    /* 第四部分：用户信息 */
+    .sidebar-user {
+      padding: 12px 16px;
+      border-top: 1px solid #e5e7eb;
+      position: relative;
+    }
+
+    .sidebar.collapsed .sidebar-user {
+      padding: 12px;
+    }
+
+    .user-info-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .user-info-btn:hover {
+      background-color: #f3f4f6;
+    }
+
+    .user-avatar-small {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .user-details {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-email {
+      font-size: 11px;
+      color: #6b7280;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-arrow {
+      color: #9ca3af;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-menu {
+      position: absolute;
+      bottom: 100%;
+      left: 16px;
+      right: 16px;
+      margin-bottom: 8px;
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      z-index: 100;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .user-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-align: left;
+    }
+
+    .user-menu-item:hover {
+      background-color: #f3f4f6;
+    }
+
+    .user-menu-item.danger {
+      color: #dc2626;
+    }
+
+    .user-menu-item.danger:hover {
+      background-color: #fee2e2;
     }
 
     .chat-area {
@@ -156,12 +711,22 @@
       flex-direction: column;
       overflow: hidden;
       background-color: #fafafa;
+      position: relative;
     }
 
     .messages-container {
       flex: 1;
       overflow-y: auto;
       padding: 20px;
+      /* display: flex; */
+      /* flex-direction: column; */
+      /* align-items: flex-start; */
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    /* 消息列表容器 */
+    .messages-list {
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -170,9 +735,177 @@
     .message {
       display: flex;
       gap: 12px;
-      max-width: 800px;
-      margin: 0 auto;
+      max-width: 85%;
+      animation: messageSlideIn 0.3s ease-out;
+    }
+
+    /* 用户消息 - 右侧 */
+    .message.user-message {
+      flex-direction: row-reverse;
+      align-self: flex-end;
+    }
+
+    /* AI消息 - 左侧 */
+    .message.assistant-message {
+      flex-direction: row;
+      align-self: flex-start;
+    }
+
+    /* 欢迎页面样式 */
+    .info-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100%;
+      text-align: center;
+    }
+
+    .info-panel h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 0 0 12px 0;
+    }
+
+    .info-panel p {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 8px 0;
+    }
+
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100%;
+    }
+
+    .welcome-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 600px;
       width: 100%;
+    }
+
+    .welcome-logo {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    }
+
+    .welcome-logo svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .welcome-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .welcome-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0 0 40px 0;
+      padding: 8px 16px;
+      background: #f3f4f6;
+      border-radius: 20px;
+    }
+
+    .welcome-prompts {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .welcome-prompt-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .welcome-prompt-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .prompt-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .prompt-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prompt-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .prompt-description {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 600px) {
+      .welcome-prompts {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes messageSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     .avatar {
@@ -188,11 +921,13 @@
     }
 
     .user-avatar {
-      background-color: #2563eb;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
     }
 
     .assistant-avatar {
-      background-color: #10b981;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-radius: 50%;
     }
 
     .message-content {
@@ -211,30 +946,85 @@
       background-color: #ffffff;
     }
 
+    .smart-prompts {
+      max-width: 800px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .smart-prompts-label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .smart-prompts-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .smart-prompt-btn {
+      padding: 6px 12px;
+      border: 1px solid #e5e7eb;
+      background-color: #f9fafb;
+      border-radius: 16px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .smart-prompt-btn:hover {
+      background-color: #f3f4f6;
+      border-color: #d1d5db;
+      transform: translateY(-1px);
+    }
+
+    .smart-prompt-btn:active {
+      transform: scale(0.95) translateY(-1px);
+    }
+
+    .smart-prompt-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .input-container {
       max-width: 800px;
       margin: 0 auto;
       position: relative;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      background-color: #ffffff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-container:focus-within {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 
     .chat-input {
       width: 100%;
-      padding: 12px 48px 12px 16px;
+      padding: 16px 48px 16px 16px;
       border-radius: 12px;
-      border: 1px solid #d1d5db;
+      border: none;
       resize: none;
       font-family: inherit;
       font-size: 15px;
       line-height: 1.5;
       max-height: 200px;
-      min-height: 56px;
+      min-height: 80px;
+      background-color: transparent;
+      outline: none;
     }
 
-    .chat-input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
 
     .send-btn {
       position: absolute;
@@ -250,10 +1040,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.15s ease;
     }
 
     .send-btn:hover {
       background-color: #1d4ed8;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
     }
 
     .info-panel {
@@ -299,270 +1099,1445 @@
       0%, 60%, 100% { transform: translateY(0); }
       30% { transform: translateY(-5px); }
     }
+
+    /* 模态框样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background-color: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      transform: scale(0.95);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: #6b7280;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .form-select,
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      background-color: white;
+    }
+
+    .form-select:focus,
+    .form-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-hint {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    /* 设置选项卡 */
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px;
+    }
+
+    .settings-tab {
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+
+    .settings-tab:hover {
+      color: #374151;
+    }
+
+    .settings-tab.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+
+    .settings-panel {
+      display: none;
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    /* 主题选项 */
+    .theme-options {
+      display: flex;
+      gap: 12px;
+    }
+
+    .theme-option {
+      flex: 1;
+      padding: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .theme-option:hover {
+      border-color: #d1d5db;
+    }
+
+    .theme-option.selected {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+    }
+
+    .theme-option-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .theme-option-label {
+      font-size: 14px;
+      color: #374151;
+    }
+
+    /* 模型显示 */
+    .model-display {
+      padding: 12px;
+      background-color: #f3f4f6;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    /* 当前模型卡片 */
+    .current-model-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .current-model-icon {
+      font-size: 24px;
+    }
+
+    .current-model-name {
+      font-family: monospace;
+    }
+
+    .current-model-empty {
+      opacity: 0.8;
+      font-style: italic;
+    }
+
+    /* 设置面板部分头部 */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-header .form-label {
+      margin-bottom: 0;
+    }
+
+    /* 提供商卡片 */
+    .providers-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .provider-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .provider-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .provider-card.configured {
+      border-color: #10b981;
+      background-color: #f0fdf4;
+    }
+
+    .provider-card.unconfigured {
+      border-color: #e5e7eb;
+      background-color: #fafafa;
+      opacity: 0.7;
+    }
+
+    .provider-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .provider-card.configured .provider-card-header {
+      border-bottom-color: #a7f3d0;
+    }
+
+    .provider-icon {
+      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .provider-name {
+      flex: 1;
+      font-weight: 600;
+      font-size: 15px;
+      color: #111827;
+    }
+
+    .provider-status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .provider-status-badge.configured {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .provider-status-badge.unconfigured {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      opacity: 0.6;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      opacity: 1;
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .provider-models {
+      padding: 12px 16px;
+    }
+
+    .models-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .models-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .model-chip {
+      padding: 6px 12px;
+      border: 1px solid #e5e7eb;
+      background-color: white;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #374151;
+    }
+
+    .model-chip:hover {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    .model-chip.active {
+      border-color: #3b82f6;
+      background-color: #3b82f6;
+      color: white;
+    }
+
+    .model-context {
+      opacity: 0.6;
+      margin-left: 4px;
+      font-size: 11px;
+    }
+
+    .provider-card-actions {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #6b7280;
+    }
+
+    .empty-state span {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    /* 小按钮 */
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* 操作按钮组 */
+    .actions-group {
+      display: flex;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* 小模态框 */
+    .modal-sm {
+      max-width: 400px;
+    }
+
+    .providers-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .provider-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      background-color: #eff6ff;
+      color: #1e40af;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+
+    .provider-tag.configured {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    /* 审计日志 */
+    .audit-toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .audit-filter {
+      width: auto;
+      min-width: 150px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .audit-table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .audit-table th,
+    .audit-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .audit-table th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+      position: sticky;
+      top: 0;
+    }
+
+    .audit-table tr:hover {
+      background-color: #f9fafb;
+    }
+
+    .audit-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .audit-level {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .audit-level.INFO {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    .audit-level.WARN {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .audit-level.ERROR {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .audit-action {
+      font-family: monospace;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .audit-time {
+      color: #6b7280;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .audit-details {
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .audit-loading,
+    .audit-empty {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    /* Toast 提示 */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.success {
+      background-color: #10b981;
+    }
+
+    .toast.error {
+      background-color: #ef4444;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* 启动画面 */
+    .splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: opacity 0.5s, visibility 0.5s;
+    }
+
+    .splash-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-content {
+      text-align: center;
+      color: white;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .splash-logo {
+      margin-bottom: 40px;
+    }
+
+    .splash-logo-icon {
+      width: 80px;
+      height: 80px;
+      background-color: white;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: bold;
+      color: #667eea;
+      margin: 0 auto 20px;
+      animation: pulse 2s infinite;
+    }
+
+    .splash-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .splash-progress-container {
+      width: 100%;
+      height: 6px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .splash-progress-bar {
+      height: 100%;
+      background-color: white;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .splash-status {
+      font-size: 16px;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+
+    .splash-steps {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .splash-step {
+      flex: 1;
+      padding: 8px 4px;
+      font-size: 11px;
+      border-radius: 6px;
+      background-color: rgba(255, 255, 255, 0.1);
+      opacity: 0.5;
+      transition: all 0.3s;
+    }
+
+    .splash-step.active {
+      background-color: rgba(255, 255, 255, 0.25);
+      opacity: 1;
+    }
+
+    .splash-step.completed {
+      background-color: rgba(255, 255, 255, 0.15);
+      opacity: 0.7;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* 暗黑主题 */
+    body.dark-theme {
+      background-color: #111827;
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .header {
+      background-color: #1f2937;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    body.dark-theme .logo {
+      color: #60a5fa;
+    }
+
+    body.dark-theme .logo-icon {
+      background-color: #3b82f6;
+    }
+
+    body.dark-theme .btn {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .btn:hover {
+      background-color: #4b5563;
+      border-color: #6b7280;
+    }
+
+    body.dark-theme .btn-primary {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    body.dark-theme .sidebar {
+      background-color: #1f2937;
+      border-right-color: #374151;
+    }
+
+    body.dark-theme .sidebar-header {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-theme .sidebar-actions {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-theme .app-header {
+      background-color: #1f2937;
+      border-bottom-color: #374151;
+    }
+
+    body.dark-theme .logo-text {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .sidebar-toggle-btn {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .sidebar-toggle-btn:hover {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .new-task-btn {
+      background-color: transparent;
+      color: #9ca3af;
+    }
+
+    body.dark-theme .new-task-btn:hover {
+      background-color: #374151;
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .new-task-btn svg {
+      color: #6b7280;
+    }
+
+    body.dark-theme .new-task-btn:hover svg {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .sidebar-section-title {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .conversation-item:hover {
+      background-color: #374151;
+    }
+
+    body.dark-theme .conversation-item.active {
+      background-color: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    body.dark-theme .group-label {
+      color: #6b7280;
+    }
+
+    body.dark-theme .conversation-menu-btn {
+      color: #6b7280;
+    }
+
+    body.dark-theme .conversation-menu-btn:hover {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .conversation-item.active .conversation-menu-btn:hover {
+      background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    body.dark-theme .conversation-menu-dropdown {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+
+    body.dark-theme .conversation-menu-item {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .conversation-menu-item:hover {
+      background-color: #374151;
+    }
+
+    body.dark-theme .conversation-menu-item.danger:hover {
+      background-color: #7f1d1d;
+    }
+
+    body.dark-theme .sidebar-item-icon:hover {
+      background-color: #374151;
+    }
+
+    body.dark-theme .sidebar-item-icon.active {
+      background-color: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    body.dark-theme .sidebar-user {
+      border-top-color: #374151;
+    }
+
+    body.dark-theme .user-info-btn:hover {
+      background-color: #374151;
+    }
+
+    body.dark-theme .user-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .user-email {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .user-arrow {
+      color: #6b7280;
+    }
+
+    body.dark-theme .sidebar-user-menu {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+
+    body.dark-theme .user-menu-item {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .user-menu-item:hover {
+      background-color: #374151;
+    }
+
+    body.dark-theme .user-menu-item.danger:hover {
+      background-color: #7f1d1d;
+    }
+
+    body.dark-theme .empty-conversations {
+      color: #6b7280;
+    }
+
+    body.dark-theme .chat-area {
+      background-color: #111827;
+    }
+
+    body.dark-theme .messages-container {
+      background-color: #111827;
+    }
+
+    body.dark-theme .message-content {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .user-avatar {
+      background-color: #3b82f6;
+    }
+
+    body.dark-theme .input-area {
+      background-color: #1f2937;
+      border-top-color: #374151;
+    }
+
+    body.dark-theme .input-container {
+      background-color: #374151;
+      border-color: #4b5563;
+    }
+
+    body.dark-theme .input-container:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    body.dark-theme .chat-input {
+      background-color: transparent;
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .send-btn {
+      background-color: #3b82f6;
+    }
+
+    body.dark-theme .info-panel {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .info-panel h2 {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .typing-indicator {
+      background-color: #374151;
+    }
+
+    body.dark-theme .typing-dot {
+      background-color: #6b7280;
+    }
+
+    body.dark-theme .modal {
+      background-color: #1f2937;
+    }
+
+    body.dark-theme .modal-header {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-theme .modal-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .modal-close {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .modal-close:hover {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .modal-footer {
+      border-top-color: #374151;
+    }
+
+    body.dark-theme .form-label {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .form-select,
+    body.dark-theme .form-input {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .form-select:focus,
+    body.dark-theme .form-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    body.dark-theme .theme-option {
+      border-color: #4b5563;
+      background-color: #374151;
+    }
+
+    body.dark-theme .theme-option:hover {
+      border-color: #6b7280;
+    }
+
+    body.dark-theme .theme-option.selected {
+      border-color: #3b82f6;
+      background-color: #1e3a8a;
+    }
+
+    body.dark-theme .theme-option-label {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .audit-table-container {
+      border-color: #374151;
+    }
+
+    body.dark-theme .audit-table th {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .audit-table td {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-theme .audit-table tr:hover {
+      background-color: #374151;
+    }
+
+    /* 字体大小 */
+    body.font-small {
+      font-size: 13px;
+    }
+
+    body.font-medium {
+      font-size: 15px;
+    }
+
+    body.font-large {
+      font-size: 17px;
+    }
+
+    body.font-small .chat-input {
+      font-size: 13px;
+    }
+
+    body.font-medium .chat-input {
+      font-size: 15px;
+    }
+
+    body.font-large .chat-input {
+      font-size: 17px;
+    }
+
+    body.font-small .message-content {
+      font-size: 13px;
+    }
+
+    body.font-medium .message-content {
+      font-size: 15px;
+    }
+
+    body.font-large .message-content {
+      font-size: 17px;
+    }
+
+    /* 暗黑主题下的模型管理 */
+    body.dark-theme .current-model-card {
+      background: linear-gradient(135deg, #4c5fd7 0%, #6b4c9a 100%);
+    }
+
+    body.dark-theme .provider-card {
+      background-color: #374151;
+      border-color: #4b5563;
+    }
+
+    body.dark-theme .provider-card.configured {
+      background-color: #064e3b;
+      border-color: #10b981;
+    }
+
+    body.dark-theme .provider-card.unconfigured {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+
+    body.dark-theme .provider-card-header {
+      border-bottom-color: #4b5563;
+    }
+
+    body.dark-theme .provider-card.configured .provider-card-header {
+      border-bottom-color: #059669;
+    }
+
+    body.dark-theme .provider-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .model-chip {
+      background-color: #4b5563;
+      border-color: #6b7280;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .model-chip:hover {
+      background-color: #374151;
+      border-color: #60a5fa;
+    }
+
+    body.dark-theme .model-chip.active {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    body.dark-theme .btn-icon:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-theme .empty-state {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .actions-group {
+      border-top-color: #374151;
+    }
+
+    body.dark-theme .section-header .form-label {
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .models-label {
+      color: #9ca3af;
+    }
+
+    /* 当前模型显示暗黑主题 */
+    body.dark-theme .current-model-display {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .current-model-display:hover {
+      background-color: #4b5563;
+      border-color: #6b7280;
+    }
+
+    body.dark-theme .header-btn {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .header-btn:hover {
+      background-color: #4b5563;
+      border-color: #6b7280;
+    }
+
+    body.dark-theme .header-divider {
+      background-color: #4b5563;
+    }
+
+    body.dark-theme .settings-modal {
+      background-color: #1f2937;
+    }
+
+    body.dark-theme .settings-sidebar {
+      background-color: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-theme .settings-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .settings-nav-item {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .settings-nav-item:hover {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .settings-nav-item.active {
+      background-color: rgba(37, 99, 235, 0.2);
+      color: #60a5fa;
+    }
+
+    body.dark-theme .settings-content-header {
+      border-color: #374151;
+    }
+
+    body.dark-theme .settings-content-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .settings-close-btn {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .settings-close-btn:hover {
+      background-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-theme .settings-section-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .settings-group-title {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .settings-item {
+      border-color: #374151;
+    }
+
+    body.dark-theme .settings-item-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .settings-item-desc,
+    body.dark-theme .settings-item-value {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .settings-select {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .theme-card {
+      border-color: #374151;
+    }
+
+    body.dark-theme .theme-card:hover {
+      border-color: #4b5563;
+    }
+
+    body.dark-theme .theme-card.active {
+      border-color: #3b82f6;
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    body.dark-theme .theme-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .font-size-btn {
+      border-color: #374151;
+    }
+
+    body.dark-theme .font-size-btn:hover {
+      border-color: #4b5563;
+    }
+
+    body.dark-theme .font-size-btn.active {
+      border-color: #3b82f6;
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    body.dark-theme .font-size-label {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .current-model-display {
+      background-color: #111827;
+    }
+
+    body.dark-theme .current-model-label {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .current-model-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .current-model-empty {
+      color: #6b7280;
+    }
+
+    body.dark-theme .provider-item {
+      border-color: #374151;
+    }
+
+    body.dark-theme .provider-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .provider-status.configured {
+      background-color: rgba(5, 150, 105, 0.2);
+      color: #34d399;
+    }
+
+    body.dark-theme .provider-status.unconfigured {
+      background-color: #374151;
+      color: #9ca3af;
+    }
+
+    body.dark-theme .model-chip {
+      border-color: #4b5563;
+      color: #d1d5db;
+    }
+
+    body.dark-theme .model-chip:hover {
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+
+    body.dark-theme .model-chip.active {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    body.dark-theme .empty-state-card {
+      border-color: #374151;
+    }
+
+    body.dark-theme .empty-text {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .account-info {
+      background-color: #111827;
+    }
+
+    body.dark-theme .account-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .account-email {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .about-section {
+      background-color: #111827;
+    }
+
+    body.dark-theme .about-logo-text {
+      color: #f3f4f6;
+    }
+
+    body.dark-theme .about-version {
+      color: #9ca3af;
+    }
+
+    body.dark-theme .about-desc {
+      color: #d1d5db;
+    }
+
+    body.dark-theme .settings-actions {
+      border-color: #374151;
+    }
+
+    /* 侧边栏切换按钮 */
+    .sidebar-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 12px;
+      color: #374151;
+      border-radius: 4px;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: #f3f4f6;
+    }
+
+    /* 响应式布局 */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 60px;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .chat-area {
+        width: 100%;
+      }
+
+      .message {
+        padding: 0 10px;
+      }
+
+      .smart-prompts {
+        display: none;
+      }
+
+      .header {
+        padding: 12px 16px;
+      }
+
+      .engine-status {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      .engine-status-text {
+        display: none;
+      }
+
+      .sidebar-toggle {
+        display: block;
+      }
+    }
+
+    /* 高分辨率屏幕 */
+    @media (min-width: 1920px) {
+      .sidebar {
+        width: 300px;
+      }
+
+      .message {
+        max-width: 1000px;
+      }
+    }
+
+    /* 触摸设备优化 */
+    @media (pointer: coarse) {
+      .conversation-item {
+        min-height: 48px;
+        padding: 12px;
+      }
+
+      .btn, .send-btn {
+        min-height: 40px;
+        min-width: 40px;
+      }
+
+      .chat-input {
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div class="header">
-      <div class="logo">
-        <div class="logo-icon">C</div>
-        <span>ClawStation</span>
-      </div>
-      <div class="controls">
-        <button class="btn" id="settingsBtn">设置</button>
-        <button class="btn" id="helpBtn">帮助</button>
-      </div>
-    </div>
-    <div class="main-content">
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <button class="new-chat-btn" id="newChatBtn">
-            <span>+ 新建对话</span>
-          </button>
-        </div>
-        <div class="conversations-list" id="conversationsList">
-          <!-- Conversations will be populated here -->
-          <div class="conversation-item active">
-            <span> 🤖️ AI助手</span>
-            <span>欢迎使用ClawStation!</span>
-          </div>
-          <div class="conversation-item">
-            <span> 📧 邮件助手</span>
-            <span>帮我整理今天的邮件</span>
-          </div>
-          <div class="conversation-item">
-            <span> 📊 报告生成</span>
-            <span>创建月度销售报告</span>
-          </div>
-        </div>
-      </div>
-      <div class="chat-area">
-        <div class="messages-container" id="messagesContainer">
-          <div class="info-panel">
-            <h2>欢迎使用 ClawStation</h2>
-            <p>AI数字员工桌面应用</p>
-            <p>开始一个新对话或选择现有对话</p>
-          </div>
-        </div>
-        <div class="input-area">
-          <div class="input-container">
-            <textarea
-              class="chat-input"
-              id="chatInput"
-              placeholder="输入消息... (按 Enter 发送, Shift+Enter 换行)"
-            ></textarea>
-            <button class="send-btn" id="sendBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="root"></div>
 
-  <script>
-    // 从preload脚本中获取Electron API
-    const { electronAPI } = window;
-
-    if (!electronAPI) {
-      console.error('Electron API not available');
-    }
-
-    // DOM元素
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const messagesContainer = document.getElementById('messagesContainer');
-    const conversationsList = document.getElementById('conversationsList');
-    const newChatBtn = document.getElementById('newChatBtn');
-    const settingsBtn = document.getElementById('settingsBtn');
-    const helpBtn = document.getElementById('helpBtn');
-
-    // 当前活动对话ID
-    let currentConversationId = null;
-
-    // 初始化应用
-    function initApp() {
-      setupEventListeners();
-      loadAppInfo();
-    }
-
-    // 设置事件监听器
-    function setupEventListeners() {
-      sendBtn.addEventListener('click', sendMessage);
-
-      chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
-
-      newChatBtn.addEventListener('click', createNewConversation);
-      settingsBtn.addEventListener('click', openSettings);
-      helpBtn.addEventListener('click', openHelp);
-    }
-
-    // 加载应用信息
-    async function loadAppInfo() {
-      try {
-        const appInfo = await electronAPI.getAppInfo();
-        console.log('App Info:', appInfo);
-      } catch (error) {
-        console.error('Failed to get app info:', error);
+  <!-- 聊天组件 -->
+  <script type="module">
+    // 初始化 highlight.js
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.hljs) {
+        window.hljs.configure({
+          languages: ['javascript', 'python', 'typescript', 'java', 'cpp', 'c', 'go', 'rust', 'html', 'css', 'json', 'markdown', 'bash', 'sql']
+        });
       }
-    }
-
-    // 发送消息
-    async function sendMessage() {
-      const message = chatInput.value.trim();
-      if (!message) return;
-
-      // 清空输入框
-      chatInput.value = '';
-      chatInput.style.height = 'auto';
-
-      // 如果没有当前对话，创建一个新对话
-      if (!currentConversationId) {
-        await createNewConversation(false); // 不自动聚焦
-      }
-
-      // 添加用户消息到界面
-      addMessageToUI('user', message);
-
-      // 显示打字指示器
-      showTypingIndicator();
-
-      try {
-        // 这里应该调用实际的AI服务
-        // 模拟AI响应
-        setTimeout(() => {
-          hideTypingIndicator();
-          addMessageToUI('assistant', '这是AI助手的模拟回复。实际集成将在后续开发中完成。');
-        }, 1500);
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        hideTypingIndicator();
-        addMessageToUI('assistant', '抱歉，发送消息时出现错误。');
-      }
-    }
-
-    // 添加消息到UI
-    function addMessageToUI(role, content) {
-      // 移除初始信息面板（如果存在）
-      const infoPanel = messagesContainer.querySelector('.info-panel');
-      if (infoPanel) {
-        infoPanel.remove();
-      }
-
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message';
-
-      const avatarDiv = document.createElement('div');
-      avatarDiv.className = `avatar ${role}-avatar`;
-      avatarDiv.textContent = role === 'user' ? 'U' : 'AI';
-
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'message-content';
-
-      // 将换行符转换为<p>标签
-      const paragraphs = content.split('\n').filter(p => p.trim() !== '');
-      paragraphs.forEach(paragraph => {
-        const p = document.createElement('p');
-        p.textContent = paragraph;
-        contentDiv.appendChild(p);
-      });
-
-      messageDiv.appendChild(avatarDiv);
-      messageDiv.appendChild(contentDiv);
-      messagesContainer.appendChild(messageDiv);
-
-      // 滚动到底部
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    // 显示打字指示器
-    function showTypingIndicator() {
-      const typingDiv = document.createElement('div');
-      typingDiv.className = 'message';
-      typingDiv.id = 'typingIndicator';
-
-      const avatarDiv = document.createElement('div');
-      avatarDiv.className = 'avatar assistant-avatar';
-      avatarDiv.textContent = 'AI';
-
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'message-content';
-
-      const indicator = document.createElement('div');
-      indicator.className = 'typing-indicator';
-      indicator.innerHTML = `
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      `;
-
-      contentDiv.appendChild(indicator);
-      typingDiv.appendChild(avatarDiv);
-      typingDiv.appendChild(contentDiv);
-      messagesContainer.appendChild(typingDiv);
-
-      // 滚动到底部
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    // 隐藏打字指示器
-    function hideTypingIndicator() {
-      const typingIndicator = document.getElementById('typingIndicator');
-      if (typingIndicator) {
-        typingIndicator.remove();
-      }
-    }
-
-    // 创建新对话
-    async function createNewConversation(focusInput = true) {
-      try {
-        // 在实际实现中，这里会调用IPC来创建新对话
-        // 暂时使用模拟实现
-        currentConversationId = Date.now(); // 模拟ID
-
-        // 清空消息容器
-        messagesContainer.innerHTML = '';
-
-        // 添加欢迎消息
-        addMessageToUI('assistant', '你好！我是你的AI助手。请问我有什么可以帮助你的吗？');
-
-        if (focusInput) {
-          chatInput.focus();
-        }
-
-        // 更新对话列表UI - 实际应从数据库加载
-        updateConversationsList();
-      } catch (error) {
-        console.error('Failed to create new conversation:', error);
-      }
-    }
-
-    // 更新对话列表
-    function updateConversationsList() {
-      // 这里在实际实现中会从数据库加载对话列表
-      // 暂时保持静态列表
-    }
-
-    // 打开设置
-    function openSettings() {
-      alert('设置功能将在后续版本中实现');
-    }
-
-    // 打开帮助
-    function openHelp() {
-      electronAPI.openExternalUrl('https://docs.clawstation.ai');
-    }
-
-    // 初始化应用
-    document.addEventListener('DOMContentLoaded', initApp);
+    });
   </script>
+
+  <!-- React 应用入口 -->
+  <script src="./main.js" type="module"></script>
 </body>
 </html>

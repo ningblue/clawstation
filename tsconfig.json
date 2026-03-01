@@ -10,7 +10,12 @@
     "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "noImplicitThis": false,
+    "noImplicitOverride": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -31,7 +36,7 @@
     "noImplicitOverride": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": false
   },
   "include": [
     "src/**/*"

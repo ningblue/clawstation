@@ -128,6 +128,40 @@ export function getUserByUsername(username: string): User | null {
   return stmt.get(username) as User | null;
 }
 
+export function updateUser(id: number, userData: Partial<Omit<User, 'id' | 'createdAt'>>): User | null {
+  const db = getDatabase();
+
+  // 构建动态更新语句
+  const updates: string[] = [];
+  const values: any[] = [];
+
+  if (userData.username !== undefined) {
+    updates.push('username = ?');
+    values.push(userData.username);
+  }
+  if (userData.email !== undefined) {
+    updates.push('email = ?');
+    values.push(userData.email);
+  }
+  if (userData.preferences !== undefined) {
+    updates.push('preferences = ?');
+    values.push(typeof userData.preferences === 'string' ? userData.preferences : JSON.stringify(userData.preferences));
+  }
+
+  if (updates.length === 0) {
+    return getUserById(id);
+  }
+
+  values.push(id);
+  const stmt = db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`);
+  const result = stmt.run(...values);
+
+  if (result.changes > 0) {
+    return getUserById(id);
+  }
+  return null;
+}
+
 export function createUser(username: string, email: string, preferences: object = {}): User {
   const db = getDatabase();
   const preferencesStr = JSON.stringify(preferences);
@@ -194,6 +228,26 @@ export function createMessage(conversationId: number, role: 'user' | 'assistant'
     content,
     timestamp: new Date().toISOString()
   };
+}
+
+export function deleteMessage(id: number): boolean {
+  const db = getDatabase();
+  const stmt = db.prepare('DELETE FROM messages WHERE id = ?');
+  const result = stmt.run(id);
+  return result.changes > 0;
+}
+
+export function updateMessage(id: number, content: string): boolean {
+  const db = getDatabase();
+  const stmt = db.prepare('UPDATE messages SET content = ? WHERE id = ?');
+  const result = stmt.run(content, id);
+  return result.changes > 0;
+}
+
+export function getMessage(id: number): Message | null {
+  const db = getDatabase();
+  const stmt = db.prepare('SELECT * FROM messages WHERE id = ?');
+  return stmt.get(id) as Message | null;
 }
 
 export function deleteConversation(id: number): boolean {
