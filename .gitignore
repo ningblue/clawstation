@@ -4,10 +4,58 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Local dependencies
-# lib/openclaw/ - required for build, clone or copy manually
-# lib/lobehub/ - required for build, clone or copy manually
-lib/
+# Build outputs
+dist/
+release/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+"\\!"
+
+# OpenClaw data (sensitive)
+.clawstation/
+.clawstation.pid
+
+# Benchmark output
+_bmad-output/
+
+# Backup files
+*.backup.*
+
+# Development files
+clawstation (binary)
+*.exe
+*.dmg
+*.app
+
+# lobehub (optional UI components)
+lib/lobehub/
 
 # Build outputs
 dist/
