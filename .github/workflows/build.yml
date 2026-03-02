@@ -44,6 +44,11 @@ jobs:
       - name: Build openclaw dependency
         run: cd lib/openclaw && pnpm install && pnpm run build
 
+      - name: Download Node.js runtime for embedding
+        run: node scripts/download-node.js darwin ${{ matrix.arch }}
+        env:
+          NODE_VERSION: '22.14.0'
+
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps --arch ${{ matrix.arch }}
         env:
@@ -89,6 +94,11 @@ jobs:
       - name: Build openclaw dependency
         run: cd lib/openclaw && pnpm install && pnpm run build
 
+      - name: Download Node.js runtime for embedding
+        run: node scripts/download-node.js win32 x64
+        env:
+          NODE_VERSION: '22.14.0'
+
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps --arch x64
         env:
@@ -125,8 +135,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release/mac/*.dmg
-            release/win/*.exe
+            release/mac/**/*.dmg
+            release/win/**/*.exe
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
