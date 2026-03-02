@@ -886,28 +886,35 @@ export class OpenClawManager extends EventEmitter {
     // 确保配置文件存在
     await this.ensureConfigFile();
 
-    // 确定工作目录 - 使用临时目录或用户数据目录，避免使用 asar 内部路径
+    // 确定工作目录 - 使用 OpenClaw 的根目录，这样 Node.js 能找到 node_modules
+    // OpenClaw 路径类似: .../lib/openclaw/dist/index.js
+    // 我们需要 .../lib/openclaw/ 作为工作目录
+    const openclawRoot = path.dirname(path.dirname(this.openclawPath)); // dist -> openclaw
     let cwd: string;
     if (app.isPackaged) {
-      // 使用 app 支持目录作为工作目录（可写）
-      cwd = path.join(app.getPath('userData'), 'openclaw-temp');
-      // 确保目录存在
-      if (!fs.existsSync(cwd)) {
-        fs.mkdirSync(cwd, { recursive: true });
-      }
+      // 打包环境：使用 OpenClaw 根目录作为 cwd
+      // 这样 Node.js 能正确解析 ./node_modules
+      cwd = openclawRoot;
+      this.log.info(`Using OpenClaw root as cwd: ${cwd}`);
     } else {
-      cwd = path.dirname(this.openclawPath);
+      cwd = openclawRoot;
     }
 
     // 准备环境变量
     // 使用独立的 OPENCLAW_STATE_DIR 指向 ~/.clawstation/
     // 这样内置的 OpenClaw 不会与用户自己安装的 OpenClaw (使用 ~/.openclaw/) 冲突
     const stateDir = path.join(os.homedir(), '.clawstation');
+    
+    // 设置 NODE_PATH 指向 OpenClaw 的 node_modules，确保依赖能被找到
+    const nodeModulesPath = path.join(openclawRoot, 'node_modules');
+    
     const env = {
       ...process.env,
       OPENCLAW_MODE: 'embedded',
       // 使用独立的状态目录，避免与用户自己的 OpenClaw 冲突
       OPENCLAW_STATE_DIR: stateDir,
+      // NODE_PATH 帮助 Node.js 找到依赖（备用方案）
+      NODE_PATH: nodeModulesPath,
       // 移除可能导致冲突的环境变量设置，改由 CLI 参数控制
       // OPENCLAW_GATEWAY_BIND: this.config.bindAddress,  // 改用 CLI 参数
       OPENCLAW_GATEWAY_PORT: String(this.config.port),
@@ -917,6 +924,8 @@ export class OpenClawManager extends EventEmitter {
       // 设置token环境变量作为备选认证方式
       OPENCLAW_GATEWAY_TOKEN: this.gatewayToken || ''
     };
+    
+    this.log.info(`NODE_PATH set to: ${nodeModulesPath}`);
 
     // 确定启动参数 - OpenClaw 要求 --bind 使用正确的模式
     const args = ['gateway', 'run', '--bind', 'loopback', '--port', String(this.config.port), '--force'];
