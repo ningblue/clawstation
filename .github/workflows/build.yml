@@ -23,15 +23,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup lib directory
-        run: |
-          mkdir -p lib
-          if [ -d "${{ secrets.OPENCLAW_PATH }}" ]; then
-            cp -r "${{ secrets.OPENCLAW_PATH }}" lib/openclaw
-          elif [ -n "${{ secrets.OPENCLAW_REPO }}" ]; then
-            git clone "${{ secrets.OPENCLAW_REPO }}" lib/openclaw
-          fi
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,13 +53,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup lib directory
-        run: |
-          New-Item -ItemType Directory -Force -Path lib
-          if (Test-Path "$env:OPENCLAW_PATH") {
-            Copy-Item -Recurse -Force "$env:OPENCLAW_PATH" "lib\openclaw"
-          }
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
