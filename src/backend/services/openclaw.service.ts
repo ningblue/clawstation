@@ -953,27 +953,50 @@ export class OpenClawManager extends EventEmitter {
       return process.env.NODE_PATH;
     }
 
-    // 尝试常见路径
-    const possiblePaths = [
-      '/usr/local/bin/node',
-      '/usr/bin/node',
-      '/opt/homebrew/bin/node',
-      path.join(os.homedir(), '.nvm', 'current', 'bin', 'node'),
-      path.join(os.homedir(), '.local', 'share', 'fnm', 'node-versions', 'installing', 'installation', 'bin', 'node')
-    ];
+    // 根据平台选择可能的路径
+    const isWindows = process.platform === 'win32';
+    const possiblePaths: string[] = [];
+
+    if (isWindows) {
+      // Windows 路径
+      possiblePaths.push(
+        'C:\\Program Files\\nodejs\\node.exe',
+        'C:\\Program Files (x86)\\nodejs\\node.exe',
+        path.join(os.homedir(), 'AppData\\Local\\fnm\\node.exe'),
+        path.join(os.homedir(), 'AppData\\Roaming\\fnm\\node.exe'),
+        path.join(os.homedir(), '.fnm\\node.exe'),
+        path.join(os.homedir(), 'scoop\\apps\\nodejs\\current\\node.exe'),
+        path.join(os.homedir(), '.nvm-windows\\node.exe'),
+        // nvm-windows 典型安装路径
+        path.join(process.env.APPDATA || '', 'nvm', 'current', 'node.exe'),
+      );
+    } else {
+      // macOS / Linux 路径
+      possiblePaths.push(
+        '/usr/local/bin/node',
+        '/usr/bin/node',
+        '/opt/homebrew/bin/node',
+        path.join(os.homedir(), '.nvm', 'current', 'bin', 'node'),
+        path.join(os.homedir(), '.local', 'share', 'fnm', 'node-versions', 'installing', 'installation', 'bin', 'node'),
+        path.join(os.homedir(), '.volta', 'bin', 'node'),
+      );
+    }
 
     for (const testPath of possiblePaths) {
       if (fs.existsSync(testPath)) {
+        this.log.info(`Found system Node.js at: ${testPath}`);
         return testPath;
       }
     }
 
-    // 尝试使用 which 命令
+    // 尝试使用 which/where 命令
     try {
       const { execSync } = require('child_process');
-      const result = execSync('which node', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
-      const whichPath = result.trim();
+      const cmd = isWindows ? 'where node' : 'which node';
+      const result = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const whichPath = result.trim().split('\n')[0]; // Windows where 可能返回多行
       if (whichPath && fs.existsSync(whichPath)) {
+        this.log.info(`Found system Node.js via ${cmd}: ${whichPath}`);
         return whichPath;
       }
     } catch {
