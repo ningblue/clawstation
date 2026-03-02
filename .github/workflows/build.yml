@@ -28,8 +28,16 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
         run: npm install --ignore-scripts
+
+      - name: Build openclaw dependency
+        run: cd lib/openclaw && pnpm install && pnpm run build
 
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps --arch ${{ matrix.arch }}
@@ -59,8 +67,16 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
         run: npm install --ignore-scripts
+
+      - name: Build openclaw dependency
+        run: cd lib/openclaw && pnpm install && pnpm run build
 
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps --arch x64
