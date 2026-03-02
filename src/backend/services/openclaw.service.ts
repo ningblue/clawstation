@@ -713,15 +713,25 @@ export class OpenClawManager extends EventEmitter {
       possiblePaths.push(process.env.OPENCLAW_PATH);
     }
 
-    // 2. 生产环境资源目录 - app.asar.unpacked - 使用 dist/index.js
+    // 2. 生产环境资源目录 - app.asar.unpacked
     if (app.isPackaged) {
       const appPath = app.getAppPath();
       const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+      // lib/openclaw 目录（从 git 提交）
+      possiblePaths.push(
+        path.join(unpackedPath, 'lib/openclaw/dist/index.js'),
+        path.join(unpackedPath, 'lib/openclaw/dist/entry.js')
+      );
+      // 备用路径
+      possiblePaths.push(
+        path.join(process.resourcesPath, 'app.asar.unpacked/lib/openclaw/dist/index.js'),
+        path.join(process.resourcesPath, 'app.asar.unpacked/lib/openclaw/dist/entry.js')
+      );
+      // node_modules 备用（如果作为 npm 依赖安装）
       possiblePaths.push(
         path.join(unpackedPath, 'node_modules/openclaw/dist/index.js'),
         path.join(unpackedPath, 'node_modules/openclaw/dist/entry.js')
       );
-      // 备用路径
       possiblePaths.push(
         path.join(process.resourcesPath, 'app.asar.unpacked/node_modules/openclaw/dist/index.js'),
         path.join(process.resourcesPath, 'app.asar.unpacked/node_modules/openclaw/dist/entry.js')
@@ -734,7 +744,12 @@ export class OpenClawManager extends EventEmitter {
       path.join(__dirname, '../../../lib/openclaw/dist/index.js')
     );
 
-    // 4. node_modules
+    // 4. 相对于项目根目录（开发环境）
+    possiblePaths.push(
+      path.join(process.cwd(), 'lib/openclaw/dist/index.js')
+    );
+
+    // 5. node_modules
     possiblePaths.push(
       path.join(__dirname, '../../../node_modules/openclaw/dist/index.js'),
       path.join(__dirname, '../../../../node_modules/openclaw/dist/index.js')
