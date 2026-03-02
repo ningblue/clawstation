@@ -28,6 +28,11 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -43,6 +48,7 @@ jobs:
         run: npx electron-builder install-app-deps --arch ${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_build_from_source: false
 
       - name: Build macOS
         run: npm run build:mac
@@ -67,6 +73,11 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -80,6 +91,8 @@ jobs:
 
       - name: Rebuild native modules
         run: npx electron-builder install-app-deps --arch x64
+        env:
+          npm_config_build_from_source: false
 
       - name: Build Windows
         run: npm run build:win
