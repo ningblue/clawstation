@@ -11,7 +11,7 @@
     "start": "electron .",
     "dev": "nodemon --exec electron .",
     "build": "npm run build:openclaw && npm run build:main && npm run build:renderer && electron-builder",
-    "build:openclaw": "./scripts/build-openclaw.sh",
+    "build:openclaw": "node scripts/build-openclaw.js",
     "build:main": "tsc",
     "build:renderer": "vite build --config vite.renderer.config.ts",
     "build:win": "npm run build -- --win",
