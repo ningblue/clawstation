@@ -46,6 +46,9 @@ show_help() {
     echo "  ./$SCRIPT_NAME status    # 查看状态"
 }
 
+# 配置
+OPENCLAW_PORT=18791
+
 # 检查服务是否正在运行
 check_status() {
     local electron_pid=""
@@ -73,14 +76,14 @@ check_status() {
     fi
 
     # 检查 OpenClaw 服务
-    openclaw_pid=$(pgrep -f "openclaw-gateway" | head -1)
+    openclaw_pid=$(pgrep -f "clawstation-engine" | head -1)
     if [ -n "$openclaw_pid" ]; then
         echo -e "${GREEN}✓ OpenClaw 服务正在运行 (PID: $openclaw_pid)${NC}"
         # 检查端口
-        if lsof -i :18791 >/dev/null 2>&1; then
-            echo -e "${GREEN}✓ OpenClaw 监听端口 18791${NC}"
+        if lsof -i :$OPENCLAW_PORT >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ OpenClaw 监听端口 $OPENCLAW_PORT${NC}"
         else
-            echo -e "${YELLOW}⚠ OpenClaw 进程存在但未监听端口 18791${NC}"
+            echo -e "${YELLOW}⚠ OpenClaw 进程存在但未监听端口 $OPENCLAW_PORT${NC}"
         fi
     else
         echo -e "${RED}✗ OpenClaw 服务未运行${NC}"
@@ -130,9 +133,9 @@ start_service() {
         sleep 1
         if kill -0 $app_pid 2>/dev/null; then
             # 检查 OpenClaw 是否启动
-            if lsof -i :18791 >/dev/null 2>&1; then
+            if lsof -i :$OPENCLAW_PORT >/dev/null 2>&1; then
                 echo -e "${GREEN}✓ ClawStation 启动成功！${NC}"
-                echo -e "${GREEN}✓ OpenClaw 服务已运行在端口 18791${NC}"
+                echo -e "${GREEN}✓ OpenClaw 服务已运行在端口 $OPENCLAW_PORT${NC}"
                 echo ""
                 echo -e "${BLUE}应用日志: tail -f '$MAIN_LOG'${NC}"
                 echo -e "${BLUE}查看状态: ./$SCRIPT_NAME status${NC}"
@@ -191,7 +194,7 @@ stop_service() {
     fi
 
     # 停止 OpenClaw 服务
-    local openclaw_pids=$(pgrep -f "openclaw-gateway" || true)
+    local openclaw_pids=$(pgrep -f "clawstation-engine" || true)
     if [ -n "$openclaw_pids" ]; then
         echo -e "${BLUE}停止 OpenClaw 服务...${NC}"
         for pid in $openclaw_pids; do
@@ -270,7 +273,7 @@ clean_all() {
     if [ "$confirm" = "yes" ]; then
         echo -e "${RED}强制终止所有进程...${NC}"
         pkill -9 -f "electron" 2>/dev/null || true
-        pkill -9 -f "openclaw" 2>/dev/null || true
+        pkill -9 -f "clawstation-engine" 2>/dev/null || true
         rm -f "$PID_FILE"
         echo -e "${GREEN}✓ 清理完成${NC}"
     else

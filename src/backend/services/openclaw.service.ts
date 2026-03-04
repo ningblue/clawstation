@@ -1,13 +1,21 @@
 // src/backend/services/openclaw.service.ts
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import { app } from 'electron';
-import * as fs from 'fs';
-import * as os from 'os';
-import log from 'electron-log';
-import { EventEmitter } from 'events';
-import { getOpenClawConfigManager, OpenClawConfigManager } from '../config/openclaw-config-manager';
-import { modelCatalogService } from './model-catalog.service';
+import { spawn, ChildProcess } from "child_process";
+import * as path from "path";
+import { app } from "electron";
+import * as fs from "fs";
+import * as os from "os";
+import log from "electron-log";
+import { EventEmitter } from "events";
+import {
+  getOpenClawConfigManager,
+  OpenClawConfigManager,
+} from "../config/openclaw-config-manager";
+import { modelCatalogService } from "./model-catalog.service";
+import {
+  OPENCLAW_PORT,
+  OPENCLAW_BIND_ADDRESS,
+  OPENCLAW_PROCESS_NAME,
+} from "../../shared/constants";
 
 /**
  * OpenClaw 引擎状态接口
@@ -68,27 +76,27 @@ export interface OpenClawQueryResponse {
  * OpenClaw 进程事件
  */
 export enum OpenClawProcessEvent {
-  STARTED = 'started',
-  STOPPED = 'stopped',
-  ERROR = 'error',
-  HEALTH_CHECK_FAILED = 'health_check_failed',
-  RESTARTING = 'restarting',
-  OUTPUT = 'output',
-  STDERR = 'stderr'
+  STARTED = "started",
+  STOPPED = "stopped",
+  ERROR = "error",
+  HEALTH_CHECK_FAILED = "health_check_failed",
+  RESTARTING = "restarting",
+  OUTPUT = "output",
+  STDERR = "stderr",
 }
 
 /**
  * 默认配置
  */
 const DEFAULT_CONFIG: OpenClawServiceConfig = {
-  port: 18791, // 使用不同端口，避免与本地 OpenClaw (18790) 冲突
-  bindAddress: '127.0.0.1',
-  logLevel: 'info',
+  port: OPENCLAW_PORT, // 使用不同端口，避免与本地 OpenClaw (18790) 冲突
+  bindAddress: OPENCLAW_BIND_ADDRESS,
+  logLevel: "info",
   maxRestarts: 3,
   restartDelayMs: 5000,
   healthCheckIntervalMs: 30000,
   healthCheckTimeoutMs: 5000,
-  startupTimeoutMs: 30000
+  startupTimeoutMs: 30000,
 };
 
 /**
@@ -97,7 +105,7 @@ const DEFAULT_CONFIG: OpenClawServiceConfig = {
  */
 export class OpenClawManager extends EventEmitter {
   private childProcess: ChildProcess | null = null;
-  private readonly log = log.scope('OpenClawManager');
+  private readonly log = log.scope("OpenClawManager");
   private startTime: number = 0;
   private restartCount: number = 0;
   private healthCheckTimer: NodeJS.Timeout | null = null;
@@ -124,7 +132,7 @@ export class OpenClawManager extends EventEmitter {
    */
   updateConfig(config: Partial<OpenClawServiceConfig>): void {
     this.config = { ...this.config, ...config };
-    this.log.info('OpenClaw service configuration updated:', this.config);
+    this.log.info("OpenClaw service configuration updated:", this.config);
   }
 
   /**
@@ -138,7 +146,7 @@ export class OpenClawManager extends EventEmitter {
    * 初始化配置
    */
   async initializeConfig(): Promise<void> {
-    this.log.info('Initializing OpenClaw configuration...');
+    this.log.info("Initializing OpenClaw configuration...");
     this.configManager.initializeConfig();
 
     // 同步配置管理器的端口设置
@@ -147,7 +155,7 @@ export class OpenClawManager extends EventEmitter {
       this.config.port = gatewayConfig.port;
     }
 
-    this.log.info('OpenClaw configuration initialized');
+    this.log.info("OpenClaw configuration initialized");
   }
 
   /**
@@ -155,7 +163,7 @@ export class OpenClawManager extends EventEmitter {
    */
   async start(): Promise<void> {
     if (this.childProcess) {
-      this.log.warn('OpenClaw is already running');
+      this.log.warn("OpenClaw is already running");
       return;
     }
 
@@ -183,7 +191,7 @@ export class OpenClawManager extends EventEmitter {
 
       // 确保 childProcess 已经在 spawnProcess 中被初始化且不为 null
       if (!this.childProcess) {
-        throw new Error('OpenClaw process initialization failed');
+        throw new Error("OpenClaw process initialization failed");
       }
 
       // 使用类型断言确保 TypeScript 理解 childProcess 不为 null
@@ -192,14 +200,18 @@ export class OpenClawManager extends EventEmitter {
       this.emit(OpenClawProcessEvent.STARTED, {
         pid: childProcess.pid,
         port: this.config.port,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
-      this.log.info(`OpenClaw started successfully on port ${this.config.port}`);
+      this.log.info(
+        `OpenClaw started successfully on port ${this.config.port}`,
+      );
     } catch (error: any) {
       // 检查是否是跳过启动的特殊错误
-      if (error?.message === 'SKIP_INTERNAL_OPENCLAW') {
-        this.log.warn('External OpenClaw detected on same port, using external instance');
+      if (error?.message === "SKIP_INTERNAL_OPENCLAW") {
+        this.log.warn(
+          "External OpenClaw detected on same port, using external instance",
+        );
         // 标记为正在运行（使用外部实例）
         this.childProcess = {} as ChildProcess;
         this.startTime = Date.now();
@@ -207,11 +219,11 @@ export class OpenClawManager extends EventEmitter {
           pid: 0,
           port: this.config.port,
           timestamp: new Date(),
-          external: true
+          external: true,
         });
         return;
       }
-      this.log.error('Failed to start OpenClaw:', error);
+      this.log.error("Failed to start OpenClaw:", error);
       this.cleanup();
       throw error;
     }
@@ -222,12 +234,12 @@ export class OpenClawManager extends EventEmitter {
    */
   stop(): void {
     if (!this.childProcess) {
-      this.log.warn('OpenClaw is not running');
+      this.log.warn("OpenClaw is not running");
       return;
     }
 
     this.isShuttingDown = true;
-    this.log.info('Stopping OpenClaw process...');
+    this.log.info("Stopping OpenClaw process...");
 
     // 停止健康检查
     this.stopHealthCheck();
@@ -245,12 +257,12 @@ export class OpenClawManager extends EventEmitter {
     }
 
     this.isShuttingDown = true;
-    this.log.info('Force stopping OpenClaw process...');
+    this.log.info("Force stopping OpenClaw process...");
 
     this.stopHealthCheck();
 
     // 强制终止
-    this.childProcess.kill('SIGKILL');
+    this.childProcess.kill("SIGKILL");
     this.cleanup();
   }
 
@@ -258,12 +270,12 @@ export class OpenClawManager extends EventEmitter {
    * 重启 OpenClaw 引擎
    */
   async restart(): Promise<void> {
-    this.log.info('Restarting OpenClaw engine...');
+    this.log.info("Restarting OpenClaw engine...");
     this.stop();
     // 等待1秒确保进程完全终止
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     await this.start();
-    this.log.info('OpenClaw engine restarted successfully');
+    this.log.info("OpenClaw engine restarted successfully");
   }
 
   /**
@@ -285,11 +297,12 @@ export class OpenClawManager extends EventEmitter {
 
     // 获取 agents 列表
     const agentsConfig = this.configManager.getAgentsConfig();
-    const agents = agentsConfig?.list?.map(agent => ({
-      id: agent.id,
-      name: agent.name,
-      default: agent.default
-    })) || [];
+    const agents =
+      agentsConfig?.list?.map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        default: agent.default,
+      })) || [];
 
     if (!isRunning) {
       return {
@@ -297,8 +310,8 @@ export class OpenClawManager extends EventEmitter {
         isHealthy: false,
         port: this.config.port,
         bindAddress: this.config.bindAddress,
-        error: 'OpenClaw engine is not running',
-        agents
+        error: "OpenClaw engine is not running",
+        agents,
       };
     }
 
@@ -311,7 +324,7 @@ export class OpenClawManager extends EventEmitter {
         try {
           const response = await fetch(
             `http://${this.config.bindAddress}:${this.config.port}/health`,
-            { signal: AbortSignal.timeout(this.config.healthCheckTimeoutMs) }
+            { signal: AbortSignal.timeout(this.config.healthCheckTimeoutMs) },
           );
           const data = await response.json();
           version = data.version;
@@ -335,12 +348,12 @@ export class OpenClawManager extends EventEmitter {
         version,
         port: this.config.port,
         bindAddress: this.config.bindAddress,
-        error: isHealthy ? undefined : 'Health check failed',
+        error: isHealthy ? undefined : "Health check failed",
         agents,
-        models
+        models,
       };
     } catch (error) {
-      this.log.warn('Status check failed:', error);
+      this.log.warn("Status check failed:", error);
       return {
         isRunning: true,
         isHealthy: false,
@@ -348,8 +361,8 @@ export class OpenClawManager extends EventEmitter {
         uptime: this.startTime ? Date.now() - this.startTime : 0,
         port: this.config.port,
         bindAddress: this.config.bindAddress,
-        error: 'Status check failed: ' + (error as Error).message,
-        agents
+        error: "Status check failed: " + (error as Error).message,
+        agents,
       };
     }
   }
@@ -357,14 +370,16 @@ export class OpenClawManager extends EventEmitter {
   /**
    * 发送查询到 OpenClaw 引擎
    */
-  async sendQuery(request: OpenClawQueryRequest): Promise<OpenClawQueryResponse> {
+  async sendQuery(
+    request: OpenClawQueryRequest,
+  ): Promise<OpenClawQueryResponse> {
     if (!this.isRunning()) {
-      throw new Error('OpenClaw engine is not running');
+      throw new Error("OpenClaw engine is not running");
     }
 
     const health = await this.performHealthCheck();
     if (!health) {
-      throw new Error('OpenClaw engine is not healthy');
+      throw new Error("OpenClaw engine is not healthy");
     }
 
     try {
@@ -374,51 +389,53 @@ export class OpenClawManager extends EventEmitter {
       }
 
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
       // 添加认证token
       if (this.gatewayToken) {
-        headers['Authorization'] = `Bearer ${this.gatewayToken}`;
+        headers["Authorization"] = `Bearer ${this.gatewayToken}`;
       }
 
       const response = await fetch(
         `http://${this.config.bindAddress}:${this.config.port}/v1/chat/completions`,
         {
-          method: 'POST',
+          method: "POST",
           headers,
           body: JSON.stringify({
-            model: request.model || 'default',
-            messages: [
-              { role: 'user', content: request.message }
-            ],
+            model: request.model || "default",
+            messages: [{ role: "user", content: request.message }],
             stream: request.stream ?? false,
             temperature: request.temperature,
-            max_tokens: request.maxTokens
+            max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(60000) // 60秒超时
-        }
+          signal: AbortSignal.timeout(60000), // 60秒超时
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenClaw request failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(
+          `OpenClaw request failed: ${response.status} ${response.statusText} - ${errorText}`,
+        );
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
+      const content = data.choices?.[0]?.message?.content || "";
 
       return {
         content,
         model: data.model,
-        usage: data.usage ? {
-          promptTokens: data.usage.prompt_tokens,
-          completionTokens: data.usage.completion_tokens,
-          totalTokens: data.usage.total_tokens
-        } : undefined
+        usage: data.usage
+          ? {
+              promptTokens: data.usage.prompt_tokens,
+              completionTokens: data.usage.completion_tokens,
+              totalTokens: data.usage.total_tokens,
+            }
+          : undefined,
       };
     } catch (error) {
-      this.log.error('Failed to send query to OpenClaw:', error);
+      this.log.error("Failed to send query to OpenClaw:", error);
       throw error;
     }
   }
@@ -430,21 +447,23 @@ export class OpenClawManager extends EventEmitter {
     try {
       this.gatewayToken = this.configManager.getGatewayToken() || null;
     } catch (error) {
-      this.log.warn('Failed to load token from config:', error);
+      this.log.warn("Failed to load token from config:", error);
     }
   }
 
   /**
    * 流式发送查询到 OpenClaw 引擎
    */
-  async *sendQueryStream(request: OpenClawQueryRequest): AsyncGenerator<string, void, unknown> {
+  async *sendQueryStream(
+    request: OpenClawQueryRequest,
+  ): AsyncGenerator<string, void, unknown> {
     if (!this.isRunning()) {
-      throw new Error('OpenClaw engine is not running');
+      throw new Error("OpenClaw engine is not running");
     }
 
     const health = await this.performHealthCheck();
     if (!health) {
-      throw new Error('OpenClaw engine is not healthy');
+      throw new Error("OpenClaw engine is not healthy");
     }
 
     try {
@@ -454,58 +473,58 @@ export class OpenClawManager extends EventEmitter {
       }
 
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
       // 添加认证token
       if (this.gatewayToken) {
-        headers['Authorization'] = `Bearer ${this.gatewayToken}`;
+        headers["Authorization"] = `Bearer ${this.gatewayToken}`;
       }
 
       const response = await fetch(
         `http://${this.config.bindAddress}:${this.config.port}/v1/chat/completions`,
         {
-          method: 'POST',
+          method: "POST",
           headers,
           body: JSON.stringify({
-            model: request.model || 'default',
-            messages: [
-              { role: 'user', content: request.message }
-            ],
+            model: request.model || "default",
+            messages: [{ role: "user", content: request.message }],
             stream: true,
             temperature: request.temperature,
-            max_tokens: request.maxTokens
+            max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(120000) // 120秒超时
-        }
+          signal: AbortSignal.timeout(120000), // 120秒超时
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenClaw request failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(
+          `OpenClaw request failed: ${response.status} ${response.statusText} - ${errorText}`,
+        );
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error('Failed to get response reader');
+        throw new Error("Failed to get response reader");
       }
 
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (trimmed.startsWith('data: ')) {
+          if (trimmed.startsWith("data: ")) {
             const data = trimmed.slice(6);
-            if (data === '[DONE]') return;
+            if (data === "[DONE]") return;
 
             try {
               const parsed = JSON.parse(data);
@@ -520,7 +539,7 @@ export class OpenClawManager extends EventEmitter {
         }
       }
     } catch (error) {
-      this.log.error('Failed to send streaming query to OpenClaw:', error);
+      this.log.error("Failed to send streaming query to OpenClaw:", error);
       throw error;
     }
   }
@@ -529,16 +548,18 @@ export class OpenClawManager extends EventEmitter {
    * 获取 OpenClaw 可用模型列表
    * 使用 ModelCatalogService 直接从文件系统读取，不依赖 HTTP API
    */
-  async getModels(): Promise<Array<{ id: string; name: string; provider?: string }>> {
+  async getModels(): Promise<
+    Array<{ id: string; name: string; provider?: string }>
+  > {
     try {
       const catalog = await modelCatalogService.loadModelCatalog();
-      return catalog.map(model => ({
+      return catalog.map((model) => ({
         id: model.id,
         name: model.name,
         provider: model.provider,
       }));
     } catch (error) {
-      this.log.error('Failed to get models from catalog:', error);
+      this.log.error("Failed to get models from catalog:", error);
       return [];
     }
   }
@@ -549,17 +570,20 @@ export class OpenClawManager extends EventEmitter {
    */
   setApiKey(provider: string, apiKey: string, agentId?: string): void {
     // 保存到 main agent（OpenClaw 实际使用的）
-    this.configManager.setApiKey('main', provider, apiKey);
+    this.configManager.setApiKey("main", provider, apiKey);
     // 也保存到 default agent（前端使用的）
-    this.configManager.setApiKey('default', provider, apiKey);
-    this.log.info(`API key set for provider: ${provider}, agents: main, default`);
+    this.configManager.setApiKey("default", provider, apiKey);
+    this.log.info(
+      `API key set for provider: ${provider}, agents: main, default`,
+    );
   }
 
   /**
    * 获取 API Key
    */
   getApiKey(provider: string, agentId?: string): string | undefined {
-    const targetAgentId = agentId || this.configManager.getDefaultAgent()?.id || 'default';
+    const targetAgentId =
+      agentId || this.configManager.getDefaultAgent()?.id || "default";
     return this.configManager.getApiKey(targetAgentId, provider);
   }
 
@@ -567,7 +591,8 @@ export class OpenClawManager extends EventEmitter {
    * 检查是否配置了指定 provider 的 API Key
    */
   hasApiKey(provider: string, agentId?: string): boolean {
-    const targetAgentId = agentId || this.configManager.getDefaultAgent()?.id || 'default';
+    const targetAgentId =
+      agentId || this.configManager.getDefaultAgent()?.id || "default";
     const apiKey = this.configManager.getApiKey(targetAgentId, provider);
     return !!apiKey && apiKey.length > 0;
   }
@@ -575,35 +600,50 @@ export class OpenClawManager extends EventEmitter {
   /**
    * 获取所有已配置的 API Keys 信息（不包含敏感值）
    */
-  getConfiguredProviders(agentId?: string): Array<{ provider: string; configured: boolean }> {
-    const targetAgentId = agentId || this.configManager.getDefaultAgent()?.id || 'default';
+  getConfiguredProviders(
+    agentId?: string,
+  ): Array<{ provider: string; configured: boolean }> {
+    const targetAgentId =
+      agentId || this.configManager.getDefaultAgent()?.id || "default";
     const authProfiles = this.configManager.loadAuthProfiles(targetAgentId);
 
-    return authProfiles.profiles.map(p => ({
+    return authProfiles.profiles.map((p) => ({
       provider: p.provider,
-      configured: !!p.apiKey && p.apiKey.length > 0
+      configured: !!p.apiKey && p.apiKey.length > 0,
     }));
   }
 
   /**
    * 获取所有可用的模型列表（从配置文件）
    */
-  getModelsFromConfig(): Array<{ provider: string; id: string; name: string; contextWindow?: number; maxTokens?: number }> {
+  getModelsFromConfig(): Array<{
+    provider: string;
+    id: string;
+    name: string;
+    contextWindow?: number;
+    maxTokens?: number;
+  }> {
     return this.configManager.getModels();
   }
 
   /**
    * 获取所有提供商配置
    */
-  getProviderConfigs(): Record<string, { baseUrl?: string; api?: string; models?: any[] }> {
+  getProviderConfigs(): Record<
+    string,
+    { baseUrl?: string; api?: string; models?: any[] }
+  > {
     return this.configManager.getProviderConfigs();
   }
 
   /**
    * 获取 Auth Profiles 列表
    */
-  getAuthProfilesFromConfig(agentId?: string): Array<{ provider: string; hasKey: boolean }> {
-    const targetAgentId = agentId || this.configManager.getDefaultAgent()?.id || 'default';
+  getAuthProfilesFromConfig(
+    agentId?: string,
+  ): Array<{ provider: string; hasKey: boolean }> {
+    const targetAgentId =
+      agentId || this.configManager.getDefaultAgent()?.id || "default";
     return this.configManager.getAuthProfiles(targetAgentId);
   }
 
@@ -611,7 +651,11 @@ export class OpenClawManager extends EventEmitter {
    * 获取当前模型配置
    * 返回当前使用的服务商和模型信息
    */
-  getCurrentModelConfig(): { provider: string; model: string; agentId: string } | null {
+  getCurrentModelConfig(): {
+    provider: string;
+    model: string;
+    agentId: string;
+  } | null {
     const defaultAgent = this.configManager.getDefaultAgent();
     if (!defaultAgent || !defaultAgent.id) {
       return null;
@@ -621,25 +665,25 @@ export class OpenClawManager extends EventEmitter {
     let modelConfig = defaultAgent.model;
 
     // 如果model是字符串格式，直接使用
-    if (typeof modelConfig === 'string') {
-      const parts = modelConfig.split('/');
+    if (typeof modelConfig === "string") {
+      const parts = modelConfig.split("/");
       if (parts.length >= 2 && parts[0]) {
         return {
           provider: parts[0],
-          model: parts.slice(1).join('/'),
-          agentId
+          model: parts.slice(1).join("/"),
+          agentId,
         };
       }
     }
 
     // 如果是对象格式，使用primary
-    if (modelConfig && typeof modelConfig === 'object' && modelConfig.primary) {
-      const parts = modelConfig.primary.split('/');
+    if (modelConfig && typeof modelConfig === "object" && modelConfig.primary) {
+      const parts = modelConfig.primary.split("/");
       if (parts.length >= 2 && parts[0]) {
         return {
           provider: parts[0],
-          model: parts.slice(1).join('/'),
-          agentId
+          model: parts.slice(1).join("/"),
+          agentId,
         };
       }
     }
@@ -648,13 +692,13 @@ export class OpenClawManager extends EventEmitter {
     const agentsConfig = this.configManager.getAgentsConfig();
     if (agentsConfig?.defaults?.model) {
       const defaultModel = agentsConfig.defaults.model;
-      if (typeof defaultModel === 'string') {
-        const parts = defaultModel.split('/');
+      if (typeof defaultModel === "string") {
+        const parts = defaultModel.split("/");
         if (parts.length >= 2 && parts[0]) {
           return {
             provider: parts[0],
-            model: parts.slice(1).join('/'),
-            agentId
+            model: parts.slice(1).join("/"),
+            agentId,
           };
         }
       }
@@ -666,7 +710,11 @@ export class OpenClawManager extends EventEmitter {
   /**
    * 验证配置是否完整（包括 API Keys）
    */
-  validateConfiguration(): { valid: boolean; errors: string[]; missingApiKeys: string[] } {
+  validateConfiguration(): {
+    valid: boolean;
+    errors: string[];
+    missingApiKeys: string[];
+  } {
     const result = this.configManager.validateConfig();
     const missingApiKeys: string[] = [];
 
@@ -674,13 +722,13 @@ export class OpenClawManager extends EventEmitter {
     const defaultAgent = this.configManager.getDefaultAgent();
     if (defaultAgent) {
       const modelConfig = defaultAgent.model;
-      if (typeof modelConfig === 'string') {
-        const provider = modelConfig.split('/')[0];
+      if (typeof modelConfig === "string") {
+        const provider = modelConfig.split("/")[0];
         if (provider && !this.hasApiKey(provider)) {
           missingApiKeys.push(provider);
         }
       } else if (modelConfig?.primary) {
-        const provider = modelConfig.primary.split('/')[0];
+        const provider = modelConfig.primary.split("/")[0];
         if (provider && !this.hasApiKey(provider)) {
           missingApiKeys.push(provider);
         }
@@ -690,7 +738,7 @@ export class OpenClawManager extends EventEmitter {
     return {
       valid: result.valid && missingApiKeys.length === 0,
       errors: result.errors,
-      missingApiKeys
+      missingApiKeys,
     };
   }
 
@@ -698,7 +746,8 @@ export class OpenClawManager extends EventEmitter {
    * 删除 API Key
    */
   removeApiKey(provider: string, agentId?: string): boolean {
-    const targetAgentId = agentId || this.configManager.getDefaultAgent()?.id || 'default';
+    const targetAgentId =
+      agentId || this.configManager.getDefaultAgent()?.id || "default";
     return this.configManager.removeAuthProfile(targetAgentId, provider);
   }
 
@@ -714,52 +763,99 @@ export class OpenClawManager extends EventEmitter {
     }
 
     // 2. 生产环境资源目录 - app.asar.unpacked
+    // 优先使用 wrapper.js (设置进程名)
     if (app.isPackaged) {
       const appPath = app.getAppPath();
-      const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
-      // lib/openclaw 目录（从 git 提交）
+      const unpackedPath = appPath.replace("app.asar", "app.asar.unpacked");
+
+      // wrapper.js 优先
       possiblePaths.push(
-        path.join(unpackedPath, 'lib/openclaw/dist/index.js'),
-        path.join(unpackedPath, 'lib/openclaw/dist/entry.js')
+        path.join(process.resourcesPath, "openclaw/wrapper.js"),
+        path.join(unpackedPath, "lib/openclaw/wrapper.js"),
       );
-      // 备用路径
+
+      // lib/openclaw 目录（从 git 提交）- 优先 entry.js
       possiblePaths.push(
-        path.join(process.resourcesPath, 'app.asar.unpacked/lib/openclaw/dist/index.js'),
-        path.join(process.resourcesPath, 'app.asar.unpacked/lib/openclaw/dist/entry.js')
+        path.join(unpackedPath, "lib/openclaw/dist/entry.js"),
+        path.join(unpackedPath, "lib/openclaw/dist/index.js"),
       );
-      // node_modules 备用（如果作为 npm 依赖安装）
+      // 备用路径 - 优先 entry.js
       possiblePaths.push(
-        path.join(unpackedPath, 'node_modules/openclaw/dist/index.js'),
-        path.join(unpackedPath, 'node_modules/openclaw/dist/entry.js')
+        path.join(
+          process.resourcesPath,
+          "app.asar.unpacked/lib/openclaw/dist/entry.js",
+        ),
+        path.join(
+          process.resourcesPath,
+          "app.asar.unpacked/lib/openclaw/dist/index.js",
+        ),
+      );
+      // node_modules 备用（如果作为 npm 依赖安装）- 优先 entry.js
+      possiblePaths.push(
+        path.join(unpackedPath, "node_modules/openclaw/dist/entry.js"),
+        path.join(unpackedPath, "node_modules/openclaw/dist/index.js"),
       );
       possiblePaths.push(
-        path.join(process.resourcesPath, 'app.asar.unpacked/node_modules/openclaw/dist/index.js'),
-        path.join(process.resourcesPath, 'app.asar.unpacked/node_modules/openclaw/dist/entry.js')
+        path.join(
+          process.resourcesPath,
+          "app.asar.unpacked/node_modules/openclaw/dist/entry.js",
+        ),
+        path.join(
+          process.resourcesPath,
+          "app.asar.unpacked/node_modules/openclaw/dist/index.js",
+        ),
       );
     }
 
-    // 3. 开发环境 lib 目录
+    // 3. 开发环境 lib 目录 - 优先使用 wrapper.js
     possiblePaths.push(
-      path.join(__dirname, '../../../../lib/openclaw/dist/index.js'),
-      path.join(__dirname, '../../../lib/openclaw/dist/index.js')
+      path.join(__dirname, "../../../../resources/openclaw/wrapper.js"),
+      path.join(__dirname, "../../../resources/openclaw/wrapper.js"),
+      path.join(process.cwd(), "resources/openclaw/wrapper.js"),
+      path.join(__dirname, "../../../../lib/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../lib/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../../lib/openclaw/dist/index.js"),
+      path.join(__dirname, "../../../lib/openclaw/dist/index.js"),
     );
 
-    // 4. 相对于项目根目录（开发环境）
+    // 4. 相对于项目根目录（开发环境）- 优先使用 entry.js
     possiblePaths.push(
-      path.join(process.cwd(), 'lib/openclaw/dist/index.js')
+      path.join(process.cwd(), "lib/openclaw/dist/entry.js"),
+      path.join(process.cwd(), "lib/openclaw/dist/index.js"),
     );
 
-    // 5. node_modules
+    // 5. node_modules - 优先使用 entry.js
     possiblePaths.push(
-      path.join(__dirname, '../../../node_modules/openclaw/dist/index.js'),
-      path.join(__dirname, '../../../../node_modules/openclaw/dist/index.js')
+      path.join(__dirname, "../../../node_modules/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../../node_modules/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../node_modules/openclaw/dist/index.js"),
+      path.join(__dirname, "../../../../node_modules/openclaw/dist/index.js"),
     );
 
-    // 5. 全局安装
+    // 6. 全局安装 - 优先使用 entry.js
     possiblePaths.push(
-      path.join(os.homedir(), '.npm-global', 'lib', 'node_modules', 'openclaw', 'dist', 'index.js'),
-      '/usr/local/lib/node_modules/openclaw/dist/index.js',
-      '/usr/lib/node_modules/openclaw/dist/index.js'
+      path.join(
+        os.homedir(),
+        ".npm-global",
+        "lib",
+        "node_modules",
+        "openclaw",
+        "dist",
+        "entry.js",
+      ),
+      "/usr/local/lib/node_modules/openclaw/dist/entry.js",
+      "/usr/lib/node_modules/openclaw/dist/entry.js",
+      path.join(
+        os.homedir(),
+        ".npm-global",
+        "lib",
+        "node_modules",
+        "openclaw",
+        "dist",
+        "index.js",
+      ),
+      "/usr/local/lib/node_modules/openclaw/dist/index.js",
+      "/usr/lib/node_modules/openclaw/dist/index.js",
     );
 
     for (const testPath of possiblePaths) {
@@ -770,8 +866,11 @@ export class OpenClawManager extends EventEmitter {
 
     // 尝试使用 which 命令查找
     try {
-      const { execSync } = require('child_process');
-      const result = execSync('which openclaw', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const { execSync } = require("child_process");
+      const result = execSync("which openclaw", {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "ignore"],
+      });
       const whichPath = result.trim();
       if (whichPath && fs.existsSync(whichPath)) {
         return whichPath;
@@ -781,8 +880,8 @@ export class OpenClawManager extends EventEmitter {
     }
 
     throw new Error(
-      `OpenClaw executable not found. Searched paths:\n${possiblePaths.join('\n')}\n\n` +
-      'Please install OpenClaw or set OPENCLAW_PATH environment variable.'
+      `OpenClaw executable not found. Searched paths:\n${possiblePaths.join("\n")}\n\n` +
+        "Please install OpenClaw or set OPENCLAW_PATH environment variable.",
     );
   }
 
@@ -791,17 +890,19 @@ export class OpenClawManager extends EventEmitter {
    */
   private async ensurePortAvailable(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const net = require('net');
+      const net = require("net");
       const tester = net.createServer();
 
-      tester.once('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
+      tester.once("error", (err: any) => {
+        if (err.code === "EADDRINUSE") {
           // 端口被占用，可能是外部的 OpenClaw
           // 不再尝试强制杀死外部进程，直接跳过启动
           // 让用户自己管理外部 OpenClaw
-          console.log(`Port ${this.config.port} is in use, likely external OpenClaw. Skipping internal launch.`);
+          console.log(
+            `Port ${this.config.port} is in use, likely external OpenClaw. Skipping internal launch.`,
+          );
           // 抛出一个特殊的错误，让 start 方法知道不要启动
-          const skipError = new Error('SKIP_INTERNAL_OPENCLAW');
+          const skipError = new Error("SKIP_INTERNAL_OPENCLAW");
           (skipError as any).skipLaunch = true;
           reject(skipError);
         } else {
@@ -809,7 +910,7 @@ export class OpenClawManager extends EventEmitter {
         }
       });
 
-      tester.once('listening', () => {
+      tester.once("listening", () => {
         tester.close(() => resolve());
       });
 
@@ -829,18 +930,18 @@ export class OpenClawManager extends EventEmitter {
     const defaultAgent = this.configManager.getDefaultAgent();
     if (!defaultAgent) {
       this.configManager.addAgent({
-        id: 'default',
+        id: "default",
         default: true,
-        name: 'Default Agent',
+        name: "Default Agent",
         model: {
-          primary: 'anthropic/claude-sonnet-4-6',
-          fallbacks: ['openai/gpt-4o'],
+          primary: "anthropic/claude-sonnet-4-6",
+          fallbacks: ["openai/gpt-4o"],
         },
       });
     }
 
     // 确保默认 agent 目录存在
-    this.configManager.ensureAgentDir('default');
+    this.configManager.ensureAgentDir("default");
 
     // 同步端口配置
     const gatewayConfig = this.configManager.getGatewayConfig();
@@ -851,7 +952,7 @@ export class OpenClawManager extends EventEmitter {
     // 加载 token
     this.gatewayToken = this.configManager.getGatewayToken() || null;
 
-    this.log.info('OpenClaw configuration ensured via ConfigManager');
+    this.log.info("OpenClaw configuration ensured via ConfigManager");
   }
 
   private gatewayToken: string | null = null;
@@ -860,8 +961,9 @@ export class OpenClawManager extends EventEmitter {
    * 生成安全随机token
    */
   private generateSecureToken(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = 'claw_';
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let token = "claw_";
     for (let i = 0; i < 32; i++) {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -880,16 +982,22 @@ export class OpenClawManager extends EventEmitter {
    */
   private async spawnProcess(): Promise<void> {
     if (!this.openclawPath) {
-      throw new Error('OpenClaw path not resolved');
+      throw new Error("OpenClaw path not resolved");
     }
 
     // 确保配置文件存在
     await this.ensureConfigFile();
 
     // 确定工作目录 - 使用 OpenClaw 的根目录，这样 Node.js 能找到 node_modules
-    // OpenClaw 路径类似: .../lib/openclaw/dist/index.js
-    // 我们需要 .../lib/openclaw/ 作为工作目录
-    const openclawRoot = path.dirname(path.dirname(this.openclawPath)); // dist -> openclaw
+    // OpenClaw 路径类似: .../lib/openclaw/dist/index.js -> .../lib/openclaw/
+    // 或者 .../resources/openclaw/wrapper.js -> .../resources/openclaw/
+    let openclawRoot: string;
+    if (this.openclawPath.endsWith("wrapper.js")) {
+      openclawRoot = path.dirname(this.openclawPath);
+    } else {
+      openclawRoot = path.dirname(path.dirname(this.openclawPath)); // dist -> openclaw
+    }
+
     let cwd: string;
     if (app.isPackaged) {
       // 打包环境：使用 OpenClaw 根目录作为 cwd
@@ -903,14 +1011,14 @@ export class OpenClawManager extends EventEmitter {
     // 准备环境变量
     // 使用独立的 OPENCLAW_STATE_DIR 指向 ~/.clawstation/
     // 这样内置的 OpenClaw 不会与用户自己安装的 OpenClaw (使用 ~/.openclaw/) 冲突
-    const stateDir = path.join(os.homedir(), '.clawstation');
-    
+    const stateDir = path.join(os.homedir(), ".clawstation");
+
     // 设置 NODE_PATH 指向 OpenClaw 的 node_modules，确保依赖能被找到
-    const nodeModulesPath = path.join(openclawRoot, 'node_modules');
-    
+    const nodeModulesPath = path.join(openclawRoot, "node_modules");
+
     const env = {
       ...process.env,
-      OPENCLAW_MODE: 'embedded',
+      OPENCLAW_MODE: "embedded",
       // 使用独立的状态目录，避免与用户自己的 OpenClaw 冲突
       OPENCLAW_STATE_DIR: stateDir,
       // NODE_PATH 帮助 Node.js 找到依赖（备用方案）
@@ -919,34 +1027,71 @@ export class OpenClawManager extends EventEmitter {
       // OPENCLAW_GATEWAY_BIND: this.config.bindAddress,  // 改用 CLI 参数
       OPENCLAW_GATEWAY_PORT: String(this.config.port),
       OPENCLAW_LOG_LEVEL: this.config.logLevel,
-      OPENCLAW_HIDE_BANNER: '1', // 隐藏启动 banner
-      NODE_NO_WARNINGS: '1',
+      OPENCLAW_HIDE_BANNER: "1", // 隐藏启动 banner
+      NODE_NO_WARNINGS: "1",
       // 设置token环境变量作为备选认证方式
-      OPENCLAW_GATEWAY_TOKEN: this.gatewayToken || ''
+      OPENCLAW_GATEWAY_TOKEN: this.gatewayToken || "",
+      // 传递进程名，以便 entry.js 能够正确设置 process.title
+      OPENCLAW_PROCESS_NAME: OPENCLAW_PROCESS_NAME,
     };
-    
+
     this.log.info(`NODE_PATH set to: ${nodeModulesPath}`);
 
-    // 确定启动参数 - OpenClaw 要求 --bind 使用正确的模式
-    const args = ['gateway', 'run', '--bind', 'loopback', '--port', String(this.config.port), '--force'];
+    // 确定启动参数
+    const args = [
+      "gateway",
+      "run",
+      "--bind",
+      "loopback",
+      "--port",
+      String(this.config.port),
+    ];
 
     // 使用系统 Node.js 启动（避免 Electron sandbox 问题）
     const nodePath = await this.findSystemNode();
 
-    this.log.info(`Spawning OpenClaw with Node.js: ${nodePath}`);
+    this.log.info(`Spawning Claw with Node.js: ${nodePath}`);
     this.log.info(`Working directory: ${cwd}`);
-    this.log.info(`Arguments: ${args.join(' ')}`);
+    this.log.info(`Arguments: ${args.join(" ")}`);
 
-    // 直接使用 openclaw 路径启动，不使用 launcher
-    this.childProcess = spawn(nodePath, [this.openclawPath, ...args], {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd,
-      detached: false
-    });
+    // 使用 launcher 设置进程名为 clawstation-engine
+    // 优先使用 launcher 脚本，如果没有则直接启动
+    const launcherPath = this.resolveLauncherPath();
+
+    if (launcherPath) {
+      // 使用 launcher 脚本启动，可以设置进程名
+      this.log.info(`Using launcher: ${launcherPath}`);
+      this.childProcess = spawn(
+        nodePath,
+        [launcherPath, this.openclawPath!, ...args],
+        {
+          env,
+          stdio: ["pipe", "pipe", "pipe"],
+          cwd,
+          detached: false,
+        },
+      );
+    } else {
+      // 直接启动（没有 launcher 时，设置 argv[0] 为 clawstation-engine）
+      // 通过修改 argv[0] 来设置进程名
+      this.log.info(
+        "No launcher found, using direct spawn with custom argv[0]",
+      );
+      const customArgv0 = OPENCLAW_PROCESS_NAME;
+      this.childProcess = spawn(
+        nodePath,
+        [customArgv0, this.openclawPath!, ...args],
+        {
+          env,
+          stdio: ["pipe", "pipe", "pipe"],
+          cwd,
+          detached: false,
+        },
+      );
+    }
 
     if (!this.childProcess.pid) {
-      throw new Error('Failed to spawn OpenClaw process');
+      throw new Error("Failed to spawn Claw process");
     }
 
     // 设置进程事件处理
@@ -954,32 +1099,67 @@ export class OpenClawManager extends EventEmitter {
   }
 
   /**
+   * 解析 launcher 脚本路径
+   */
+  private resolveLauncherPath(): string | null {
+    const possiblePaths: string[] = [];
+
+    // 生产环境
+    if (app.isPackaged) {
+      const appPath = app.getAppPath();
+      const unpackedPath = appPath.replace("app.asar", "app.asar.unpacked");
+      possiblePaths.push(
+        path.join(unpackedPath, "scripts", "clawstation-claw-launcher.js"),
+        path.join(
+          process.resourcesPath,
+          "scripts",
+          "clawstation-claw-launcher.js",
+        ),
+      );
+    }
+
+    // 开发环境
+    possiblePaths.push(
+      path.join(__dirname, "../../../scripts/clawstation-claw-launcher.js"),
+      path.join(process.cwd(), "scripts", "clawstation-claw-launcher.js"),
+    );
+
+    for (const testPath of possiblePaths) {
+      if (fs.existsSync(testPath)) {
+        return testPath;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * 查找 Node.js 运行时
    * 优先级：打包的 Node.js > 系统 Node.js > Electron 内置
    */
   private async findSystemNode(): Promise<string> {
-    const isWindows = process.platform === 'win32';
+    const isWindows = process.platform === "win32";
     const arch = process.arch;
-    
+
     // 1. 最高优先级：打包的 Node.js 运行时
     if (app.isPackaged) {
       const embeddedNodePaths: string[] = [];
-      
+
       // resources/node/ 目录（electron-builder extraResources）
-      const resourcesNodePath = path.join(process.resourcesPath, 'node');
-      
+      const resourcesNodePath = path.join(process.resourcesPath, "node");
+
       if (isWindows) {
         embeddedNodePaths.push(
-          path.join(resourcesNodePath, 'node.exe'),
-          path.join(resourcesNodePath, 'bin', 'node.exe'),
+          path.join(resourcesNodePath, "node.exe"),
+          path.join(resourcesNodePath, "bin", "node.exe"),
         );
       } else {
         embeddedNodePaths.push(
-          path.join(resourcesNodePath, 'bin', 'node'),
-          path.join(resourcesNodePath, 'node'),
+          path.join(resourcesNodePath, "bin", "node"),
+          path.join(resourcesNodePath, "node"),
         );
       }
-      
+
       for (const testPath of embeddedNodePaths) {
         if (fs.existsSync(testPath)) {
           this.log.info(`Using embedded Node.js: ${testPath}`);
@@ -987,7 +1167,7 @@ export class OpenClawManager extends EventEmitter {
         }
       }
     }
-    
+
     // 2. 环境变量指定的 Node
     if (process.env.NODE_PATH && fs.existsSync(process.env.NODE_PATH)) {
       this.log.info(`Using NODE_PATH: ${process.env.NODE_PATH}`);
@@ -999,23 +1179,33 @@ export class OpenClawManager extends EventEmitter {
 
     if (isWindows) {
       possiblePaths.push(
-        'C:\\Program Files\\nodejs\\node.exe',
-        'C:\\Program Files (x86)\\nodejs\\node.exe',
-        path.join(os.homedir(), 'AppData\\Local\\fnm\\node.exe'),
-        path.join(os.homedir(), 'AppData\\Roaming\\fnm\\node.exe'),
-        path.join(os.homedir(), '.fnm\\node.exe'),
-        path.join(os.homedir(), 'scoop\\apps\\nodejs\\current\\node.exe'),
-        path.join(os.homedir(), '.nvm-windows\\node.exe'),
-        path.join(process.env.APPDATA || '', 'nvm', 'current', 'node.exe'),
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Program Files (x86)\\nodejs\\node.exe",
+        path.join(os.homedir(), "AppData\\Local\\fnm\\node.exe"),
+        path.join(os.homedir(), "AppData\\Roaming\\fnm\\node.exe"),
+        path.join(os.homedir(), ".fnm\\node.exe"),
+        path.join(os.homedir(), "scoop\\apps\\nodejs\\current\\node.exe"),
+        path.join(os.homedir(), ".nvm-windows\\node.exe"),
+        path.join(process.env.APPDATA || "", "nvm", "current", "node.exe"),
       );
     } else {
       possiblePaths.push(
-        '/usr/local/bin/node',
-        '/usr/bin/node',
-        '/opt/homebrew/bin/node',
-        path.join(os.homedir(), '.nvm', 'current', 'bin', 'node'),
-        path.join(os.homedir(), '.local', 'share', 'fnm', 'node-versions', 'installing', 'installation', 'bin', 'node'),
-        path.join(os.homedir(), '.volta', 'bin', 'node'),
+        "/usr/local/bin/node",
+        "/usr/bin/node",
+        "/opt/homebrew/bin/node",
+        path.join(os.homedir(), ".nvm", "current", "bin", "node"),
+        path.join(
+          os.homedir(),
+          ".local",
+          "share",
+          "fnm",
+          "node-versions",
+          "installing",
+          "installation",
+          "bin",
+          "node",
+        ),
+        path.join(os.homedir(), ".volta", "bin", "node"),
       );
     }
 
@@ -1028,10 +1218,13 @@ export class OpenClawManager extends EventEmitter {
 
     // 4. which/where 命令
     try {
-      const { execSync } = require('child_process');
-      const cmd = isWindows ? 'where node' : 'which node';
-      const result = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
-      const whichPath = result.trim().split('\n')[0];
+      const { execSync } = require("child_process");
+      const cmd = isWindows ? "where node" : "which node";
+      const result = execSync(cmd, {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "ignore"],
+      });
+      const whichPath = result.trim().split("\n")[0];
       if (whichPath && fs.existsSync(whichPath)) {
         this.log.info(`Found system Node.js via ${cmd}: ${whichPath}`);
         return whichPath;
@@ -1041,7 +1234,7 @@ export class OpenClawManager extends EventEmitter {
     }
 
     // 5. 最后回退到 Electron 内置 Node.js
-    this.log.warn('No Node.js found, falling back to Electron Node.js');
+    this.log.warn("No Node.js found, falling back to Electron Node.js");
     return process.execPath;
   }
 
@@ -1052,43 +1245,55 @@ export class OpenClawManager extends EventEmitter {
     if (!this.childProcess) return;
 
     // 标准输出
-    this.childProcess.stdout?.on('data', (data: Buffer) => {
+    this.childProcess.stdout?.on("data", (data: Buffer) => {
       const output = data.toString().trim();
       if (output) {
-        this.log.info('[OpenClaw]', output);
+        this.log.info("[OpenClaw]", output);
         this.emit(OpenClawProcessEvent.OUTPUT, output);
       }
     });
 
     // 标准错误
-    this.childProcess.stderr?.on('data', (data: Buffer) => {
+    this.childProcess.stderr?.on("data", (data: Buffer) => {
       const output = data.toString().trim();
       if (output) {
-        this.log.warn('[OpenClaw]', output);
+        this.log.warn("[OpenClaw]", output);
         this.emit(OpenClawProcessEvent.STDERR, output);
       }
     });
 
     // 进程错误
-    this.childProcess.on('error', (error) => {
-      this.log.error('OpenClaw process error:', error);
+    this.childProcess.on("error", (error) => {
+      this.log.error("OpenClaw process error:", error);
       this.emit(OpenClawProcessEvent.ERROR, error);
     });
 
     // 进程退出
-    this.childProcess.on('close', (code, signal) => {
-      this.log.info(`OpenClaw process exited with code ${code}, signal ${signal}`);
+    this.childProcess.on("close", (code, signal) => {
+      this.log.info(
+        `OpenClaw process exited with code ${code}, signal ${signal}`,
+      );
       this.childProcess = null;
 
       if (!this.isShuttingDown) {
-        this.emit(OpenClawProcessEvent.STOPPED, { code, signal, unexpected: true });
+        this.emit(OpenClawProcessEvent.STOPPED, {
+          code,
+          signal,
+          unexpected: true,
+        });
         this.handleUnexpectedExit(code);
       } else {
-        this.emit(OpenClawProcessEvent.STOPPED, { code, signal, unexpected: false });
+        this.emit(OpenClawProcessEvent.STOPPED, {
+          code,
+          signal,
+          unexpected: false,
+        });
       }
     });
 
-    this.log.info(`Started OpenClaw process with PID: ${this.childProcess.pid}`);
+    this.log.info(
+      `Started OpenClaw process with PID: ${this.childProcess.pid}`,
+    );
   }
 
   /**
@@ -1108,7 +1313,7 @@ export class OpenClawManager extends EventEmitter {
         // 继续等待
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     throw new Error(`OpenClaw failed to start within ${timeout}ms`);
@@ -1120,15 +1325,20 @@ export class OpenClawManager extends EventEmitter {
   private async performHealthCheck(): Promise<boolean> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.healthCheckTimeoutMs);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.healthCheckTimeoutMs,
+      );
 
       const response = await fetch(
         `http://${this.config.bindAddress}:${this.config.port}/health`,
-        { signal: controller.signal }
+        { signal: controller.signal },
       );
 
       clearTimeout(timeoutId);
-      return response.ok;
+      // OpenClaw returns 503 if UI assets are missing, but API is working.
+      // We consider 503 as healthy for embedded engine without UI.
+      return response.ok || response.status === 503;
     } catch {
       return false;
     }
@@ -1149,7 +1359,7 @@ export class OpenClawManager extends EventEmitter {
 
       const isHealthy = await this.performHealthCheck();
       if (!isHealthy) {
-        this.log.warn('Health check failed');
+        this.log.warn("Health check failed");
         this.emit(OpenClawProcessEvent.HEALTH_CHECK_FAILED);
 
         if (!this.isShuttingDown) {
@@ -1181,20 +1391,24 @@ export class OpenClawManager extends EventEmitter {
 
     if (this.restartCount < this.config.maxRestarts) {
       this.restartCount++;
-      this.log.info(`Attempting to restart OpenClaw (attempt ${this.restartCount}/${this.config.maxRestarts})...`);
+      this.log.info(
+        `Attempting to restart OpenClaw (attempt ${this.restartCount}/${this.config.maxRestarts})...`,
+      );
 
       this.emit(OpenClawProcessEvent.RESTARTING, {
         attempt: this.restartCount,
-        maxAttempts: this.config.maxRestarts
+        maxAttempts: this.config.maxRestarts,
       });
 
       setTimeout(() => {
-        this.start().catch(error => {
-          this.log.error('Failed to restart OpenClaw:', error);
+        this.start().catch((error) => {
+          this.log.error("Failed to restart OpenClaw:", error);
         });
       }, this.config.restartDelayMs);
     } else {
-      this.log.error(`OpenClaw has exited unexpectedly ${this.config.maxRestarts} times. Giving up.`);
+      this.log.error(
+        `OpenClaw has exited unexpectedly ${this.config.maxRestarts} times. Giving up.`,
+      );
       this.cleanup();
     }
   }
@@ -1206,13 +1420,13 @@ export class OpenClawManager extends EventEmitter {
     if (!this.childProcess) return;
 
     // 首先尝试 SIGTERM
-    this.childProcess.kill('SIGTERM');
+    this.childProcess.kill("SIGTERM");
 
     // 设置超时强制终止
     setTimeout(() => {
       if (this.childProcess && !this.childProcess.killed) {
-        this.log.warn('OpenClaw did not terminate gracefully, forcing...');
-        this.childProcess.kill('SIGKILL');
+        this.log.warn("OpenClaw did not terminate gracefully, forcing...");
+        this.childProcess.kill("SIGKILL");
       }
     }, 10000);
   }
@@ -1233,7 +1447,9 @@ let managerInstance: OpenClawManager | null = null;
 /**
  * 获取 OpenClaw 管理器实例（单例）
  */
-export function getOpenClawManager(config?: Partial<OpenClawServiceConfig>): OpenClawManager {
+export function getOpenClawManager(
+  config?: Partial<OpenClawServiceConfig>,
+): OpenClawManager {
   if (!managerInstance) {
     managerInstance = new OpenClawManager(config);
   } else if (config) {

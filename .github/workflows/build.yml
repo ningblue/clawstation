@@ -42,7 +42,7 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Build openclaw dependency
-        run: cd lib/openclaw && pnpm install && pnpm run build
+        run: ./scripts/build-openclaw.sh
 
       - name: Download Node.js runtime for embedding
         run: node scripts/download-node.js darwin ${{ matrix.arch }}
@@ -92,7 +92,7 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Build openclaw dependency
-        run: cd lib/openclaw && pnpm install && pnpm run build
+        run: ./scripts/build-openclaw.sh
 
       - name: Download Node.js runtime for embedding
         run: node scripts/download-node.js win32 x64

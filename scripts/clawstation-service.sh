@@ -60,12 +60,14 @@ kill_port_process() {
         log_info "停止占用端口 $port 的进程: $pids"
         echo "$pids" | while read -r pid; do
             if [ -n "$pid" ]; then
-                kill $pid 2>/dev/null
-                sleep 1
-                # 检查是否还在运行
-                if kill -0 $pid 2>/dev/null; then
-                    log_warn "进程 $pid 未响应，强制终止..."
+                # 检查进程名是否包含 clawstation-engine
+                # 使用 args 而不是 comm，因为 process.title 修改的是参数显示
+                local process_name=$(ps -p $pid -o args= 2>/dev/null)
+                if echo "$process_name" | grep -qi "clawstation-engine"; then
+                    log_info "终止内置 AI 引擎进程 (clawstation-engine): $pid"
                     kill -9 $pid 2>/dev/null
+                else
+                    log_info "跳过非内置 AI 引擎进程: $pid ($process_name)"
                 fi
             fi
         done
@@ -94,8 +96,8 @@ kill_electron() {
         fi
     fi
 
-    # 停止所有相关子进程
-    local child_pids=$(pgrep -f "clawstation" 2>/dev/null | grep -v "^$$")
+    # 停止所有相关子进程（精确匹配 clawstation-engine）
+    local child_pids=$(pgrep -f "clawstation-engine" 2>/dev/null | grep -v "^$$")
     if [ -n "$child_pids" ]; then
         log_info "停止相关子进程..."
         echo "$child_pids" | while read -r pid; do
@@ -200,11 +202,11 @@ stop_service() {
         found_process=1
     fi
 
-    # 3. 停止所有 clawstation 相关进程
-    local all_pids=$(pgrep -f "clawstation" 2>/dev/null)
-    if [ -n "$all_pids" ]; then
-        log_info "停止所有 clawstation 进程..."
-        echo "$all_pids" | while read -r pid; do
+    # 3. 停止所有 clawstation-engine 相关进程（精确匹配内置AI引擎）
+    local claw_pids=$(pgrep -f "clawstation-engine" 2>/dev/null)
+    if [ -n "$claw_pids" ]; then
+        log_info "停止内置 AI 引擎进程 (clawstation-engine)..."
+        echo "$claw_pids" | while read -r pid; do
             if [ -n "$pid" ] && [ "$pid" != "$$" ]; then
                 kill $pid 2>/dev/null
             fi
@@ -212,7 +214,7 @@ stop_service() {
         sleep 2
 
         # 强制终止剩余进程
-        local remaining=$(pgrep -f "clawstation" 2>/dev/null)
+        local remaining=$(pgrep -f "clawstation-engine" 2>/dev/null)
         if [ -n "$remaining" ]; then
             echo "$remaining" | while read -r pid; do
                 if [ -n "$pid" ] && [ "$pid" != "$$" ]; then
@@ -306,10 +308,10 @@ status_service() {
         log_warn "浏览器控制服务未运行 (端口 $BROWSER_PORT)"
     fi
 
-    # 检查相关进程
-    local process_count=$(pgrep -f "clawstation" 2>/dev/null | wc -l)
+    # 检查相关进程（精确匹配 clawstation-engine）
+    local process_count=$(pgrep -f "clawstation-engine" 2>/dev/null | wc -l)
     if [ $process_count -gt 0 ]; then
-        log_info "相关进程数量: $process_count"
+        log_info "内置 AI 引擎进程数量: $process_count"
     fi
 
     if [ $running -eq 0 ]; then
@@ -332,6 +334,13 @@ view_logs() {
 build_app() {
     log_info "构建 ClawStation..."
     cd "$PROJECT_ROOT"
+
+    log_info "构建 OpenClaw 内置服务..."
+    npm run build:openclaw 2>&1 | tee "$PROJECT_ROOT/$LOG_DIR/build-openclaw.log"
+    if [ $? -ne 0 ]; then
+        log_error "OpenClaw 构建失败"
+        return 1
+    fi
 
     log_info "构建主进程..."
     npm run build:main 2>&1 | tee "$PROJECT_ROOT/$LOG_DIR/build-main.log"

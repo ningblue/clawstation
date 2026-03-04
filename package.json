@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "nodemon --exec electron .",
-    "build": "npm run build:main && npm run build:renderer && electron-builder",
+    "build": "npm run build:openclaw && npm run build:main && npm run build:renderer && electron-builder",
+    "build:openclaw": "./scripts/build-openclaw.sh",
     "build:main": "tsc",
     "build:renderer": "vite build --config vite.renderer.config.ts",
     "build:win": "npm run build -- --win",
@@ -44,7 +45,6 @@
     "better-sqlite3": "^12.0.0",
     "electron-log": "^5.0.0",
     "electron-updater": "^6.1.0",
-    "openclaw": "file:./lib/openclaw",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-markdown": "^10.1.0",

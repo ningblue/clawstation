@@ -1,12 +1,17 @@
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import { app } from 'electron';
-import * as fs from 'fs';
-import log from 'electron-log';
+import { spawn, ChildProcess } from "child_process";
+import * as path from "path";
+import { app } from "electron";
+import * as fs from "fs";
+import log from "electron-log";
+import {
+  OPENCLAW_PORT,
+  OPENCLAW_PROCESS_NAME,
+  OPENCLAW_BIND_ADDRESS,
+} from "../shared/constants";
 
 export class OpenClawManager {
   private childProcess: ChildProcess | null = null;
-  private readonly log = log.scope('OpenClawManager');
+  private readonly log = log.scope("OpenClawManager");
 
   async start(): Promise<void> {
     try {
@@ -14,80 +19,96 @@ export class OpenClawManager {
       let openclawPath: string;
 
       if (app.isPackaged) {
-        // 生产环境中，从 app.asar.unpacked 中获取
-        // 打包后 app.getAppPath() 返回 app.asar 的路径
-        // 资源在 app.asar.unpacked 中
-        const appPath = app.getAppPath();
-        const resourcesPath = appPath.replace('app.asar', 'app.asar.unpacked');
-        openclawPath = path.join(resourcesPath, 'node_modules/openclaw/dist/index.js');
-
-        // 备用方案：直接从已知路径尝试
-        if (!fs.existsSync(openclawPath)) {
-          openclawPath = '/Applications/ClawStation.app/Contents/Resources/app.asar.unpacked/node_modules/openclaw/dist/index.js';
-        }
+        // 生产环境：Contents/Resources/openclaw/wrapper.js
+        // process.resourcesPath 指向 Contents/Resources
+        openclawPath = path.join(
+          process.resourcesPath,
+          "openclaw",
+          "wrapper.js",
+        );
       } else {
-        // 开发环境中，使用源码路径
-        openclawPath = path.join(__dirname, '../../../node_modules/openclaw/dist/index.js');
+        // 开发环境：resources/openclaw/wrapper.js
+        // __dirname 是 src/main 编译后的位置，通常在 dist/main
+        // 项目根目录是 path.resolve(__dirname, '../../')
+        openclawPath = path.resolve(
+          __dirname,
+          "../../resources/openclaw/wrapper.js",
+        );
       }
 
       // 检查OpenClaw是否存在
       if (!fs.existsSync(openclawPath)) {
-        throw new Error(`OpenClaw executable not found at: ${openclawPath}`);
+        throw new Error(
+          `OpenClaw executable not found at: ${openclawPath}. Please run 'npm run build:openclaw' first.`,
+        );
       }
 
-      console.log('[OpenClawManager] Using OpenClaw at:', openclawPath);
+      console.log("[OpenClawManager] Using OpenClaw at:", openclawPath);
+
+      const port = process.env.OPENCLAW_PORT || String(OPENCLAW_PORT);
 
       // 准备环境变量
       const env = {
         ...process.env,
-        OPENCLAW_MODE: 'embedded',
-        // 不使用环境变量设置绑定地址，而是使用 CLI 参数
-        // OPENCLAW_GATEWAY_BIND: 'localhost',  // 改为 CLI 参数
-        OPENCLAW_GATEWAY_PORT: '18791',
+        OPENCLAW_MODE: "embedded",
+        OPENCLAW_GATEWAY_PORT: port,
+        // Set process name for the wrapper to pick up
+        OPENCLAW_PROCESS_NAME: OPENCLAW_PROCESS_NAME,
       };
 
       // 启动OpenClaw子进程
       this.childProcess = spawn(
         process.execPath, // 使用Electron内置的Node.js
-        [openclawPath, 'gateway', 'run', '--bind', 'loopback', '--port', '18791', '--force'],
+        [
+          openclawPath,
+          "gateway",
+          "run",
+          "--bind",
+          "loopback",
+          "--port",
+          port,
+          "--force",
+        ],
         {
           env,
-          stdio: ['pipe', 'pipe', 'pipe'],
+          stdio: ["pipe", "pipe", "pipe"],
           cwd: path.dirname(openclawPath),
-        }
+        },
       );
 
       // 监听输出
-      this.childProcess.stdout?.on('data', (data) => {
+      this.childProcess.stdout?.on("data", (data) => {
         this.log.info(data.toString());
       });
 
-      this.childProcess.stderr?.on('data', (data) => {
+      this.childProcess.stderr?.on("data", (data) => {
         this.log.error(data.toString());
       });
 
-      this.childProcess.on('error', (error) => {
-        this.log.error('OpenClaw process error:', error);
+      this.childProcess.on("error", (error) => {
+        this.log.error("OpenClaw process error:", error);
       });
 
-      this.childProcess.on('close', (code) => {
+      this.childProcess.on("close", (code) => {
         this.log.info(`OpenClaw process exited with code ${code}`);
         this.childProcess = null;
       });
 
-      this.log.info(`Started OpenClaw process with PID: ${this.childProcess.pid}`);
+      this.log.info(
+        `Started OpenClaw process with PID: ${this.childProcess.pid}`,
+      );
 
       // 等待一段时间以确保服务启动
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     } catch (error) {
-      this.log.error('Failed to start OpenClaw:', error);
+      this.log.error("Failed to start OpenClaw:", error);
       throw error;
     }
   }
 
   stop(): void {
     if (this.childProcess) {
-      this.log.info('Stopping OpenClaw process...');
+      this.log.info("Stopping OpenClaw process...");
       this.childProcess.kill();
       this.childProcess = null;
     }
