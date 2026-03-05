@@ -10,13 +10,15 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - arch: arm64
+            os: macos-14
             artifact_name: ClawStation-arm64
           - arch: x64
+            os: macos-13
             artifact_name: ClawStation-x64
 
     steps:
@@ -51,7 +53,6 @@ jobs:
 
       - name: Rebuild native modules
         run: |
-          npm rebuild better-sqlite3
           npx electron-builder install-app-deps --arch ${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
