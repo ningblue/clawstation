@@ -50,7 +50,9 @@ jobs:
           NODE_VERSION: '22.14.0'
 
       - name: Rebuild native modules
-        run: npx electron-builder install-app-deps --arch ${{ matrix.arch }} --force
+        run: |
+          npm rebuild better-sqlite3
+          npx electron-builder install-app-deps --arch ${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_build_from_source: true
