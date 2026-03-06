@@ -338,9 +338,6 @@ export class OpenClawConfigManager {
       agents: {
         defaults: {
           model: DEFAULT_CONFIG.DEFAULT_MODEL,
-          heartbeat: {
-            enabled: false,
-          },
         },
         list: [
           {
