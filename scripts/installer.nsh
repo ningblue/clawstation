@@ -1,0 +1,1 @@
+ShowInstDetails show

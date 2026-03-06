@@ -48,3 +48,4 @@ nsis:
   oneClick: false
   allowElevation: true
   allowToChangeInstallationDirectory: true
+  include: scripts/installer.nsh
