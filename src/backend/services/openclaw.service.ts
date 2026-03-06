@@ -11,6 +11,7 @@ import {
   OpenClawConfigManager,
 } from "../config/openclaw-config-manager";
 import { modelCatalogService } from "./model-catalog.service";
+import { MessageService } from "./message.service";
 import {
   OPENCLAW_PORT,
   OPENCLAW_BIND_ADDRESS,
@@ -113,6 +114,7 @@ export class OpenClawManager extends EventEmitter {
   private isShuttingDown: boolean = false;
   private openclawPath: string | null = null;
   private configManager: OpenClawConfigManager;
+  private isExternal: boolean = false;
 
   constructor(config: Partial<OpenClawServiceConfig> = {}) {
     super();
@@ -212,8 +214,8 @@ export class OpenClawManager extends EventEmitter {
         this.log.warn(
           "External OpenClaw detected on same port, using external instance",
         );
-        // 标记为正在运行（使用外部实例）
-        this.childProcess = {} as ChildProcess;
+        // 标记为外部实例，不尝试杀死进程
+        this.isExternal = true;
         this.startTime = Date.now();
         this.emit(OpenClawProcessEvent.STARTED, {
           pid: 0,
@@ -233,6 +235,13 @@ export class OpenClawManager extends EventEmitter {
    * 停止 OpenClaw 引擎
    */
   stop(): void {
+    // 如果是外部实例，不尝试杀死进程
+    if (this.isExternal) {
+      this.log.info("Using external OpenClaw instance, skipping stop");
+      this.cleanup();
+      return;
+    }
+
     if (!this.childProcess) {
       this.log.warn("OpenClaw is not running");
       return;
@@ -252,6 +261,13 @@ export class OpenClawManager extends EventEmitter {
    * 强制停止 OpenClaw 引擎
    */
   forceStop(): void {
+    // 如果是外部实例，不尝试杀死进程
+    if (this.isExternal) {
+      this.log.info("Using external OpenClaw instance, skipping force stop");
+      this.cleanup();
+      return;
+    }
+
     if (!this.childProcess) {
       return;
     }
@@ -282,8 +298,7 @@ export class OpenClawManager extends EventEmitter {
    * 检查 OpenClaw 是否正在运行（内部或外部）
    */
   isRunning(): boolean {
-    // 检查是否是外部实例标记
-    if (this.childProcess && (this.childProcess as any).external) {
+    if (this.isExternal) {
       return true;
     }
     return this.childProcess !== null && this.childProcess.exitCode === null;
@@ -368,6 +383,207 @@ export class OpenClawManager extends EventEmitter {
   }
 
   /**
+   * 获取进程信息
+   */
+  getProcessInfo(): {
+    processName: string;
+    pid: number | null;
+    port: number;
+    isExternal: boolean;
+    isRunning: boolean;
+    uptime: number;
+  } {
+    return {
+      processName: OPENCLAW_PROCESS_NAME,
+      pid: this.childProcess?.pid || null,
+      port: this.config.port,
+      isExternal: this.isExternal,
+      isRunning: this.isRunning(),
+      uptime: this.startTime ? Date.now() - this.startTime : 0,
+    };
+  }
+
+  /**
+   * 强制清理所有 OpenClaw 相关进程
+   */
+  async forceCleanup(): Promise<{
+    success: boolean;
+    killed: number;
+    error?: string;
+  }> {
+    this.log.info("Force cleaning up OpenClaw processes...");
+    let killed = 0;
+
+    try {
+      // 1. 停止健康检查
+      this.stopHealthCheck();
+
+      // 2. 尝试优雅关闭当前进程
+      if (this.childProcess && !this.isExternal) {
+        this.childProcess.kill("SIGTERM");
+        // 等待 2 秒
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // 如果还在运行，强制杀死
+        if (this.isRunning()) {
+          this.childProcess.kill("SIGKILL");
+        }
+        this.cleanup();
+        killed++;
+      }
+
+      // 3. 使用系统命令查找并杀死所有 clawstation-engine 进程
+      try {
+        const { execSync } = require("child_process");
+
+        // macOS/Linux: 查找并杀死进程
+        if (process.platform === "darwin" || process.platform === "linux") {
+          try {
+            // 查找所有 clawstation-engine 进程
+            const output = execSync(
+              `ps aux | grep "${OPENCLAW_PROCESS_NAME}" | grep -v grep | awk '{print $2}'`,
+              { encoding: "utf-8" },
+            );
+            const pids = output.trim().split("\n").filter(Boolean);
+
+            for (const pid of pids) {
+              try {
+                execSync(`kill -9 ${pid} 2>/dev/null || true`);
+                killed++;
+                this.log.info(`Killed process ${pid}`);
+              } catch {
+                // 忽略单个进程杀死错误
+              }
+            }
+          } catch {
+            // 可能没有找到进程
+          }
+
+          // 也检查 nodemon 进程
+          try {
+            const output = execSync(
+              `ps aux | grep "nodemon.*clawstation" | grep -v grep | awk '{print $2}'`,
+              { encoding: "utf-8" },
+            );
+            const pids = output.trim().split("\n").filter(Boolean);
+
+            for (const pid of pids) {
+              try {
+                execSync(`kill -9 ${pid} 2>/dev/null || true`);
+                this.log.info(`Killed nodemon process ${pid}`);
+              } catch {
+                // 忽略
+              }
+            }
+          } catch {
+            // 忽略
+          }
+        }
+
+        // Windows: 使用 taskkill
+        if (process.platform === "win32") {
+          try {
+            execSync(
+              `taskkill /F /IM ${OPENCLAW_PROCESS_NAME}.exe 2>nul || exit 0`,
+            );
+            killed++;
+          } catch {
+            // 忽略
+          }
+        }
+      } catch (error) {
+        this.log.warn("Error during system process cleanup:", error);
+      }
+
+      // 4. 释放端口（如果可能）
+      try {
+        const { execSync } = require("child_process");
+        if (process.platform === "darwin" || process.platform === "linux") {
+          // 查找并杀死占用端口的进程
+          try {
+            const output = execSync(
+              `lsof -ti:${this.config.port} 2>/dev/null || netstat -anv | grep "${this.config.port}" | head -1`,
+              { encoding: "utf-8" },
+            );
+            if (output.trim()) {
+              const pids = output.trim().split("\n").filter(Boolean);
+              for (const pid of pids) {
+                try {
+                  execSync(`kill -9 ${pid} 2>/dev/null || true`);
+                  killed++;
+                  this.log.info(`Killed port occupier ${pid}`);
+                } catch {
+                  // 忽略
+                }
+              }
+            }
+          } catch {
+            // 忽略
+          }
+        }
+      } catch {
+        // 忽略端口清理错误
+      }
+
+      // 5. 重置状态
+      this.childProcess = null;
+      this.startTime = 0;
+      this.isExternal = false;
+      this.isShuttingDown = false;
+      this.gatewayToken = null;
+
+      this.log.info(`Force cleanup completed. Killed ${killed} processes.`);
+      return { success: true, killed };
+    } catch (error) {
+      this.log.error("Force cleanup failed:", error);
+      return {
+        success: false,
+        killed,
+        error: (error as Error).message,
+      };
+    }
+  }
+
+  /**
+   * 修复 AI 引擎（强制清理并重启）
+   */
+  async repair(): Promise<{ success: boolean; message: string }> {
+    this.log.info("Starting AI engine repair...");
+
+    try {
+      // 1. 强制清理
+      const cleanupResult = await this.forceCleanup();
+      if (!cleanupResult.success) {
+        this.log.warn("Cleanup had issues, continuing with restart...");
+      }
+
+      // 2. 等待端口释放
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // 3. 重新启动
+      try {
+        await this.start();
+        this.log.info("AI engine repair completed successfully");
+        return {
+          success: true,
+          message: `已清理 ${cleanupResult.killed} 个进程，AI 引擎已重启`,
+        };
+      } catch (startError) {
+        return {
+          success: false,
+          message: `清理完成，但重启失败: ${(startError as Error).message}`,
+        };
+      }
+    } catch (error) {
+      this.log.error("Repair failed:", error);
+      return {
+        success: false,
+        message: `修复失败: ${(error as Error).message}`,
+      };
+    }
+  }
+
+  /**
    * 发送查询到 OpenClaw 引擎
    */
   async sendQuery(
@@ -397,6 +613,9 @@ export class OpenClawManager extends EventEmitter {
         headers["Authorization"] = `Bearer ${this.gatewayToken}`;
       }
 
+      // 构建消息列表，包含对话历史
+      const messages = await this.buildMessages(request);
+
       const response = await fetch(
         `http://${this.config.bindAddress}:${this.config.port}/v1/chat/completions`,
         {
@@ -404,12 +623,12 @@ export class OpenClawManager extends EventEmitter {
           headers,
           body: JSON.stringify({
             model: request.model || "default",
-            messages: [{ role: "user", content: request.message }],
+            messages,
             stream: request.stream ?? false,
             temperature: request.temperature,
             max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(60000), // 60秒超时
+          signal: AbortSignal.timeout(600000), // 600秒（10分钟）超时，与 OpenClaw 默认超时一致
         },
       );
 
@@ -452,11 +671,58 @@ export class OpenClawManager extends EventEmitter {
   }
 
   /**
+   * 构建消息列表，包含对话历史
+   */
+  private async buildMessages(
+    request: OpenClawQueryRequest,
+  ): Promise<Array<{ role: string; content: string }>> {
+    const messages: Array<{ role: string; content: string }> = [];
+
+    // 如果有 conversationId，加载历史消息
+    if (request.conversationId) {
+      try {
+        const history = await MessageService.getMessagesByConversationId(
+          request.conversationId,
+        );
+
+        // 将历史消息转换为 OpenAI 格式
+        for (const msg of history) {
+          // 跳过 system 消息（虽然当前模型不支持，但保持兼容性）
+          if ((msg.role as string) === "system") continue;
+
+          messages.push({
+            role: msg.role,
+            content: msg.content,
+          });
+        }
+
+        this.log.info(
+          `Loaded ${history.length} messages from conversation ${request.conversationId}`,
+        );
+      } catch (error) {
+        this.log.warn(`Failed to load conversation history: ${error}`);
+      }
+    }
+
+    // 添加当前用户消息
+    messages.push({
+      role: "user",
+      content: request.message,
+    });
+
+    return messages;
+  }
+
+  /**
    * 流式发送查询到 OpenClaw 引擎
    */
   async *sendQueryStream(
     request: OpenClawQueryRequest,
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<
+    { type: "content" | "tool_call"; data: string },
+    void,
+    unknown
+  > {
     if (!this.isRunning()) {
       throw new Error("OpenClaw engine is not running");
     }
@@ -481,6 +747,9 @@ export class OpenClawManager extends EventEmitter {
         headers["Authorization"] = `Bearer ${this.gatewayToken}`;
       }
 
+      // 构建消息列表，包含对话历史
+      const messages = await this.buildMessages(request);
+
       const response = await fetch(
         `http://${this.config.bindAddress}:${this.config.port}/v1/chat/completions`,
         {
@@ -488,12 +757,12 @@ export class OpenClawManager extends EventEmitter {
           headers,
           body: JSON.stringify({
             model: request.model || "default",
-            messages: [{ role: "user", content: request.message }],
+            messages,
             stream: true,
             temperature: request.temperature,
             max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(120000), // 120秒超时
+          signal: AbortSignal.timeout(600000), // 600秒（10分钟）超时，与 OpenClaw 默认超时一致
         },
       );
 
@@ -528,9 +797,29 @@ export class OpenClawManager extends EventEmitter {
 
             try {
               const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
+              const delta = parsed.choices?.[0]?.delta;
+
+              // 处理普通文本内容
+              const content = delta?.content;
               if (content) {
-                yield content;
+                yield { type: "content", data: content };
+              }
+
+              // 处理工具调用
+              const toolCalls = delta?.tool_calls;
+              if (toolCalls && Array.isArray(toolCalls)) {
+                for (const toolCall of toolCalls) {
+                  if (toolCall.function?.name) {
+                    yield {
+                      type: "tool_call",
+                      data: JSON.stringify({
+                        type: "tool_call",
+                        name: toolCall.function.name,
+                        arguments: toolCall.function.arguments || {},
+                      }),
+                    };
+                  }
+                }
               }
             } catch {
               // 忽略解析错误
@@ -1073,21 +1362,17 @@ export class OpenClawManager extends EventEmitter {
       );
     } else {
       // 直接启动（没有 launcher 时，设置 argv[0] 为 clawstation-engine）
-      // 通过修改 argv[0] 来设置进程名
+      // 注意：在 Node 22+ 上修改 argv0 可能导致模块加载失败，因此我们只传递脚本路径
+      // 进程名由 wrapper.js 内部设置
       this.log.info(
-        "No launcher found, using direct spawn with custom argv[0]",
+        "No launcher found, using direct spawn without custom argv[0]",
       );
-      const customArgv0 = OPENCLAW_PROCESS_NAME;
-      this.childProcess = spawn(
-        nodePath,
-        [customArgv0, this.openclawPath!, ...args],
-        {
-          env,
-          stdio: ["pipe", "pipe", "pipe"],
-          cwd,
-          detached: false,
-        },
-      );
+      this.childProcess = spawn(nodePath, [this.openclawPath!, ...args], {
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+        cwd,
+        detached: false,
+      });
     }
 
     if (!this.childProcess.pid) {
@@ -1437,6 +1722,7 @@ export class OpenClawManager extends EventEmitter {
   private cleanup(): void {
     this.stopHealthCheck();
     this.childProcess = null;
+    this.isExternal = false;
     this.startTime = 0;
   }
 }

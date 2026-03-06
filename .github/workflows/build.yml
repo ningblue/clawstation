@@ -59,7 +59,7 @@ jobs:
           npm_config_build_from_source: true
 
       - name: Build macOS
-        run: npm run build:mac
+        run: npm run build -- --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
