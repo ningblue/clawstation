@@ -810,7 +810,49 @@ export class OpenClawConfigManager {
     }
 
     // 确保默认 agent 目录存在
-    this.ensureAgentDir(DEFAULT_CONFIG.DEFAULT_AGENT_ID);
+    const agentDir = this.ensureAgentDir(DEFAULT_CONFIG.DEFAULT_AGENT_ID);
+
+    // 确保 auth-profiles.json 存在
+    if (!fs.existsSync(this.getAuthProfilesPath(DEFAULT_CONFIG.DEFAULT_AGENT_ID))) {
+      this.saveAuthProfiles(DEFAULT_CONFIG.DEFAULT_AGENT_ID, { profiles: [] });
+    }
+
+    // 确保 system.md 存在
+    const systemMdPath = path.join(agentDir, 'system.md');
+    if (!fs.existsSync(systemMdPath)) {
+      const defaultSystemPrompt = `# Default Agent System Prompt
+
+You are a helpful AI assistant running within ClawStation.
+Your primary goal is to assist the user with their tasks effectively and safely.
+
+## Capabilities
+- You can answer questions and help with various tasks.
+- You have access to a set of tools to perform actions.
+
+## Guidelines
+- Be concise and clear in your responses.
+- If you are unsure about something, admit it.
+- Always prioritize user safety and privacy.
+`;
+      fs.writeFileSync(systemMdPath, defaultSystemPrompt);
+      this.log.info(`Created default system prompt at ${systemMdPath}`);
+    }
+
+    // 确保 models.json 存在
+    const modelsJsonPath = path.join(agentDir, 'models.json');
+    if (!fs.existsSync(modelsJsonPath)) {
+      const defaultModels = {
+        models: [
+          {
+            id: DEFAULT_CONFIG.DEFAULT_MODEL,
+            provider: 'anthropic',
+            enabled: true
+          }
+        ]
+      };
+      fs.writeFileSync(modelsJsonPath, JSON.stringify(defaultModels, null, 2));
+      this.log.info(`Created default models config at ${modelsJsonPath}`);
+    }
 
     this.log.info('OpenClaw configuration initialized');
   }
