@@ -158,6 +158,22 @@ async function createWindow() {
       mainWindow = null;
     });
 
+    // 处理外部链接点击 - 在系统浏览器中打开
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      // 在系统默认浏览器中打开外部链接
+      shell.openExternal(url);
+      return { action: "deny" }; // 阻止在应用内打开
+    });
+
+    // 拦截导航事件，防止在应用内跳转到外部链接
+    mainWindow.webContents.on("will-navigate", (event, url) => {
+      // 检查是否是外部链接（非本地文件）
+      if (!url.startsWith("file://")) {
+        event.preventDefault();
+        shell.openExternal(url);
+      }
+    });
+
     // 当窗口加载完成后，发送OpenClaw状态事件
     mainWindow.webContents.once("did-finish-load", () => {
       console.log("Window finished loading, sending openclaw:ready event");
@@ -369,6 +385,32 @@ function setupIpcHandlers() {
     "show-error-dialog",
     async (_, options: { title: string; message: string }) => {
       await dialog.showErrorBox(options.title, options.message);
+    },
+  );
+
+  // 显示确认对话框
+  ipcMain.handle(
+    "show-confirm-dialog",
+    async (
+      _,
+      options: {
+        title: string;
+        message: string;
+        buttons?: string[];
+        defaultId?: number;
+        cancelId?: number;
+      },
+    ) => {
+      const result = await dialog.showMessageBox({
+        type: "question",
+        title: options.title,
+        message: options.title,
+        detail: options.message,
+        buttons: options.buttons || ["确认", "取消"],
+        defaultId: options.defaultId ?? 0,
+        cancelId: options.cancelId ?? 1,
+      });
+      return result.response;
     },
   );
 }

@@ -1,0 +1,181 @@
+/**
+ * ToolCard 组件样式
+ */
+
+.tool-card {
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  margin: 8px 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tool-card:hover {
+  border-color: var(--border-hover, #cbd5e1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tool-card.expanded {
+  border-color: var(--accent-color, #3b82f6);
+}
+
+/* 工具卡片头部 */
+.tool-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary, #f1f5f9);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.tool-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #1e293b);
+}
+
+.tool-status {
+  font-size: 12px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+.tool-status.pending {
+  color: var(--warning-color, #f59e0b);
+  animation: spin 1s linear infinite;
+}
+
+.tool-status.success {
+  color: var(--success-color, #10b981);
+  background: var(--success-bg, #d1fae5);
+}
+
+.tool-status.error {
+  color: var(--error-color, #ef4444);
+  background: var(--error-bg, #fee2e2);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tool-detail {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-expand-icon {
+  font-size: 10px;
+  color: var(--text-tertiary, #94a3b8);
+  padding: 4px;
+}
+
+/* 工具卡片内容 */
+.tool-card-content {
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-tertiary, #f8fafc);
+  padding: 12px 16px;
+}
+
+.tool-content-pre {
+  margin: 0;
+  padding: 12px;
+  background: var(--code-bg, #1e293b);
+  color: var(--code-text, #e2e8f0);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 工具卡片列表 */
+.tool-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .tool-card {
+    background: var(--bg-secondary-dark, #1e293b);
+    border-color: var(--border-color-dark, #334155);
+  }
+
+  .tool-card:hover {
+    border-color: var(--border-hover-dark, #475569);
+  }
+
+  .tool-icon {
+    background: var(--bg-tertiary-dark, #334155);
+  }
+
+  .tool-name {
+    color: var(--text-primary-dark, #f1f5f9);
+  }
+
+  .tool-detail {
+    color: var(--text-secondary-dark, #94a3b8);
+  }
+
+  .tool-card-content {
+    border-color: var(--border-color-dark, #334155);
+    background: var(--bg-secondary-dark, #1e293b);
+  }
+}
+
+/* 状态指示器 */
+.tool-card.pending {
+  border-left: 3px solid var(--warning-color, #f59e0b);
+}
+
+.tool-card.success {
+  border-left: 3px solid var(--success-color, #10b981);
+}
+
+.tool-card.error {
+  border-left: 3px solid var(--error-color, #ef4444);
+}

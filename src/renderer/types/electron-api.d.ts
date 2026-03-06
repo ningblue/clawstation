@@ -48,6 +48,15 @@ export interface ElectronAPI {
   // 错误对话框
   showErrorDialog: (options: { title: string; message: string }) => Promise<void>;
 
+  // 确认对话框
+  showConfirmDialog: (options: {
+    title: string;
+    message: string;
+    buttons?: string[];
+    defaultId?: number;
+    cancelId?: number;
+  }) => Promise<number>;
+
   // OpenClaw AI引擎相关API
   getOpenClawStatus: () => Promise<{
     isRunning: boolean;
@@ -63,9 +72,48 @@ export interface ElectronAPI {
     response?: string;
     error?: string;
   }>;
+  sendQueryToOpenClawStream: (
+    message: string,
+    conversationId?: number,
+    onChunk?: (chunk: string) => void,
+    onToolCall?: (tool: { name: string; arguments: Record<string, unknown> }) => void,
+    onDone?: (fullContent: string) => void,
+    onError?: (error: string) => void
+  ) => (() => void);
+  startOpenClaw: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  stopOpenClaw: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
   restartOpenClaw: () => Promise<{
     success: boolean;
     error?: string;
+  }>;
+
+  // AI 引擎进程管理
+  getOpenClawProcessInfo: () => Promise<{
+    success: boolean;
+    info?: {
+      processName: string;
+      pid: number | null;
+      port: number;
+      isExternal: boolean;
+      isRunning: boolean;
+      uptime: number;
+    };
+    error?: string;
+  }>;
+  cleanupOpenClawProcesses: () => Promise<{
+    success: boolean;
+    killed: number;
+    error?: string;
+  }>;
+  repairOpenClaw: () => Promise<{
+    success: boolean;
+    message: string;
   }>;
 
   // 审计日志相关API

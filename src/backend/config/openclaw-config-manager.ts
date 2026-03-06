@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import log from 'electron-log';
+import { OPENCLAW_PORT, OPENCLAW_BIND_ADDRESS } from '../../shared/constants';
 
 /**
  * Agent 模型配置
@@ -151,6 +152,22 @@ export interface OpenClawConfig {
   gateway?: GatewayConfig;
   agents?: AgentsConfig;
   models?: ModelsConfig;
+  tools?: {
+    web?: {
+      search?: {
+        enabled?: boolean;
+        provider?: string;
+        apiKey?: string;
+        maxResults?: number;
+        timeoutSeconds?: number;
+        cacheTtlMinutes?: number;
+      };
+      fetch?: {
+        enabled?: boolean;
+        maxChars?: number;
+      };
+    };
+  };
 }
 
 /**
@@ -173,8 +190,8 @@ export interface AuthProfilesConfig {
  * 默认配置常量
  */
 export const DEFAULT_CONFIG = {
-  GATEWAY_PORT: 18791,
-  BIND_ADDRESS: 'loopback',
+  GATEWAY_PORT: OPENCLAW_PORT,
+  BIND_ADDRESS: OPENCLAW_BIND_ADDRESS,
   DEFAULT_AGENT_ID: 'default',
   DEFAULT_MODEL: 'anthropic/claude-sonnet-4-6',
   DEFAULT_PROVIDER: 'anthropic',
@@ -380,6 +397,9 @@ export class OpenClawConfigManager {
    * 更新配置
    */
   updateConfig(updates: Partial<OpenClawConfig>): void {
+    // 深度合并 tools 配置
+    const mergedTools = this.deepMerge(this.config.tools, updates.tools);
+
     this.config = {
       ...this.config,
       ...updates,
@@ -395,8 +415,27 @@ export class OpenClawConfigManager {
         ...this.config.models,
         ...updates.models,
       },
+      tools: mergedTools,
     };
     this.saveConfig();
+  }
+
+  /**
+   * 深度合并对象
+   */
+  private deepMerge(target: any, source: any): any {
+    if (!source) return target;
+    if (!target) return source;
+
+    const result = { ...target };
+    for (const key of Object.keys(source)) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.deepMerge(target[key], source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    return result;
   }
 
   /**

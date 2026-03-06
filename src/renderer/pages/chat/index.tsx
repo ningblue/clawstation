@@ -31,6 +31,9 @@ export const ChatPage: React.FC = () => {
     isTyping,
     loading,
     error,
+    isStreaming,
+    streamingContent,
+    streamingToolCalls,
     createConversation,
     selectConversation,
     renameConversation,
@@ -39,6 +42,7 @@ export const ChatPage: React.FC = () => {
     updateMessageContent,
     regenerateMessage,
     sendMessage,
+    cancelStream,
     startEngineStatusCheck,
     clearError,
   } = useChatStore(user?.id ?? null);
@@ -121,6 +125,9 @@ export const ChatPage: React.FC = () => {
           <MessageList
             messages={displayMessages}
             isTyping={isTyping}
+            isStreaming={isStreaming}
+            streamingContent={streamingContent}
+            streamingToolCalls={streamingToolCalls}
             showEmptyState={currentConversationId === null && messages.length === 0}
             onDeleteMessage={deleteMessage}
             onUpdateMessage={updateMessageContent}
@@ -129,6 +136,8 @@ export const ChatPage: React.FC = () => {
           <ChatInput
             onSend={handleSendMessage}
             disabled={loading || isTyping}
+            isStreaming={isStreaming}
+            onCancel={cancelStream}
           />
         </div>
       </div>

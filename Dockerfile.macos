@@ -1,0 +1,37 @@
+# Build using Docker - macOS
+FROM node:22-alpine
+
+RUN apk add --no-cache \
+    wine \
+    wine-utils \
+    mono \
+    libxi \
+    libxcursor \
+    libxrandr \
+    libxfixes \
+    libxcomposite \
+    libxdamage \
+    libasound \
+    ttf-freefont \
+    chromium
+
+WORKDIR /app
+
+# Copy project files
+COPY package*.json ./
+COPY lib ./lib
+COPY src ./src
+COPY resources ./resources
+COPY scripts ./scripts
+COPY electron-builder.yml ./
+COPY tsconfig.json ./
+COPY vite.renderer.config.ts ./
+
+# Install dependencies
+RUN npm install
+
+# Build
+RUN npm run build:mac
+
+# Output
+VOLUME ["/app/release"]

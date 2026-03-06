@@ -11,6 +11,8 @@ export interface ChatInputProps {
   onModelClick?: () => void;
   onImageUpload?: (files: FileList) => void;
   onFileUpload?: (files: FileList) => void;
+  onCancel?: () => void;
+  isStreaming?: boolean;
 }
 
 // 快捷提示配置
@@ -30,6 +32,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onModelClick,
   onImageUpload,
   onFileUpload,
+  onCancel,
+  isStreaming = false,
 }) => {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -248,24 +252,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             rows={1}
           />
 
-          {/* 发送按钮 */}
-          <button
-            className={`send-btn ${text.trim() && !disabled ? 'active' : ''}`}
-            onClick={handleSend}
-            disabled={!text.trim() || disabled}
-            title="发送消息"
-          >
-            {disabled ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinner">
-                <circle cx="12" cy="12" r="10" strokeDasharray="60" strokeDashoffset="20"/>
+          {/* 发送/停止按钮 */}
+          {isStreaming ? (
+            <button
+              className="send-btn active stop-btn"
+              onClick={onCancel}
+              title="停止生成"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
               </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            )}
-          </button>
+            </button>
+          ) : (
+            <button
+              className={`send-btn ${text.trim() && !disabled ? 'active' : ''}`}
+              onClick={handleSend}
+              disabled={!text.trim() || disabled}
+              title="发送消息"
+            >
+              {disabled ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinner">
+                  <circle cx="12" cy="12" r="10" strokeDasharray="60" strokeDashoffset="20"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              )}
+            </button>
+          )}
         </div>
 
         {/* 底部提示 */}

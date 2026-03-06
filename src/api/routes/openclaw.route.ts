@@ -1,6 +1,6 @@
 // src/api/routes/openclaw.route.ts
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { ipcMain, IpcMainInvokeEvent, IpcMainEvent } from 'electron';
 import { OpenClawManager } from '../../backend/services/openclaw.service';
 import { modelCatalogService } from '../../backend/services/model-catalog.service';
 
@@ -85,6 +85,39 @@ export function setupOpenClawRoutes(openclawManager: OpenClawManager): void {
         success: false,
         error: (error as Error).message
       };
+    }
+  });
+
+  // 获取进程信息
+  ipcMain.handle('openclaw:process:info', async (_event: IpcMainInvokeEvent) => {
+    try {
+      const info = openclawManager.getProcessInfo();
+      return { success: true, info };
+    } catch (error) {
+      console.error('Error getting process info:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  // 强制清理进程
+  ipcMain.handle('openclaw:process:cleanup', async (_event: IpcMainInvokeEvent) => {
+    try {
+      const result = await openclawManager.forceCleanup();
+      return result;
+    } catch (error) {
+      console.error('Error cleaning up processes:', error);
+      return { success: false, killed: 0, error: (error as Error).message };
+    }
+  });
+
+  // 修复 AI 引擎
+  ipcMain.handle('openclaw:repair', async (_event: IpcMainInvokeEvent) => {
+    try {
+      const result = await openclawManager.repair();
+      return result;
+    } catch (error) {
+      console.error('Error repairing OpenClaw:', error);
+      return { success: false, message: (error as Error).message };
     }
   });
 
@@ -328,4 +361,100 @@ export function setupOpenClawRoutes(openclawManager: OpenClawManager): void {
       return { success: false, error: (error as Error).message };
     }
   });
+  // ========== 流式响应 IPC (支持取消) ==========
+
+  // 存储活动的流式请求
+  const activeStreams = new Map<number, AbortController>();
+
+  // 开始流式请求
+  ipcMain.on("openclaw:query:stream:start", async (event: IpcMainEvent, message: string, conversationId?: number) => {
+    try {
+      if (!message || message.trim().length === 0) {
+        event.sender.send("openclaw:stream:chunk", { type: "error", error: "Message is required" });
+        return;
+      }
+
+      const webContentsId = event.sender.id;
+
+      // 如果已有活动的流，先取消
+      const existingAbort = activeStreams.get(webContentsId);
+      if (existingAbort) {
+        existingAbort.abort();
+      }
+
+      const abortController = new AbortController();
+      activeStreams.set(webContentsId, abortController);
+
+      try {
+        const stream = openclawManager.sendQueryStream({
+          message: message.trim(),
+          conversationId,
+          stream: true
+        });
+
+        let fullContent = "";
+        const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+
+        for await (const chunk of stream) {
+          if (abortController.signal.aborted) {
+            event.sender.send("openclaw:stream:chunk", { type: "cancelled" });
+            break;
+          }
+
+          if (chunk.type === 'content') {
+            fullContent += chunk.data;
+            event.sender.send("openclaw:stream:chunk", {
+              type: "chunk",
+              content: chunk.data
+            });
+          } else if (chunk.type === 'tool_call') {
+            try {
+              const toolData = JSON.parse(chunk.data);
+              toolCalls.push({ name: toolData.name, arguments: toolData.arguments });
+              // 发送工具调用信息给前端
+              event.sender.send("openclaw:stream:chunk", {
+                type: "tool_call",
+                tool: toolData
+              });
+            } catch {
+              // 忽略解析错误
+            }
+          }
+        }
+
+        if (!abortController.signal.aborted) {
+          event.sender.send("openclaw:stream:chunk", {
+            type: "done",
+            content: fullContent
+          });
+        }
+      } catch (streamError) {
+        if ((streamError as Error).name !== "AbortError") {
+          event.sender.send("openclaw:stream:chunk", {
+            type: "error",
+            error: (streamError as Error).message
+          });
+        }
+      } finally {
+        activeStreams.delete(webContentsId);
+      }
+    } catch (error) {
+      console.error("Error in streaming query:", error);
+      event.sender.send("openclaw:stream:chunk", {
+        type: "error",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // 取消流式请求
+  ipcMain.on("openclaw:query:stream:cancel", (event: IpcMainEvent) => {
+    const webContentsId = event.sender.id;
+    const abortController = activeStreams.get(webContentsId);
+    if (abortController) {
+      abortController.abort();
+      activeStreams.delete(webContentsId);
+    }
+  });
+
 }

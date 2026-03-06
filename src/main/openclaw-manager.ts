@@ -57,8 +57,37 @@ export class OpenClawManager {
       };
 
       // 启动OpenClaw子进程
+      // 优先使用嵌入的 Node.js，如果没有则使用 Electron 内置的 Node 环境
+      // 注意：Electron 内置的 Node 环境可能缺少某些 OpenClaw 依赖的原生模块
+      let nodeExecutable = process.execPath;
+
+      if (app.isPackaged) {
+        // 尝试寻找嵌入的 Node.js
+        const platform = process.platform === "win32" ? "win" : "mac";
+        const arch = process.arch;
+        // resources/node/node
+        const embeddedNode = path.join(
+          process.resourcesPath,
+          "node",
+          "bin",
+          "node",
+        );
+
+        if (fs.existsSync(embeddedNode)) {
+          nodeExecutable = embeddedNode;
+          console.log(
+            "[OpenClawManager] Using embedded Node.js:",
+            embeddedNode,
+          );
+        } else {
+          console.warn(
+            "[OpenClawManager] Embedded Node.js not found, falling back to process.execPath",
+          );
+        }
+      }
+
       this.childProcess = spawn(
-        process.execPath, // 使用Electron内置的Node.js
+        nodeExecutable,
         [
           openclawPath,
           "gateway",

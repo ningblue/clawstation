@@ -5,9 +5,10 @@ directories:
   buildResources: resources
 files:
   - dist/**/*
-  - lib/openclaw/**/*
   - package.json
 extraResources:
+  - from: resources/openclaw
+    to: openclaw
   - from: resources/
     to: resources/
     filter:
@@ -16,6 +17,10 @@ extraResources:
     to: node
     filter:
       - "**/*"
+  - from: scripts/
+    to: scripts/
+    filter:
+      - "clawstation-claw-launcher.js"
 asar: true
 asarUnpack:
   - "**/*.node"

@@ -6,6 +6,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import type { Message } from '../../stores';
 import { MarkdownRenderer } from '../MarkdownRenderer';
+import { ToolCard, type ToolCall, type ToolResult } from '../ToolCard';
+import { Thinking, parseThinkingFromContent } from '../Thinking';
 
 export interface MessageListProps {
   /** 消息列表 */
@@ -14,6 +16,12 @@ export interface MessageListProps {
   isTyping?: boolean;
   /** 是否显示空状态 */
   showEmptyState?: boolean;
+  /** 是否正在流式响应 */
+  isStreaming?: boolean;
+  /** 流式响应内容 */
+  streamingContent?: string;
+  /** 流式响应中的工具调用 */
+  streamingToolCalls?: Array<{ name: string; arguments: Record<string, unknown> }>;
   /** 删除消息回调 */
   onDeleteMessage?: (messageId: number) => void;
   /** 更新消息回调 */
@@ -21,6 +29,67 @@ export interface MessageListProps {
   /** 重新生成消息回调 */
   onRegenerateMessage?: (messageId: number) => void;
 }
+
+/**
+ * 解析消息内容中的工具调用
+ */
+const parseToolsFromContent = (content: string): Array<{ tool: ToolCall | ToolResult; status: 'pending' | 'success' | 'error' }> => {
+  const tools: Array<{ tool: ToolCall | ToolResult; status: 'pending' | 'success' | 'error' }> = [];
+
+  // 匹配 JSON 代码块中的工具调用
+  const toolCallRegex = /```json\s*({[\s\S]*?})\s*```/g;
+  let match;
+
+  while ((match = toolCallRegex.exec(content)) !== null) {
+    try {
+      const jsonStr = match[1] ?? '';
+      if (!jsonStr) continue;
+      const data = JSON.parse(jsonStr);
+
+      // 检测工具调用格式
+      if (data.type === 'toolcall' || data.type === 'tool_call' || data.type === 'tooluse' || data.type === 'tool_use') {
+        tools.push({
+          tool: data as ToolCall,
+          status: 'success'
+        });
+      }
+      // 检测工具结果格式
+      else if (data.type === 'toolresult' || data.type === 'tool_result') {
+        tools.push({
+          tool: data as ToolResult,
+          status: data.error ? 'error' : 'success'
+        });
+      }
+    } catch {
+      // 忽略解析错误
+    }
+  }
+
+  // 也尝试匹配内联的 JSON（不在代码块中）
+  const inlineRegex = /\{[^{}]*"type"\s*:\s*"(toolcall|tool_call|tooluse|tool_use|toolresult|tool_result)"[^{}]*\}/g;
+  while ((match = inlineRegex.exec(content)) !== null) {
+    // 避免重复处理已经匹配到的内容
+    const alreadyMatched = tools.some(t => {
+      const toolJson = JSON.stringify(t.tool);
+      return toolJson.includes(match![0].slice(1, -1));
+    });
+
+    if (!alreadyMatched) {
+      try {
+        const data = JSON.parse(match[0]);
+        if (['toolcall', 'tool_call', 'tooluse', 'tool_use'].includes(data.type)) {
+          tools.push({ tool: data as ToolCall, status: 'success' });
+        } else if (['toolresult', 'tool_result'].includes(data.type)) {
+          tools.push({ tool: data as ToolResult, status: data.error ? 'error' : 'success' });
+        }
+      } catch {
+        // 忽略解析错误
+      }
+    }
+  }
+
+  return tools;
+};
 
 /**
  * 消息项组件
@@ -39,6 +108,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // 解析工具调用和 thinking
+  const tools = !isUser ? parseToolsFromContent(message.content) : [];
+  const { mainContent, thinking } = !isUser ? parseThinkingFromContent(message.content) : { mainContent: message.content };
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -194,7 +267,19 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
               </div>
             </div>
           ) : (
-            <MarkdownRenderer content={message.content} />
+            <>
+              <MarkdownRenderer content={mainContent} />
+              {/* 显示思考过程 */}
+              {thinking && <Thinking content={thinking} />}
+              {/* 显示工具调用 */}
+              {tools.length > 0 && (
+                <div className="message-tools">
+                  {tools.map((item, index) => (
+                    <ToolCard key={index} tool={item.tool} status={item.status} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -277,6 +362,9 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   isTyping = false,
   showEmptyState = false,
+  isStreaming = false,
+  streamingContent = '',
+  streamingToolCalls = [],
   onDeleteMessage,
   onUpdateMessage,
   onRegenerateMessage,
@@ -324,7 +412,54 @@ export const MessageList: React.FC<MessageListProps> = ({
           />
         ))
       )}
-      {isTyping && <TypingIndicator />}
+      {/* 流式响应内容 */}
+      {/* 流式响应内容 */}
+      {isStreaming && (
+        <div className="message assistant-message">
+          <div
+            className="avatar assistant-avatar"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              fontWeight: 'bold',
+              color: 'white',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            }}
+          >
+            AI
+          </div>
+          <div
+            className="message-content"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              maxWidth: 'calc(100% - 48px)',
+              alignItems: 'flex-start',
+            }}
+          >
+            {streamingContent ? (
+              <>
+                <MarkdownRenderer content={streamingContent} />
+                <span className="streaming-cursor">▋</span>
+              </>
+            ) : (
+              <div className="typing-indicator">
+                <div className="typing-dot"></div>
+                <div className="typing-dot"></div>
+                <div className="typing-dot"></div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isTyping && !isStreaming && <TypingIndicator />}
     </div>
   );
 };

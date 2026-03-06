@@ -50,6 +50,15 @@ export function useChatStore(userId: number | null) {
   const [error, setError] = useState<string | null>(null);
   const engineCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // 流式响应状态 - 按会话ID隔离
+  const [streamingStates, setStreamingStates] = useState<Record<number, {
+    isStreaming: boolean;
+    content: string;
+    toolCalls: Array<{ name: string; arguments: Record<string, unknown> }>;
+  }>>({});
+  const cancelStreamRef = useRef<(() => void) | null>(null);
+  const activeConversationRef = useRef<number | null>(null);
+
   /**
    * 检查引擎状态
    */
@@ -333,10 +342,16 @@ export function useChatStore(userId: number | null) {
   }, [messages, currentConversationId, addMessage]);
 
   /**
-   * 发送消息并获取AI回复
+   * 发送消息并获取AI回复（流式响应）
    */
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return { success: false, error: '消息不能为空' };
+
+    // 如果有正在进行的流，先取消
+    if (cancelStreamRef.current) {
+      cancelStreamRef.current();
+      cancelStreamRef.current = null;
+    }
 
     // 如果没有当前对话，先创建一个
     let conversationId = currentConversationId;
@@ -352,34 +367,151 @@ export function useChatStore(userId: number | null) {
     }
     const targetConversationId: number = conversationId;
 
+    // 记录当前活动会话
+    activeConversationRef.current = targetConversationId;
+
     try {
       // 添加用户消息
       await addMessage('user', content);
 
-      // 显示打字指示器
+      // 开始流式响应 - 按会话隔离
+      setStreamingStates(prev => ({
+        ...prev,
+        [targetConversationId]: { isStreaming: true, content: '', toolCalls: [] }
+      }));
       setIsTyping(true);
 
-      // 发送到AI引擎
-      const result = await window.electronAPI.sendQueryToOpenClaw(content, targetConversationId);
+      // 使用流式API
+      const cancelFn = window.electronAPI.sendQueryToOpenClawStream(
+        content,
+        targetConversationId,
+        (chunk) => {
+          // 接收到新的chunk - 只更新当前会话的状态
+          setStreamingStates(prev => ({
+            ...prev,
+            [targetConversationId]: {
+              isStreaming: true,
+              toolCalls: prev[targetConversationId]?.toolCalls || [],
+              content: (prev[targetConversationId]?.content || '') + chunk
+            }
+          }));
+        },
+        (tool) => {
+          // 接收到工具调用 - 只更新当前会话的状态
+          setStreamingStates(prev => ({
+            ...prev,
+            [targetConversationId]: {
+              isStreaming: true,
+              content: prev[targetConversationId]?.content || '',
+              toolCalls: [...(prev[targetConversationId]?.toolCalls || []), tool]
+            }
+          }));
+        },
+        async (fullContent) => {
+          // 流式响应完成
+          setStreamingStates(prev => ({
+            ...prev,
+            [targetConversationId]: {
+              isStreaming: false,
+              content: prev[targetConversationId]?.content || '',
+              toolCalls: prev[targetConversationId]?.toolCalls || []
+            }
+          }));
+          setIsTyping(false);
+          cancelStreamRef.current = null;
+          activeConversationRef.current = null;
 
-      setIsTyping(false);
+          // 保存完整的AI回复到数据库
+          await addMessage('assistant', fullContent);
 
-      if (result.success && result.response) {
-        // 添加AI回复
-        await addMessage('assistant', result.response);
-        return { success: true };
-      } else {
-        // 添加错误消息
-        await addMessage('assistant', `抱歉，AI引擎返回错误: ${result.error || '未知错误'}`);
-        return { success: false, error: result.error };
-      }
+          // 延迟清空流式内容（让用户看到完成状态）
+          setTimeout(() => {
+            setStreamingStates(prev => {
+              const newState = { ...prev };
+              delete newState[targetConversationId];
+              return newState;
+            });
+          }, 100);
+        },
+        async (error) => {
+          // 发生错误
+          console.error('Stream error:', error);
+          const currentContent = streamingStates[targetConversationId]?.content || '';
+          setStreamingStates(prev => ({
+            ...prev,
+            [targetConversationId]: {
+              isStreaming: false,
+              content: prev[targetConversationId]?.content || '',
+              toolCalls: prev[targetConversationId]?.toolCalls || []
+            }
+          }));
+          setIsTyping(false);
+          cancelStreamRef.current = null;
+          activeConversationRef.current = null;
+
+          // 添加错误消息（只如果有内容才添加）
+          const errorContent = currentContent.trim()
+            ? currentContent + '\n\n[生成中断: ' + (error || '未知错误') + ']'
+            : `抱歉，AI引擎返回错误: ${error || '未知错误'}`;
+          await addMessage('assistant', errorContent);
+        }
+      );
+
+      // 保存取消函数
+      cancelStreamRef.current = cancelFn;
+
+      return { success: true };
     } catch (err) {
       console.error('Failed to send message:', err);
+      setStreamingStates(prev => ({
+        ...prev,
+        [targetConversationId]: { isStreaming: false, content: '', toolCalls: [] }
+      }));
       setIsTyping(false);
+      cancelStreamRef.current = null;
+      activeConversationRef.current = null;
       await addMessage('assistant', '抱歉，获取AI回复时出现错误。请检查AI引擎状态。');
       return { success: false, error: err instanceof Error ? err.message : '发送失败' };
     }
   }, [currentConversationId, createConversation, addMessage]);
+
+  /**
+   * 取消当前流式响应
+   */
+  const cancelStream = useCallback(() => {
+    const activeConvId = activeConversationRef.current;
+    if (cancelStreamRef.current && activeConvId) {
+      cancelStreamRef.current();
+      cancelStreamRef.current = null;
+
+      const currentContent = streamingStates[activeConvId]?.content || '';
+      setStreamingStates(prev => ({
+        ...prev,
+        [activeConvId]: {
+          isStreaming: false,
+          content: prev[activeConvId]?.content || '',
+          toolCalls: prev[activeConvId]?.toolCalls || []
+        }
+      }));
+      setIsTyping(false);
+
+      // 如果有流式内容，保存为一条消息
+      if (currentContent.trim()) {
+        addMessage('assistant', currentContent + '\n\n[已停止生成]');
+      }
+
+      // 延迟清空状态
+      setTimeout(() => {
+        setStreamingStates(prev => {
+          const newState = { ...prev };
+          delete newState[activeConvId];
+          return newState;
+        });
+      }, 100);
+
+      activeConversationRef.current = null;
+    }
+  }, [streamingStates, addMessage]);
 
   /**
    * 清空错误状态
@@ -407,6 +539,12 @@ export function useChatStore(userId: number | null) {
   // 获取当前对话
   const currentConversation = conversations.find(c => c.id === currentConversationId) || null;
 
+  // 获取当前会话的流式状态
+  const currentStreamingState = currentConversationId ? streamingStates[currentConversationId] : undefined;
+  const isStreaming = currentStreamingState?.isStreaming || false;
+  const streamingContent = currentStreamingState?.content || '';
+  const streamingToolCalls = currentStreamingState?.toolCalls || [];
+
   return {
     // 状态
     conversations,
@@ -417,6 +555,11 @@ export function useChatStore(userId: number | null) {
     engineStatus,
     loading,
     error,
+
+    // 流式响应状态 - 当前会话
+    isStreaming,
+    streamingContent,
+    streamingToolCalls,
 
     // 操作
     setCurrentConversationId,
@@ -431,6 +574,7 @@ export function useChatStore(userId: number | null) {
     updateMessageContent,
     regenerateMessage,
     sendMessage,
+    cancelStream,
     checkEngineStatus,
     startEngineStatusCheck,
     stopEngineStatusCheck,

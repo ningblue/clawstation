@@ -220,6 +220,15 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 type EngineStatus = 'stopped' | 'starting' | 'running' | 'error' | 'restarting';
 
 /**
+ * 进程信息类型
+ */
+interface ProcessInfo {
+  processName: string;
+  pid: number;
+  port: number;
+}
+
+/**
  * AI引擎设置面板（包含引擎控制和模型配置）
  */
 interface AIEngineSettingsProps {
@@ -235,6 +244,8 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
   const [showAddKey, setShowAddKey] = useState(false);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('stopped');
   const [engineError, setEngineError] = useState<string>('');
+  const [processInfo, setProcessInfo] = useState<ProcessInfo | null>(null);
+  const [isRepairing, setIsRepairing] = useState(false);
 
   const getProviderDisplayName = useCallback((provider: string): string => {
     return PROVIDER_DISPLAY_NAMES[provider] || provider;
@@ -256,7 +267,7 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
     }
   }, [engineStatus]);
 
-  // 加载引擎状态
+  // 加载引擎状态和进程信息
   const loadEngineStatus = useCallback(async () => {
     try {
       const status = await window.electronAPI.getOpenClawStatus();
@@ -267,6 +278,16 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
       }
       if (status.error) {
         setEngineError(status.error);
+      }
+
+      // 加载进程信息
+      const processResult = await window.electronAPI.getOpenClawProcessInfo();
+      if (processResult.success && processResult.info) {
+        setProcessInfo({
+          processName: processResult.info.processName,
+          pid: processResult.info.pid || 0,
+          port: processResult.info.port,
+        });
       }
     } catch (error) {
       console.error('Failed to get engine status:', error);
@@ -282,7 +303,10 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
       setEngineStatus(data.isRunning ? 'running' : 'stopped');
       if (!data.isRunning) {
         setEngineError('');
+        setProcessInfo(null);
       }
+      // 状态变化时刷新进程信息
+      loadEngineStatus();
     };
 
     window.electronAPI.onOpenClawStatusChanged(handleStatusChanged);
@@ -301,6 +325,8 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
       if (result.success) {
         setEngineStatus('running');
         onShowToast('AI引擎已启动', 'success');
+        // 刷新进程信息
+        await loadEngineStatus();
       } else {
         throw new Error(result.error || '启动失败');
       }
@@ -321,6 +347,7 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
       if (result.success) {
         setEngineStatus('stopped');
         setEngineError('');
+        setProcessInfo(null);
         onShowToast('AI引擎已停止', 'success');
       } else {
         throw new Error(result.error || '停止失败');
@@ -342,6 +369,8 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
         setEngineStatus('running');
         setEngineError('');
         onShowToast('AI引擎已重启', 'success');
+        // 刷新进程信息
+        await loadEngineStatus();
       } else {
         throw new Error(result.error || '重启失败');
       }
@@ -350,6 +379,74 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
       setEngineError(error instanceof Error ? error.message : '重启失败');
       onShowToast('重启失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  // 异常修复：强制清理旧进程并重启
+  const handleRepairEngine = async () => {
+    // 1. 检查引擎状态，如果运行正常，提示用户不需要修复
+    if (engineStatus === 'running') {
+      onShowToast('AI引擎运行正常，无需修复', 'success');
+      return;
+    }
+
+    // 2. 二次确认：告知用户会退出应用并重启
+    try {
+      const confirmChoice = await window.electronAPI.showConfirmDialog({
+        title: '确认修复AI引擎',
+        message: '异常修复将强制清理所有AI引擎进程并重新启动应用。\n\n此操作会暂时退出应用，修复完成后自动重启。\n\n是否继续？',
+        buttons: ['确认修复', '取消'],
+        defaultId: 1,
+        cancelId: 1,
+      });
+
+      if (confirmChoice !== 0) {
+        return; // 用户取消
+      }
+    } catch (dialogError) {
+      console.error('显示确认对话框失败:', dialogError);
+      return;
+    }
+
+    try {
+      setIsRepairing(true);
+      setEngineStatus('restarting');
+      onShowToast('正在修复AI引擎，应用即将重启...', 'success');
+
+      const result = await window.electronAPI.repairOpenClaw();
+      if (result.success) {
+        // 3. 修复成功后自动重启应用
+        onShowToast('修复成功，正在重启应用...', 'success');
+        await window.electronAPI.appRestart();
+      } else {
+        throw new Error(result.message || '修复失败');
+      }
+    } catch (error) {
+      setEngineStatus('error');
+      const errorMessage = error instanceof Error ? error.message : '修复失败';
+      setEngineError(errorMessage);
+      onShowToast('修复失败: ' + errorMessage, 'error');
+
+      // 修复失败，询问用户是否重启应用
+      try {
+        const userChoice = await window.electronAPI.showConfirmDialog({
+          title: 'AI引擎修复失败',
+          message: `修复AI引擎时遇到问题：${errorMessage}\n\n是否重启应用以尝试恢复？`,
+          buttons: ['重启应用', '稍后手动处理'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+
+        if (userChoice === 0) {
+          onShowToast('正在重启应用...', 'success');
+          await window.electronAPI.appRestart();
+        }
+      } catch (dialogError) {
+        console.error('显示确认对话框失败:', dialogError);
+      }
+    } finally {
+      setIsRepairing(false);
       setLoading(false);
     }
   };
@@ -400,6 +497,85 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
             )}
           </div>
         </div>
+
+        {/* 进程信息 */}
+        {processInfo && (
+          <div className="engine-process-info" style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: 'var(--bg-tertiary, #f8fafc)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color, #e2e8f0)',
+          }}>
+            <div style={{
+              fontSize: '13px',
+              fontWeight: 500,
+              color: 'var(--text-primary, #1e293b)',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>🖥️</span>
+              <span>进程信息</span>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '12px',
+              fontSize: '12px',
+            }}>
+              <div>
+                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>进程名</div>
+                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.processName}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>PID</div>
+                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.pid}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>端口</div>
+                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.port}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 异常修复按钮 */}
+        <div style={{
+          marginTop: '16px',
+          paddingTop: '16px',
+          borderTop: '1px solid var(--border-color, #e2e8f0)',
+        }}>
+          <button
+            className="btn btn-sm"
+            onClick={handleRepairEngine}
+            disabled={isRepairing || engineStatus === 'running'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: engineStatus === 'running' ? '#9ca3af' : '#ef4444',
+              borderColor: engineStatus === 'running' ? '#9ca3af' : '#ef4444',
+              cursor: engineStatus === 'running' ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <span>{isRepairing ? '⟳' : '🔧'}</span>
+            <span>
+              {isRepairing ? '修复中...' : engineStatus === 'running' ? '引擎运行正常' : '异常修复'}
+            </span>
+          </button>
+          <div style={{
+            fontSize: '11px',
+            color: 'var(--text-secondary, #64748b)',
+            marginTop: '6px',
+          }}>
+            {engineStatus === 'running'
+              ? 'AI引擎运行正常，无需修复'
+              : '清理残留进程并强制重启应用'}
+          </div>
+        </div>
+
         {engineError && (
           <div className="engine-status-error">
             {engineError}
@@ -417,6 +593,32 @@ interface AIModelSettingsProps {
   onShowToast: (message: string, type: 'success' | 'error') => void;
 }
 
+// 搜索 API 提供商配置
+interface SearchProviderConfig {
+  id: string;
+  name: string;
+  hasKey: boolean;
+  description: string;
+}
+
+// 搜索 API 提供商列表
+const SEARCH_PROVIDERS: SearchProviderConfig[] = [
+  { id: 'brave', name: 'Brave Search', hasKey: false, description: '免费额度：每月 2000 次请求' },
+  { id: 'perplexity', name: 'Perplexity', hasKey: false, description: '需要 Perplexity API Key' },
+  { id: 'grok', name: 'Grok (xAI)', hasKey: false, description: '需要 xAI API Key' },
+  { id: 'gemini', name: 'Google Gemini', hasKey: false, description: '需要 Google AI API Key' },
+  { id: 'kimi', name: 'Kimi (Moonshot)', hasKey: false, description: '需要 Kimi API Key' },
+];
+
+// 初始搜索提供商列表
+const DEFAULT_SEARCH_PROVIDERS: SearchProviderConfig[] = [
+  { id: 'brave', name: 'Brave Search', hasKey: false, description: '免费额度：每月 2000 次请求' },
+  { id: 'perplexity', name: 'Perplexity', hasKey: false, description: '需要 Perplexity API Key' },
+  { id: 'grok', name: 'Grok (xAI)', hasKey: false, description: '需要 xAI API Key' },
+  { id: 'gemini', name: 'Google Gemini', hasKey: false, description: '需要 Google AI API Key' },
+  { id: 'kimi', name: 'Kimi (Moonshot)', hasKey: false, description: '需要 Kimi API Key' },
+];
+
 const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   const [loading, setLoading] = useState(false);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -424,6 +626,13 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [apiKey, setApiKey] = useState('');
   const [showAddKey, setShowAddKey] = useState(false);
+
+  // 搜索 API Key 状态
+  const [searchProvider, setSearchProvider] = useState<string>('brave');
+  const [searchApiKey, setSearchApiKey] = useState('');
+  const [searchEnabled, setSearchEnabled] = useState(true);
+  const [showAddSearchKey, setShowAddSearchKey] = useState(false);
+  const [searchProviders, setSearchProviders] = useState<SearchProviderConfig[]>(DEFAULT_SEARCH_PROVIDERS);
 
   const getProviderDisplayName = useCallback((provider: string): string => {
     return PROVIDER_DISPLAY_NAMES[provider] || provider;
@@ -557,6 +766,60 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
       }
     } catch (error) {
       onShowToast('切换失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 保存搜索 API Key
+  const handleSaveSearchApiKey = async () => {
+    if (!searchApiKey.trim()) {
+      onShowToast('请输入 API Key', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // 调用后端保存搜索 API Key
+      const result = await window.electronAPI.setSearchApiKey(searchProvider, searchApiKey);
+      if (result.success) {
+        onShowToast('搜索 API Key 已保存', 'success');
+        setSearchApiKey('');
+        setShowAddSearchKey(false);
+        // 更新本地状态
+        setSearchProviders(prev => prev.map(p =>
+          p.id === searchProvider ? { ...p, hasKey: true } : p
+        ));
+      } else {
+        throw new Error(result.error || '保存失败');
+      }
+    } catch (error) {
+      onShowToast('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 删除搜索 API Key
+  const handleRemoveSearchApiKey = async (providerId: string) => {
+    const providerName = searchProviders.find(p => p.id === providerId)?.name || providerId;
+    if (!confirm(`确定要删除 ${providerName} 的搜索 API Key 吗？`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await window.electronAPI.removeSearchApiKey(providerId);
+      if (result.success) {
+        onShowToast('搜索 API Key 已删除', 'success');
+        setSearchProviders(prev => prev.map(p =>
+          p.id === providerId ? { ...p, hasKey: false } : p
+        ));
+      } else {
+        throw new Error(result.error || '删除失败');
+      }
+    } catch (error) {
+      onShowToast('删除失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     } finally {
       setLoading(false);
     }
@@ -705,6 +968,111 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                 className="btn btn-primary"
                 onClick={handleSaveApiKey}
                 disabled={!selectedProvider || !apiKey.trim() || loading}
+              >
+                {loading ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 网络搜索 API Key 配置 */}
+      <div className="settings-group" style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+        <div className="settings-group-title">
+          <span>🌐 网络搜索</span>
+        </div>
+        <div className="settings-item-desc" style={{ marginBottom: '16px' }}>
+          配置网络搜索 API Key，启用 AI 实时联网搜索功能
+        </div>
+
+        {/* 启用搜索开关 */}
+        <div className="settings-item" style={{ marginBottom: '16px' }}>
+          <div className="settings-item-label">
+            <div className="settings-item-title">启用网络搜索</div>
+            <div className="settings-item-desc">允许 AI 使用网络搜索工具</div>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={searchEnabled}
+              onChange={(e) => setSearchEnabled(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        {/* 搜索 API 提供商列表 */}
+        <div className="search-provider-list">
+          {searchProviders.map(provider => (
+            <div key={provider.id} className="provider-item" style={{ marginBottom: '12px' }}>
+              <div className="provider-header">
+                <span className="provider-name">{provider.name}</span>
+                <span className={`provider-status ${provider.hasKey ? 'configured' : 'unconfigured'}`}>
+                  {provider.hasKey ? '已配置' : '未配置'}
+                </span>
+                {provider.hasKey ? (
+                  <button
+                    className="btn-icon-sm"
+                    onClick={() => handleRemoveSearchApiKey(provider.id)}
+                    title="删除配置"
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => {
+                      setSearchProvider(provider.id);
+                      setShowAddSearchKey(true);
+                    }}
+                  >
+                    配置
+                  </button>
+                )}
+              </div>
+              <div className="settings-item-desc" style={{ marginTop: '4px' }}>
+                {provider.description}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 添加搜索 API Key 弹窗 */}
+      {showAddSearchKey && (
+        <div className="modal-overlay active" onClick={() => setShowAddSearchKey(false)}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                配置 {searchProviders.find(p => p.id === searchProvider)?.name} API Key
+              </h3>
+              <button className="modal-close" onClick={() => setShowAddSearchKey(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">API Key</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="输入 API Key"
+                  value={searchApiKey}
+                  onChange={e => setSearchApiKey(e.target.value)}
+                />
+              </div>
+              <div className="form-hint">
+                {searchProvider === 'brave' && '获取 Brave API Key: https://brave.com/search/api/'}
+                {searchProvider === 'perplexity' && '获取 Perplexity API Key: https://www.perplexity.ai/settings'}
+                {searchProvider === 'grok' && '获取 xAI API Key: https://console.x.ai'}
+                {searchProvider === 'gemini' && '获取 Google AI API Key: https://aistudio.google.com/app/apikey'}
+                {searchProvider === 'kimi' && '获取 Kimi API Key: https://platform.moonshot.cn/'}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn" onClick={() => setShowAddSearchKey(false)}>取消</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveSearchApiKey}
+                disabled={!searchApiKey.trim() || loading}
               >
                 {loading ? '保存中...' : '保存'}
               </button>

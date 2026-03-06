@@ -26,6 +26,8 @@ export interface ChatContainerProps {
   // 状态
   isLoading?: boolean;
   isStreaming?: boolean;
+  streamingContent?: string;
+  onCancelStream?: () => void;
 
   // 回调函数
   onSendMessage: (message: string) => void;
@@ -142,6 +144,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   availableModels = [],
   isLoading = false,
   isStreaming = false,
+  streamingContent = '',
+  onCancelStream,
   onSendMessage,
   onSelectConversation,
   onCreateConversation,
@@ -288,6 +292,19 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                   />
                 ))}
 
+                {/* 流式响应内容 */}
+                {isStreaming && streamingContent && (
+                  <ChatItem
+                    message={{
+                      id: -1,
+                      role: 'assistant',
+                      content: streamingContent,
+                      isStreaming: true,
+                    }}
+                    onCopy={handleCopy}
+                  />
+                )}
+
                 {isLoading && !isStreaming && (
                   <LoadingSkeleton />
                 )}
@@ -313,6 +330,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             disabled={isLoading || isStreaming}
             placeholder="输入消息..."
             modelName={currentModelName}
+            isStreaming={isStreaming}
+            onCancel={onCancelStream}
           />
         </div>
       </div>

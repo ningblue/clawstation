@@ -12,6 +12,10 @@ export interface ChatInputProps {
   disabled?: boolean;
   /** 占位符文本 */
   placeholder?: string;
+  /** 是否正在流式响应 */
+  isStreaming?: boolean;
+  /** 取消流式响应回调 */
+  onCancel?: () => void;
 }
 
 // 智能提示配置
@@ -57,6 +61,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   disabled = false,
   placeholder = '输入消息... (按 Enter 发送, Shift+Enter 换行)',
+  isStreaming = false,
+  onCancel,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -125,19 +131,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled}
+          disabled={disabled || isStreaming}
           rows={1}
         />
-        <button
-          className="send-btn"
-          onClick={handleSend}
-          disabled={disabled || !inputValue.trim()}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+        {isStreaming ? (
+          <button
+            className="send-btn stop-btn"
+            onClick={onCancel}
+            title="停止生成"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+          </button>
+        ) : (
+          <button
+            className="send-btn"
+            onClick={handleSend}
+            disabled={disabled || !inputValue.trim()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

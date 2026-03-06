@@ -40,12 +40,55 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showErrorDialog: (options: { title: string; message: string }) =>
     ipcRenderer.invoke('show-error-dialog', options),
 
+  // 确认对话框
+  showConfirmDialog: (options: {
+    title: string;
+    message: string;
+    buttons?: string[];
+    defaultId?: number;
+    cancelId?: number;
+  }) => ipcRenderer.invoke('show-confirm-dialog', options),
+
   // OpenClaw AI引擎相关API
   getOpenClawStatus: () => ipcRenderer.invoke('openclaw:status'),
   sendQueryToOpenClaw: (message: string, conversationId?: number) => ipcRenderer.invoke('openclaw:query', message, conversationId),
+  sendQueryToOpenClawStream: (message: string, conversationId?: number, onChunk?: (chunk: string) => void, onToolCall?: (tool: { name: string; arguments: Record<string, unknown> }) => void, onDone?: (fullContent: string) => void, onError?: (error: string) => void) => {
+    const webContentsId = ipcRenderer.send('openclaw:query:stream:start', message, conversationId);
+
+    const chunkHandler = (event: any, data: any) => {
+      if (data.type === 'chunk' && onChunk) {
+        onChunk(data.content);
+      } else if (data.type === 'tool_call' && onToolCall) {
+        onToolCall(data.tool);
+      } else if (data.type === 'done' && onDone) {
+        onDone(data.content);
+        cleanup();
+      } else if (data.type === 'error' && onError) {
+        onError(data.error);
+        cleanup();
+      }
+    };
+
+    const cleanup = () => {
+      ipcRenderer.removeListener('openclaw:stream:chunk', chunkHandler);
+    };
+
+    ipcRenderer.on('openclaw:stream:chunk', chunkHandler);
+
+    // 返回取消函数
+    return () => {
+      ipcRenderer.send('openclaw:query:stream:cancel');
+      cleanup();
+    };
+  },
   startOpenClaw: () => ipcRenderer.invoke('openclaw:start'),
   stopOpenClaw: () => ipcRenderer.invoke('openclaw:stop'),
   restartOpenClaw: () => ipcRenderer.invoke('openclaw:restart'),
+
+  // AI 引擎进程管理
+  getOpenClawProcessInfo: () => ipcRenderer.invoke('openclaw:process:info'),
+  cleanupOpenClawProcesses: () => ipcRenderer.invoke('openclaw:process:cleanup'),
+  repairOpenClaw: () => ipcRenderer.invoke('openclaw:repair'),
 
   // OpenClaw 配置管理API
   getOpenClawConfig: () => ipcRenderer.invoke('openclaw:config:get'),
@@ -61,6 +104,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   hasApiKey: (provider: string, agentId?: string) => ipcRenderer.invoke('openclaw:apikey:has', provider, agentId),
   getConfiguredProviders: (agentId?: string) => ipcRenderer.invoke('openclaw:apikey:providers', agentId),
   removeApiKey: (provider: string, agentId?: string) => ipcRenderer.invoke('openclaw:apikey:remove', provider, agentId),
+
+  // 搜索 API Key 管理
+  setSearchApiKey: (provider: string, apiKey: string) => ipcRenderer.invoke('openclaw:search:apikey:set', provider, apiKey),
+  removeSearchApiKey: (provider: string) => ipcRenderer.invoke('openclaw:search:apikey:remove', provider),
 
   // OpenClaw 模型管理API
   getModelsList: () => ipcRenderer.invoke('openclaw:models:list'),
@@ -152,6 +199,15 @@ declare global {
       // 错误对话框
       showErrorDialog: (options: { title: string; message: string }) => Promise<void>;
 
+      // 确认对话框
+      showConfirmDialog: (options: {
+        title: string;
+        message: string;
+        buttons?: string[];
+        defaultId?: number;
+        cancelId?: number;
+      }) => Promise<number>;
+
       // OpenClaw AI引擎相关API
       getOpenClawStatus: () => Promise<{
         isRunning: boolean;
@@ -167,6 +223,14 @@ declare global {
         response?: string;
         error?: string;
       }>;
+      sendQueryToOpenClawStream: (
+        message: string,
+        conversationId?: number,
+        onChunk?: (chunk: string) => void,
+        onToolCall?: (tool: { name: string; arguments: Record<string, unknown> }) => void,
+        onDone?: (fullContent: string) => void,
+        onError?: (error: string) => void
+      ) => (() => void);
       startOpenClaw: () => Promise<{
         success: boolean;
         error?: string;
@@ -178,6 +242,29 @@ declare global {
       restartOpenClaw: () => Promise<{
         success: boolean;
         error?: string;
+      }>;
+
+      // AI 引擎进程管理
+      getOpenClawProcessInfo: () => Promise<{
+        success: boolean;
+        info?: {
+          processName: string;
+          pid: number | null;
+          port: number;
+          isExternal: boolean;
+          isRunning: boolean;
+          uptime: number;
+        };
+        error?: string;
+      }>;
+      cleanupOpenClawProcesses: () => Promise<{
+        success: boolean;
+        killed: number;
+        error?: string;
+      }>;
+      repairOpenClaw: () => Promise<{
+        success: boolean;
+        message: string;
       }>;
 
       // OpenClaw 配置管理API
@@ -230,6 +317,16 @@ declare global {
         error?: string;
       }>;
       removeApiKey: (provider: string, agentId?: string) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+
+      // 搜索 API Key 管理
+      setSearchApiKey: (provider: string, apiKey: string) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      removeSearchApiKey: (provider: string) => Promise<{
         success: boolean;
         error?: string;
       }>;
