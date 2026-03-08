@@ -1,9 +1,10 @@
 /**
  * ChatInput 组件
- * 聊天输入区域，包含文本输入框、发送按钮和智能提示
+ * 聊天输入区域，包含文本输入框、发送按钮、模型选择器和智能提示
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { InlineModelPicker } from './InlineModelPicker';
 
 export interface ChatInputProps {
   /** 发送消息回调 */
@@ -16,6 +17,8 @@ export interface ChatInputProps {
   isStreaming?: boolean;
   /** 取消流式响应回调 */
   onCancel?: () => void;
+  /** 引擎是否正在重启（模型切换中） */
+  engineRestarting?: boolean;
 }
 
 // 智能提示配置
@@ -63,9 +66,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   placeholder = '输入消息... (按 Enter 发送, Shift+Enter 换行)',
   isStreaming = false,
   onCancel,
+  engineRestarting = false,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const effectivePlaceholder = engineRestarting ? '正在切换模型...' : placeholder;
+  const effectiveDisabled = disabled || isStreaming || engineRestarting;
 
   // 自动调整高度
   const adjustHeight = useCallback(() => {
@@ -130,32 +137,35 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           value={inputValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || isStreaming}
+          placeholder={effectivePlaceholder}
+          disabled={effectiveDisabled}
           rows={1}
         />
-        {isStreaming ? (
-          <button
-            className="send-btn stop-btn"
-            onClick={onCancel}
-            title="停止生成"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
-            </svg>
-          </button>
-        ) : (
-          <button
-            className="send-btn"
-            onClick={handleSend}
-            disabled={disabled || !inputValue.trim()}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        )}
+        <div className="chat-input-bottom-bar">
+          <InlineModelPicker disabled={effectiveDisabled} />
+          {isStreaming ? (
+            <button
+              className="send-btn stop-btn"
+              onClick={onCancel}
+              title="停止生成"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+            </button>
+          ) : (
+            <button
+              className="send-btn"
+              onClick={handleSend}
+              disabled={effectiveDisabled || !inputValue.trim()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

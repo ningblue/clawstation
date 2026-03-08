@@ -113,6 +113,51 @@ clawstation/
 └── tsconfig.json
 ```
 
+## 架构图
+
+### 当前架构（内置 OpenClaw）
+
+```mermaid
+graph TD
+    U[用户] --> R[Renderer React UI]
+    R --> P[Preload\nwindow.electronAPI]
+    P --> I[IPC 通道]
+    I --> M[Main Process\nOpenClawManager]
+
+    M -->|HTTP /health| G[OpenClaw Gateway\n127.0.0.1:18791]
+    M -->|HTTP /v1/chat/completions| G
+    M -->|spawn / stop / health-check| E[OpenClaw 子进程]
+
+    E --> C[~/.clawstation/openclaw.json]
+    E --> L[~/.clawstation/logs/openclaw.log]
+    M --> D[(SQLite 本地会话数据)]
+```
+
+说明：
+- 对话请求链路是 `Renderer -> IPC -> Main -> HTTP(OpenClaw)`。
+- 当前并非“纯接口隔离”，主应用还负责本地引擎进程管理（启动/停止/重启/健康检查）以及本地配置与日志路径。
+
+### 目标架构（快速对接云端 AI 引擎）
+
+```mermaid
+graph TD
+    U[用户] --> R[Renderer React UI]
+    R --> P[Preload\nwindow.electronAPI]
+    P --> I[IPC 通道]
+    I --> M[Main Process\nEngine Adapter]
+
+    M -->|统一接口: /health /v1/chat/completions| A{Engine Provider}
+    A --> B[本地 OpenClaw]
+    A --> C[云端 AI Gateway]
+
+    M --> D[(SQLite 本地会话数据)]
+```
+
+建议：
+- 保持主应用内部只调用统一的 `Engine Adapter` 接口。
+- 本地引擎与云端引擎都实现同一协议（`/health`、`/v1/chat/completions`、SSE 流式）。
+- 通过配置切换 `provider=local|cloud`，可实现快速迁移与回滚。
+
 ## 技术栈
 
 - **框架**: Electron 40
@@ -120,6 +165,7 @@ clawstation/
 - **样式**: Tailwind CSS
 - **数据库**: Better-SQLite3
 - **AI 引擎**: OpenClaw (bundled)
+
 
 ## 配置说明
 

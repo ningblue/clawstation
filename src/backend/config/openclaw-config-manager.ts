@@ -4,11 +4,11 @@
  * 负责管理 OpenClaw 的完整配置，包括 agents、models、gateway 等
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import log from 'electron-log';
-import { OPENCLAW_PORT, OPENCLAW_BIND_ADDRESS } from '../../shared/constants';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import log from "electron-log";
+import { OPENCLAW_PORT, OPENCLAW_BIND_ADDRESS } from "../../shared/constants";
 
 /**
  * Agent 模型配置
@@ -90,7 +90,7 @@ export interface GatewayHttpConfig {
  * Gateway 认证配置
  */
 export interface GatewayAuthConfig {
-  mode?: 'none' | 'token' | 'password' | 'trusted-proxy';
+  mode?: "none" | "token" | "password" | "trusted-proxy";
   token?: string;
   password?: string;
   allowTailscale?: boolean;
@@ -109,9 +109,9 @@ export interface GatewayControlUiConfig {
  * Gateway 配置
  */
 export interface GatewayConfig {
-  mode?: 'local' | 'remote';
+  mode?: "local" | "remote";
   port?: number;
-  bind?: 'auto' | 'lan' | 'loopback' | 'custom' | 'tailnet';
+  bind?: "auto" | "lan" | "loopback" | "custom" | "tailnet";
   customBindHost?: string;
   auth?: GatewayAuthConfig;
   http?: GatewayHttpConfig;
@@ -124,7 +124,7 @@ export interface GatewayConfig {
 export interface ModelProviderConfig {
   baseUrl: string;
   apiKey?: string;
-  auth?: 'api-key' | 'aws-sdk' | 'oauth' | 'token';
+  auth?: "api-key" | "aws-sdk" | "oauth" | "token";
   models: Array<{
     id: string;
     name: string;
@@ -137,8 +137,21 @@ export interface ModelProviderConfig {
  * 模型配置
  */
 export interface ModelsConfig {
-  mode?: 'merge' | 'replace';
+  mode?: "merge" | "replace";
   providers?: Record<string, ModelProviderConfig>;
+}
+
+/**
+ * Auth Profile Reference (OpenClaw 原生格式)
+ * 用于 openclaw.json 中的 auth.profiles 部分
+ */
+export interface AuthProfileReference {
+  provider: string;
+  mode: "api_key" | "oauth" | "token";
+}
+
+export interface AuthConfig {
+  profiles?: Record<string, AuthProfileReference>;
 }
 
 /**
@@ -150,6 +163,7 @@ export interface OpenClawConfig {
     lastTouchedAt?: string;
   };
   gateway?: GatewayConfig;
+  auth?: AuthConfig;
   agents?: AgentsConfig;
   models?: ModelsConfig;
   tools?: {
@@ -171,19 +185,24 @@ export interface OpenClawConfig {
 }
 
 /**
- * Auth Profile 配置
+ * Auth Profile Credential (OpenClaw 原生格式)
+ * 与 ~/.openclaw/agents/{agent}/agent/auth-profiles.json 格式兼容
  */
-export interface AuthProfile {
+export interface AuthProfileCredential {
+  type: "api_key" | "oauth" | "token";
   provider: string;
-  apiKey?: string;
+  key?: string; // api_key 类型使用
   baseUrl?: string;
 }
 
 /**
- * Auth Profiles 文件结构
+ * Auth Profiles Store (OpenClaw 原生格式)
+ * 格式: { version: 1, profiles: { "provider:default": { type, provider, key } } }
  */
-export interface AuthProfilesConfig {
-  profiles: AuthProfile[];
+export interface AuthProfileStore {
+  version?: number;
+  profiles: Record<string, AuthProfileCredential>;
+  usageStats?: Record<string, { lastUsed?: number; errorCount?: number }>;
 }
 
 /**
@@ -192,10 +211,10 @@ export interface AuthProfilesConfig {
 export const DEFAULT_CONFIG = {
   GATEWAY_PORT: OPENCLAW_PORT,
   BIND_ADDRESS: OPENCLAW_BIND_ADDRESS,
-  DEFAULT_AGENT_ID: 'default',
-  DEFAULT_MODEL: 'anthropic/claude-sonnet-4-6',
-  DEFAULT_PROVIDER: 'anthropic',
-  TOKEN_PREFIX: 'claw_',
+  DEFAULT_AGENT_ID: "default",
+  DEFAULT_MODEL: "anthropic/claude-sonnet-4-6",
+  DEFAULT_PROVIDER: "anthropic",
+  TOKEN_PREFIX: "claw_",
   TOKEN_LENGTH: 32,
 } as const;
 
@@ -203,14 +222,14 @@ export const DEFAULT_CONFIG = {
  * OpenClaw 配置管理器
  */
 export class OpenClawConfigManager {
-  private readonly log = log.scope('OpenClawConfigManager');
+  private readonly log = log.scope("OpenClawConfigManager");
   private readonly configDir: string;
   private readonly configPath: string;
   private config: OpenClawConfig = {};
 
   constructor(configDir?: string) {
-    this.configDir = configDir || path.join(os.homedir(), '.clawstation');
-    this.configPath = path.join(this.configDir, 'openclaw.json');
+    this.configDir = configDir || path.join(os.homedir(), ".clawstation");
+    this.configPath = path.join(this.configDir, "openclaw.json");
     this.log.info(`Config manager initialized with path: ${this.configPath}`);
   }
 
@@ -242,7 +261,8 @@ export class OpenClawConfigManager {
    * 生成安全随机 token
    */
   private generateSecureToken(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let token = DEFAULT_CONFIG.TOKEN_PREFIX;
     for (let i = 0; i < DEFAULT_CONFIG.TOKEN_LENGTH; i++) {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -264,19 +284,19 @@ export class OpenClawConfigManager {
     this.ensureConfigDir();
 
     if (!fs.existsSync(this.configPath)) {
-      this.log.info('Config file not found, creating default config');
+      this.log.info("Config file not found, creating default config");
       this.config = this.createDefaultConfig();
       this.saveConfig();
       return this.config;
     }
 
     try {
-      const content = fs.readFileSync(this.configPath, 'utf8');
+      const content = fs.readFileSync(this.configPath, "utf8");
       this.config = JSON.parse(content);
-      this.log.info('Config loaded successfully');
+      this.log.info("Config loaded successfully");
       return this.config;
     } catch (error) {
-      this.log.error('Failed to load config:', error);
+      this.log.error("Failed to load config:", error);
       this.config = this.createDefaultConfig();
       this.saveConfig();
       return this.config;
@@ -293,14 +313,14 @@ export class OpenClawConfigManager {
     this.config.meta = {
       ...this.config.meta,
       lastTouchedAt: this.getTimestamp(),
-      lastTouchedVersion: '1.0.0',
+      lastTouchedVersion: "1.0.0",
     };
 
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-      this.log.info('Config saved successfully');
+      this.log.info("Config saved successfully");
     } catch (error) {
-      this.log.error('Failed to save config:', error);
+      this.log.error("Failed to save config:", error);
       throw error;
     }
   }
@@ -314,14 +334,14 @@ export class OpenClawConfigManager {
     return {
       meta: {
         lastTouchedAt: this.getTimestamp(),
-        lastTouchedVersion: '1.0.0',
+        lastTouchedVersion: "1.0.0",
       },
       gateway: {
-        mode: 'local',
+        mode: "local",
         port: DEFAULT_CONFIG.GATEWAY_PORT,
-        bind: 'loopback',
+        bind: "loopback",
         auth: {
-          mode: 'token',
+          mode: "token",
           token: token,
         },
         http: {
@@ -343,36 +363,36 @@ export class OpenClawConfigManager {
           {
             id: DEFAULT_CONFIG.DEFAULT_AGENT_ID,
             default: true,
-            name: 'Default Agent',
+            name: "Default Agent",
             model: {
               primary: DEFAULT_CONFIG.DEFAULT_MODEL,
-              fallbacks: ['openai/gpt-4o', 'google/gemini-pro'],
+              fallbacks: ["openai/gpt-4o", "google/gemini-pro"],
             },
           },
         ],
       },
       models: {
-        mode: 'merge',
+        mode: "merge",
         providers: {
           anthropic: {
-            baseUrl: 'https://api.anthropic.com',
-            auth: 'api-key',
+            baseUrl: "https://api.anthropic.com",
+            auth: "api-key",
             models: [
               {
-                id: 'claude-sonnet-4-6',
-                name: 'Claude Sonnet 4.6',
+                id: "claude-sonnet-4-6",
+                name: "Claude Sonnet 4.6",
                 contextWindow: 200000,
                 maxTokens: 8192,
               },
             ],
           },
           openai: {
-            baseUrl: 'https://api.openai.com',
-            auth: 'api-key',
+            baseUrl: "https://api.openai.com",
+            auth: "api-key",
             models: [
               {
-                id: 'gpt-4o',
-                name: 'GPT-4o',
+                id: "gpt-4o",
+                name: "GPT-4o",
                 contextWindow: 128000,
                 maxTokens: 4096,
               },
@@ -426,7 +446,11 @@ export class OpenClawConfigManager {
 
     const result = { ...target };
     for (const key of Object.keys(source)) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (
+        source[key] &&
+        typeof source[key] === "object" &&
+        !Array.isArray(source[key])
+      ) {
         result[key] = this.deepMerge(target[key], source[key]);
       } else {
         result[key] = source[key];
@@ -479,7 +503,9 @@ export class OpenClawConfigManager {
     }
 
     // 检查是否已存在
-    const existingIndex = this.config.agents.list.findIndex((a) => a.id === agent.id);
+    const existingIndex = this.config.agents.list.findIndex(
+      (a) => a.id === agent.id
+    );
     if (existingIndex >= 0) {
       this.config.agents.list[existingIndex] = agent;
       this.log.info(`Updated agent: ${agent.id}`);
@@ -500,7 +526,9 @@ export class OpenClawConfigManager {
     }
 
     const initialLength = this.config.agents.list.length;
-    this.config.agents.list = this.config.agents.list.filter((a) => a.id !== agentId);
+    this.config.agents.list = this.config.agents.list.filter(
+      (a) => a.id !== agentId
+    );
 
     if (this.config.agents.list.length < initialLength) {
       this.log.info(`Removed agent: ${agentId}`);
@@ -552,6 +580,31 @@ export class OpenClawConfigManager {
   }
 
   /**
+   * 设置默认模型（同时更新 agents.defaults.model 和默认 agent 的模型）
+   */
+  setDefaultModel(model: AgentModelConfig): void {
+    if (!this.config.agents) {
+      this.config.agents = {};
+    }
+
+    // 更新 agents.defaults.model（OpenClaw 引擎优先使用这个）
+    this.config.agents.defaults = {
+      ...this.config.agents.defaults,
+      model,
+    };
+
+    // 同时更新默认 agent 的模型配置
+    const defaultAgent = this.getDefaultAgent();
+    if (defaultAgent) {
+      defaultAgent.model = model;
+      this.addAgent(defaultAgent);
+    }
+
+    this.saveConfig();
+    this.log.info(`Set default model:`, model);
+  }
+
+  /**
    * 获取 Gateway Token
    */
   getGatewayToken(): string | undefined {
@@ -567,11 +620,11 @@ export class OpenClawConfigManager {
       this.config.gateway = {};
     }
     if (!this.config.gateway.auth) {
-      this.config.gateway.auth = { mode: 'token' };
+      this.config.gateway.auth = { mode: "token" };
     }
     this.config.gateway.auth.token = newToken;
     this.saveConfig();
-    this.log.info('Gateway token regenerated');
+    this.log.info("Gateway token regenerated");
     return newToken;
   }
 
@@ -579,7 +632,7 @@ export class OpenClawConfigManager {
    * 获取 Agent 目录路径
    */
   getAgentDir(agentId: string): string {
-    return path.join(this.configDir, 'agents', agentId, 'agent');
+    return path.join(this.configDir, "agents", agentId, "agent");
   }
 
   /**
@@ -598,33 +651,58 @@ export class OpenClawConfigManager {
    * 获取 Auth Profiles 路径
    */
   getAuthProfilesPath(agentId: string): string {
-    return path.join(this.getAgentDir(agentId), 'auth-profiles.json');
+    return path.join(this.getAgentDir(agentId), "auth-profiles.json");
   }
 
   /**
-   * 加载 Auth Profiles
+   * 加载 Auth Profiles (OpenClaw 原生格式)
    */
-  loadAuthProfiles(agentId: string): AuthProfilesConfig {
+  loadAuthProfiles(agentId: string): AuthProfileStore {
     const authPath = this.getAuthProfilesPath(agentId);
 
     if (!fs.existsSync(authPath)) {
-      this.log.info(`Auth profiles not found for agent ${agentId}, creating empty config`);
-      return { profiles: [] };
+      this.log.info(
+        `Auth profiles not found for agent ${agentId}, creating empty config`
+      );
+      return { version: 1, profiles: {} };
     }
 
     try {
-      const content = fs.readFileSync(authPath, 'utf8');
-      return JSON.parse(content);
+      const content = fs.readFileSync(authPath, "utf8");
+      const parsed = JSON.parse(content);
+
+      // 兼容旧格式: { profiles: [] } -> { version: 1, profiles: {} }
+      if (Array.isArray(parsed.profiles)) {
+        const newProfiles: Record<string, AuthProfileCredential> = {};
+        for (const p of parsed.profiles) {
+          if (p.provider) {
+            newProfiles[`${p.provider}:default`] = {
+              type: "api_key",
+              provider: p.provider,
+              key: p.apiKey,
+            };
+          }
+        }
+        this.log.info(
+          `Migrated auth profiles for agent ${agentId} to new format`
+        );
+        return { version: 1, profiles: newProfiles };
+      }
+
+      return parsed as AuthProfileStore;
     } catch (error) {
-      this.log.error(`Failed to load auth profiles for agent ${agentId}:`, error);
-      return { profiles: [] };
+      this.log.error(
+        `Failed to load auth profiles for agent ${agentId}:`,
+        error
+      );
+      return { version: 1, profiles: {} };
     }
   }
 
   /**
-   * 保存 Auth Profiles
+   * 保存 Auth Profiles (OpenClaw 原生格式)
    */
-  saveAuthProfiles(agentId: string, authConfig: AuthProfilesConfig): void {
+  saveAuthProfiles(agentId: string, authConfig: AuthProfileStore): void {
     this.ensureAgentDir(agentId);
     const authPath = this.getAuthProfilesPath(agentId);
 
@@ -632,51 +710,59 @@ export class OpenClawConfigManager {
       fs.writeFileSync(authPath, JSON.stringify(authConfig, null, 2));
       this.log.info(`Auth profiles saved for agent: ${agentId}`);
     } catch (error) {
-      this.log.error(`Failed to save auth profiles for agent ${agentId}:`, error);
+      this.log.error(
+        `Failed to save auth profiles for agent ${agentId}:`,
+        error
+      );
       throw error;
     }
   }
 
   /**
-   * 添加或更新 Auth Profile
+   * 添加或更新 Auth Profile (OpenClaw 原生格式)
    */
-  setAuthProfile(agentId: string, profile: AuthProfile): void {
+  setAuthProfile(
+    agentId: string,
+    provider: string,
+    credential: AuthProfileCredential
+  ): void {
     const authConfig = this.loadAuthProfiles(agentId);
 
-    const existingIndex = authConfig.profiles.findIndex(
-      (p) => p.provider === profile.provider
-    );
-
-    if (existingIndex >= 0) {
-      authConfig.profiles[existingIndex] = profile;
-    } else {
-      authConfig.profiles.push(profile);
-    }
+    // OpenClaw 格式: profiles["provider:default"] = { type, provider, key }
+    const profileId = `${provider}:default`;
+    authConfig.profiles[profileId] = credential;
 
     this.saveAuthProfiles(agentId, authConfig);
-    this.log.info(`Set auth profile for agent ${agentId}, provider: ${profile.provider}`);
+    this.log.info(
+      `Set auth profile for agent ${agentId}, provider: ${provider}`
+    );
   }
 
   /**
-   * 获取指定 Provider 的 Auth Profile
+   * 获取指定 Provider 的 Auth Profile (OpenClaw 原生格式)
    */
-  getAuthProfile(agentId: string, provider: string): AuthProfile | undefined {
+  getAuthProfile(
+    agentId: string,
+    provider: string
+  ): AuthProfileCredential | undefined {
     const authConfig = this.loadAuthProfiles(agentId);
-    return authConfig.profiles.find((p) => p.provider === provider);
+    const profileId = `${provider}:default`;
+    return authConfig.profiles[profileId];
   }
 
   /**
-   * 删除 Auth Profile
+   * 删除 Auth Profile (OpenClaw 原生格式)
    */
   removeAuthProfile(agentId: string, provider: string): boolean {
     const authConfig = this.loadAuthProfiles(agentId);
-    const initialLength = authConfig.profiles.length;
+    const profileId = `${provider}:default`;
 
-    authConfig.profiles = authConfig.profiles.filter((p) => p.provider !== provider);
-
-    if (authConfig.profiles.length < initialLength) {
+    if (profileId in authConfig.profiles) {
+      delete authConfig.profiles[profileId];
       this.saveAuthProfiles(agentId, authConfig);
-      this.log.info(`Removed auth profile for agent ${agentId}, provider: ${provider}`);
+      this.log.info(
+        `Removed auth profile for agent ${agentId}, provider: ${provider}`
+      );
       return true;
     }
 
@@ -684,27 +770,169 @@ export class OpenClawConfigManager {
   }
 
   /**
-   * 设置 API Key
+   * 设置 API Key (OpenClaw 原生格式)
+   * 同时更新:
+   * 1. auth-profiles.json - 存储 API Key
+   * 2. openclaw.json auth.profiles - 定义 profile 映射
+   * 3. openclaw.json models.providers - 定义 provider 配置
    */
-  setApiKey(agentId: string, provider: string, apiKey: string): void {
-    this.setAuthProfile(agentId, {
+  setApiKey(
+    agentId: string,
+    provider: string,
+    apiKey: string,
+    endpoint?: string
+  ): void {
+    // 1. 更新 auth-profiles.json
+    this.setAuthProfile(agentId, provider, {
+      type: "api_key",
       provider,
-      apiKey,
+      key: apiKey,
     });
+
+    // 2. 更新 openclaw.json auth.profiles
+    if (!this.config.auth) {
+      this.config.auth = { profiles: {} };
+    }
+    if (!this.config.auth.profiles) {
+      this.config.auth.profiles = {};
+    }
+    this.config.auth.profiles[`${provider}:default`] = {
+      provider,
+      mode: "api_key",
+    };
+
+    // 3. 更新 openclaw.json models.providers
+    if (!this.config.models) {
+      this.config.models = { mode: "merge", providers: {} };
+    }
+    if (!this.config.models.providers) {
+      this.config.models.providers = {};
+    }
+
+    // 根据 provider 设置默认的 baseUrl 和模型
+    const providerConfig = this.getDefaultProviderConfig(provider, endpoint);
+    this.config.models.providers[provider] = providerConfig;
+
+    this.saveConfig();
+    this.log.info(
+      `Set API key for provider: ${provider}, endpoint: ${
+        endpoint || "default"
+      }`
+    );
   }
 
   /**
-   * 获取 API Key
+   * 获取 Provider 默认配置
+   */
+  private getDefaultProviderConfig(
+    provider: string,
+    endpoint?: string
+  ): ModelProviderConfig {
+    const configs: Record<string, (endpoint?: string) => ModelProviderConfig> =
+      {
+        zai: (ep) => ({
+          baseUrl:
+            ep === "coding-cn"
+              ? "https://open.bigmodel.cn/api/coding/paas/v4"
+              : ep === "coding-global"
+              ? "https://api.z.ai/coding/paas/v4"
+              : ep === "cn"
+              ? "https://open.bigmodel.cn/api/paas/v4"
+              : ep === "global"
+              ? "https://api.z.ai/v4"
+              : "https://open.bigmodel.cn/api/coding/paas/v4", // 默认 coding-cn
+          auth: "api-key",
+          models: [
+            {
+              id: "glm-5",
+              name: "GLM-5",
+              contextWindow: 204800,
+              maxTokens: 131072,
+            },
+            {
+              id: "glm-4.7",
+              name: "GLM-4.7",
+              contextWindow: 204800,
+              maxTokens: 131072,
+            },
+            {
+              id: "glm-4.7-flash",
+              name: "GLM-4.7 Flash",
+              contextWindow: 204800,
+              maxTokens: 131072,
+            },
+            {
+              id: "glm-4.7-flashx",
+              name: "GLM-4.7 FlashX",
+              contextWindow: 204800,
+              maxTokens: 131072,
+            },
+          ],
+        }),
+        anthropic: () => ({
+          baseUrl: "https://api.anthropic.com",
+          auth: "api-key",
+          models: [
+            {
+              id: "claude-sonnet-4-6",
+              name: "Claude Sonnet 4.6",
+              contextWindow: 200000,
+              maxTokens: 8192,
+            },
+          ],
+        }),
+        openai: () => ({
+          baseUrl: "https://api.openai.com",
+          auth: "api-key",
+          models: [
+            {
+              id: "gpt-4o",
+              name: "GPT-4o",
+              contextWindow: 128000,
+              maxTokens: 4096,
+            },
+          ],
+        }),
+        // 可以添加更多 provider...
+      };
+
+    const configFn = configs[provider];
+    if (configFn) {
+      return configFn(endpoint);
+    }
+
+    // 默认配置
+    return {
+      baseUrl: "",
+      auth: "api-key",
+      models: [],
+    };
+  }
+
+  /**
+   * 获取 API Key (OpenClaw 原生格式)
    */
   getApiKey(agentId: string, provider: string): string | undefined {
-    return this.getAuthProfile(agentId, provider)?.apiKey;
+    return this.getAuthProfile(agentId, provider)?.key;
   }
 
   /**
    * 获取所有配置的模型
    */
-  getModels(): Array<{ provider: string; id: string; name: string; contextWindow?: number; maxTokens?: number }> {
-    const models: Array<{ provider: string; id: string; name: string; contextWindow?: number; maxTokens?: number }> = [];
+  getModels(): Array<{
+    provider: string;
+    id: string;
+    name: string;
+    contextWindow?: number;
+    maxTokens?: number;
+  }> {
+    const models: Array<{
+      provider: string;
+      id: string;
+      name: string;
+      contextWindow?: number;
+      maxTokens?: number;
+    }> = [];
     const providers = this.config.models?.providers;
 
     if (providers) {
@@ -716,7 +944,7 @@ export class OpenClawConfigManager {
               id: model.id,
               name: model.name || model.id,
               contextWindow: model.contextWindow,
-              maxTokens: model.maxTokens
+              maxTokens: model.maxTokens,
             });
           }
         }
@@ -729,7 +957,10 @@ export class OpenClawConfigManager {
   /**
    * 获取所有提供商配置
    */
-  getProviderConfigs(): Record<string, { baseUrl?: string; api?: string; models?: any[] }> {
+  getProviderConfigs(): Record<
+    string,
+    { baseUrl?: string; api?: string; models?: any[] }
+  > {
     return this.config.models?.providers || {};
   }
 
@@ -738,17 +969,19 @@ export class OpenClawConfigManager {
    */
   getConfiguredProviders(agentId: string): string[] {
     const authConfig = this.loadAuthProfiles(agentId);
-    return authConfig.profiles.map(p => p.provider);
+    return Object.values(authConfig.profiles).map((p) => p.provider);
   }
 
   /**
    * 获取 Auth Profiles 列表
    */
-  getAuthProfiles(agentId: string): Array<{ provider: string; hasKey: boolean }> {
+  getAuthProfiles(
+    agentId: string
+  ): Array<{ provider: string; hasKey: boolean }> {
     const authConfig = this.loadAuthProfiles(agentId);
-    return authConfig.profiles.map(p => ({
+    return Object.values(authConfig.profiles).map((p) => ({
       provider: p.provider,
-      hasKey: !!p.apiKey
+      hasKey: !!p.key,
     }));
   }
 
@@ -760,23 +993,26 @@ export class OpenClawConfigManager {
 
     // 检查 Gateway 配置
     if (!this.config.gateway) {
-      errors.push('Missing gateway configuration');
+      errors.push("Missing gateway configuration");
     } else {
       if (!this.config.gateway.port) {
-        errors.push('Missing gateway port');
+        errors.push("Missing gateway port");
       }
-      if (!this.config.gateway.auth?.token && this.config.gateway.auth?.mode === 'token') {
-        errors.push('Missing gateway auth token');
+      if (
+        !this.config.gateway.auth?.token &&
+        this.config.gateway.auth?.mode === "token"
+      ) {
+        errors.push("Missing gateway auth token");
       }
     }
 
     // 检查 Agents 配置
     if (!this.config.agents?.list || this.config.agents.list.length === 0) {
-      errors.push('No agents configured');
+      errors.push("No agents configured");
     } else {
       const defaultAgent = this.config.agents.list.find((a) => a.default);
       if (!defaultAgent) {
-        errors.push('No default agent configured');
+        errors.push("No default agent configured");
       }
     }
 
@@ -790,7 +1026,7 @@ export class OpenClawConfigManager {
    * 初始化完整配置（包括默认 agent 和 auth profiles）
    */
   initializeConfig(): void {
-    this.log.info('Initializing OpenClaw configuration...');
+    this.log.info("Initializing OpenClaw configuration...");
 
     // 加载或创建主配置
     this.loadConfig();
@@ -801,10 +1037,10 @@ export class OpenClawConfigManager {
       this.addAgent({
         id: DEFAULT_CONFIG.DEFAULT_AGENT_ID,
         default: true,
-        name: 'Default Agent',
+        name: "Default Agent",
         model: {
           primary: DEFAULT_CONFIG.DEFAULT_MODEL,
-          fallbacks: ['openai/gpt-4o'],
+          fallbacks: ["openai/gpt-4o"],
         },
       });
     }
@@ -812,13 +1048,18 @@ export class OpenClawConfigManager {
     // 确保默认 agent 目录存在
     const agentDir = this.ensureAgentDir(DEFAULT_CONFIG.DEFAULT_AGENT_ID);
 
-    // 确保 auth-profiles.json 存在
-    if (!fs.existsSync(this.getAuthProfilesPath(DEFAULT_CONFIG.DEFAULT_AGENT_ID))) {
-      this.saveAuthProfiles(DEFAULT_CONFIG.DEFAULT_AGENT_ID, { profiles: [] });
+    // 确保 auth-profiles.json 存在 (OpenClaw 原生格式)
+    if (
+      !fs.existsSync(this.getAuthProfilesPath(DEFAULT_CONFIG.DEFAULT_AGENT_ID))
+    ) {
+      this.saveAuthProfiles(DEFAULT_CONFIG.DEFAULT_AGENT_ID, {
+        version: 1,
+        profiles: {},
+      });
     }
 
     // 确保 system.md 存在
-    const systemMdPath = path.join(agentDir, 'system.md');
+    const systemMdPath = path.join(agentDir, "system.md");
     if (!fs.existsSync(systemMdPath)) {
       const defaultSystemPrompt = `# Default Agent System Prompt
 
@@ -839,22 +1080,22 @@ Your primary goal is to assist the user with their tasks effectively and safely.
     }
 
     // 确保 models.json 存在
-    const modelsJsonPath = path.join(agentDir, 'models.json');
+    const modelsJsonPath = path.join(agentDir, "models.json");
     if (!fs.existsSync(modelsJsonPath)) {
       const defaultModels = {
         models: [
           {
             id: DEFAULT_CONFIG.DEFAULT_MODEL,
-            provider: 'anthropic',
-            enabled: true
-          }
-        ]
+            provider: "anthropic",
+            enabled: true,
+          },
+        ],
       };
       fs.writeFileSync(modelsJsonPath, JSON.stringify(defaultModels, null, 2));
       this.log.info(`Created default models config at ${modelsJsonPath}`);
     }
 
-    this.log.info('OpenClaw configuration initialized');
+    this.log.info("OpenClaw configuration initialized");
   }
 
   /**
@@ -872,10 +1113,10 @@ Your primary goal is to assist the user with their tasks effectively and safely.
       const importedConfig = JSON.parse(configJson);
       this.config = importedConfig;
       this.saveConfig();
-      this.log.info('Config imported successfully');
+      this.log.info("Config imported successfully");
     } catch (error) {
-      this.log.error('Failed to import config:', error);
-      throw new Error('Invalid config JSON');
+      this.log.error("Failed to import config:", error);
+      throw new Error("Invalid config JSON");
     }
   }
 }
@@ -886,7 +1127,9 @@ let configManagerInstance: OpenClawConfigManager | null = null;
 /**
  * 获取配置管理器实例（单例）
  */
-export function getOpenClawConfigManager(configDir?: string): OpenClawConfigManager {
+export function getOpenClawConfigManager(
+  configDir?: string
+): OpenClawConfigManager {
   if (!configManagerInstance) {
     configManagerInstance = new OpenClawConfigManager(configDir);
   }

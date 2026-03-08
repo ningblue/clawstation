@@ -266,7 +266,7 @@ export const App: React.FC = () => {
   const [splashProgress, setSplashProgress] = useState(0);
   const [splashStep, setSplashStep] = useState('database');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'ai'>('general');
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'engine' | 'ai' | 'appearance' | 'account' | 'about'>('general');
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 

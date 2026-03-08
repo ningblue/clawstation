@@ -44,8 +44,10 @@ linux:
   target: AppImage
   category: Office
   icon: resources/icon.png
+afterPack: scripts/after-pack.js
 nsis:
   oneClick: false
+
   allowElevation: true
   allowToChangeInstallationDirectory: true
   include: scripts/installer.nsh

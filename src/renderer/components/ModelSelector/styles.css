@@ -1,6 +1,6 @@
 /**
  * ModelSelector 组件样式
- * 参考LobeHub ModelSwitchPanel设计
+ * 三栏层级选择器: 供应商分组 + 子分类 + 模型列表
  */
 
 /* 主容器 */
@@ -40,11 +40,20 @@
   opacity: 0.5;
 }
 
+.model-selector__trigger.restarting {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 .model-selector__trigger-icon {
   font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.model-selector__trigger-icon.spinning {
+  animation: spin 0.8s linear infinite;
 }
 
 .model-selector__trigger-text {
@@ -71,7 +80,7 @@
   top: 100%;
   left: 0;
   margin-top: 8px;
-  width: 520px;
+  width: 440px;
   max-height: 600px;
   background-color: #ffffff;
   border-radius: 12px;
@@ -81,6 +90,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.model-selector__dropdown.three-col {
+  width: 560px;
 }
 
 /* 搜索栏 */
@@ -120,9 +133,10 @@
   min-height: 300px;
 }
 
-/* 服务商列表 */
+/* 左栏: 供应商列表 */
 .model-selector__providers {
-  width: 160px;
+  width: 130px;
+  flex-shrink: 0;
   border-right: 1px solid #f3f4f6;
   overflow-y: auto;
   padding: 8px;
@@ -132,7 +146,7 @@
 .model-selector__provider-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
@@ -152,9 +166,14 @@
   font-weight: 500;
 }
 
-.model-selector__provider-item.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.model-selector__provider-item.unconfigured {
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.model-selector__provider-item.unconfigured:hover {
+  background-color: #fef3c7;
+  color: #92400e;
 }
 
 .model-selector__provider-icon {
@@ -178,13 +197,72 @@
   height: 6px;
   border-radius: 50%;
   background-color: #d1d5db;
+  flex-shrink: 0;
 }
 
 .model-selector__provider-status.configured {
   background-color: #10b981;
 }
 
-/* 模型列表 */
+/* 中栏: 子分类 */
+.model-selector__subcategories {
+  width: 120px;
+  flex-shrink: 0;
+  border-right: 1px solid #f3f4f6;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: #fdfdfd;
+}
+
+.model-selector__subcategory-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.model-selector__subcategory-item:hover {
+  background-color: #f3f4f6;
+}
+
+.model-selector__subcategory-item.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.model-selector__subcategory-item.unconfigured {
+  color: #9ca3af;
+}
+
+.model-selector__subcategory-item.unconfigured:hover {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.model-selector__subcategory-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector__subcategory-count {
+  font-size: 11px;
+  color: #9ca3af;
+  background-color: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* 右栏: 模型列表 */
 .model-selector__models {
   flex: 1;
   overflow-y: auto;
@@ -222,8 +300,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   border: 2px solid transparent;
@@ -243,18 +321,6 @@
 .model-selector__model-item.disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.model-selector__model-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background-color: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
 }
 
 .model-selector__model-info {
@@ -313,6 +379,21 @@
 .model-selector__model-tag.reasoning {
   background-color: #fce7f3;
   color: #db2777;
+}
+
+/* 未配置提示 */
+.model-selector__unconfigured-hint {
+  padding: 12px;
+  font-size: 13px;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.model-selector__unconfigured-hint:hover {
+  background-color: #fef3c7;
+  color: #92400e;
 }
 
 /* 底部 */
@@ -402,29 +483,41 @@
     width: 360px;
   }
 
+  .model-selector__dropdown.three-col {
+    width: 440px;
+  }
+
   .model-selector__providers {
     width: 120px;
+  }
+
+  .model-selector__subcategories {
+    width: 90px;
   }
 }
 
 /* 滚动条样式 */
 .model-selector__providers::-webkit-scrollbar,
+.model-selector__subcategories::-webkit-scrollbar,
 .model-selector__models::-webkit-scrollbar {
   width: 6px;
 }
 
 .model-selector__providers::-webkit-scrollbar-track,
+.model-selector__subcategories::-webkit-scrollbar-track,
 .model-selector__models::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .model-selector__providers::-webkit-scrollbar-thumb,
+.model-selector__subcategories::-webkit-scrollbar-thumb,
 .model-selector__models::-webkit-scrollbar-thumb {
   background-color: #d1d5db;
   border-radius: 3px;
 }
 
 .model-selector__providers::-webkit-scrollbar-thumb:hover,
+.model-selector__subcategories::-webkit-scrollbar-thumb:hover,
 .model-selector__models::-webkit-scrollbar-thumb:hover {
   background-color: #9ca3af;
 }

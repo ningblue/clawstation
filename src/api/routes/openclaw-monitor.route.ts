@@ -8,6 +8,8 @@ import { OpenClawManager } from '../../backend/services/openclaw.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import log from 'electron-log';
+
 
 /**
  * 日志条目接口
@@ -75,13 +77,29 @@ export function setupOpenClawMonitorRoutes(openclawManager: OpenClawManager): vo
     subsystem?: string;
   }) => {
     try {
-      const logPath = path.join(os.homedir(), '.clawstation', 'logs', 'openclaw.log');
+      const stateLogDir = path.join(os.homedir(), '.clawstation', 'logs');
+      const candidatePaths = [
+        path.join(stateLogDir, 'openclaw.log'),
+        path.join(stateLogDir, 'gateway.log'),
+        path.join(stateLogDir, 'openclaw-gateway.log'),
+        log.transports.file.getFile().path,
+      ];
 
-      if (!fs.existsSync(logPath)) {
-        return { success: true, logs: [] };
+      const existingPaths = candidatePaths.filter((p) => !!p && fs.existsSync(p));
+      if (existingPaths.length === 0) {
+        return { success: true, logs: [], checkedPaths: candidatePaths };
+      }
+
+      const logPath = existingPaths
+        .map((p) => ({ p, mtime: fs.statSync(p).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime)[0]?.p;
+
+      if (!logPath) {
+        return { success: true, logs: [], checkedPaths: candidatePaths };
       }
 
       const content = fs.readFileSync(logPath, 'utf8');
+
       const lines = content.split('\n').filter(line => line.trim());
 
       // 解析日志条目
@@ -123,7 +141,8 @@ export function setupOpenClawMonitorRoutes(openclawManager: OpenClawManager): vo
         );
       }
 
-      return { success: true, logs: filteredLogs };
+      return { success: true, logs: filteredLogs, source: logPath };
+
     } catch (error) {
       console.error('Error getting logs:', error);
       return { success: false, error: (error as Error).message };
@@ -133,18 +152,69 @@ export function setupOpenClawMonitorRoutes(openclawManager: OpenClawManager): vo
   // 获取最近的错误
   ipcMain.handle('openclaw:monitor:errors', async (_event: IpcMainInvokeEvent, limit: number = 10) => {
     try {
-      const result = await ipcMain.emit('openclaw:monitor:logs', {} as any, {
-        lines: 500,
-        level: 'error',
-      });
+      const stateLogDir = path.join(os.homedir(), '.clawstation', 'logs');
 
-      const logs = (result as any)?.[0]?.logs || [];
-      return { success: true, errors: logs.slice(-limit) };
+      const candidatePaths = [
+        path.join(stateLogDir, 'openclaw.log'),
+        path.join(stateLogDir, 'gateway.log'),
+        path.join(stateLogDir, 'openclaw-gateway.log'),
+        log.transports.file.getFile().path,
+      ];
+
+      const existingPaths = candidatePaths.filter((p) => !!p && fs.existsSync(p));
+      if (existingPaths.length === 0) {
+        return { success: true, errors: [] };
+      }
+
+      const logPath = existingPaths
+        .map((p) => ({ p, mtime: fs.statSync(p).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime)[0]?.p;
+
+      if (!logPath) {
+        return { success: true, errors: [] };
+      }
+
+      const content = fs.readFileSync(logPath, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      const errors: LogEntry[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+
+        try {
+          const entry = JSON.parse(line);
+          const level = String(entry._meta?.logLevelName || 'INFO');
+          const message = String(entry['1'] || entry.message || line);
+          const subsystem = entry['0'] ? JSON.parse(entry['0']).subsystem : 'unknown';
+
+          if (level.toLowerCase() === 'error' || /error|failed|exception/i.test(message)) {
+            errors.push({
+              timestamp: entry.time || entry.timestamp || new Date().toISOString(),
+              level,
+              subsystem,
+              message,
+            });
+          }
+        } catch {
+          if (/error|failed|exception/i.test(line)) {
+            errors.push({
+              timestamp: new Date().toISOString(),
+              level: 'ERROR',
+              subsystem: 'unknown',
+              message: line,
+            });
+          }
+        }
+      }
+
+      return { success: true, errors: errors.slice(-limit), source: logPath };
     } catch (error) {
       console.error('Error getting errors:', error);
       return { success: false, error: (error as Error).message };
     }
   });
+
 
   // 诊断检查
   ipcMain.handle('openclaw:monitor:diagnose', async (_event: IpcMainInvokeEvent) => {

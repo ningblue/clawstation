@@ -23,13 +23,19 @@ export interface ElectronAPI {
   createConversation: (conversationData: any) => Promise<any>;
   getConversation: (conversationId: number) => Promise<any>;
   listConversations: (userId: number) => Promise<any[]>;
-  updateConversation: (conversationId: number, conversationData: any) => Promise<any>;
+  updateConversation: (
+    conversationId: number,
+    conversationData: any
+  ) => Promise<any>;
   deleteConversation: (conversationId: number) => Promise<boolean>;
 
   // 消息相关API
   createMessage: (messageData: any) => Promise<any>;
   getMessagesByConversation: (conversationId: number) => Promise<any[]>;
-  getLatestMessages: (params: { conversationId: number; limit: number }) => Promise<any[]>;
+  getLatestMessages: (params: {
+    conversationId: number;
+    limit: number;
+  }) => Promise<any[]>;
   getMessage: (messageId: number) => Promise<any>;
   deleteMessage: (messageId: number) => Promise<boolean>;
 
@@ -46,7 +52,10 @@ export interface ElectronAPI {
   openExternalUrl: (url: string) => Promise<void>;
 
   // 错误对话框
-  showErrorDialog: (options: { title: string; message: string }) => Promise<void>;
+  showErrorDialog: (options: {
+    title: string;
+    message: string;
+  }) => Promise<void>;
 
   // 确认对话框
   showConfirmDialog: (options: {
@@ -67,7 +76,10 @@ export interface ElectronAPI {
     error?: string;
     port: number;
   }>;
-  sendQueryToOpenClaw: (message: string, conversationId?: number) => Promise<{
+  sendQueryToOpenClaw: (
+    message: string,
+    conversationId?: number
+  ) => Promise<{
     success: boolean;
     response?: string;
     error?: string;
@@ -76,10 +88,13 @@ export interface ElectronAPI {
     message: string,
     conversationId?: number,
     onChunk?: (chunk: string) => void,
-    onToolCall?: (tool: { name: string; arguments: Record<string, unknown> }) => void,
+    onToolCall?: (tool: {
+      name: string;
+      arguments: Record<string, unknown>;
+    }) => void,
     onDone?: (fullContent: string) => void,
     onError?: (error: string) => void
-  ) => (() => void);
+  ) => () => void;
   startOpenClaw: () => Promise<{
     success: boolean;
     error?: string;
@@ -122,17 +137,26 @@ export interface ElectronAPI {
     logs?: any[];
     error?: string;
   }>;
-  getAuditLogsByUser: (userId: number, limit?: number) => Promise<{
+  getAuditLogsByUser: (
+    userId: number,
+    limit?: number
+  ) => Promise<{
     success: boolean;
     logs?: any[];
     error?: string;
   }>;
-  getAuditLogsByAction: (action: string, limit?: number) => Promise<{
+  getAuditLogsByAction: (
+    action: string,
+    limit?: number
+  ) => Promise<{
     success: boolean;
     logs?: any[];
     error?: string;
   }>;
-  exportAuditLogs: (params?: { format?: 'json' | 'csv'; limit?: number }) => Promise<{
+  exportAuditLogs: (params?: {
+    format?: "json" | "csv";
+    limit?: number;
+  }) => Promise<{
     success: boolean;
     data?: string;
     format?: string;
@@ -140,29 +164,75 @@ export interface ElectronAPI {
   }>;
 
   // OpenClaw 配置管理API
-  getOpenClawConfig: () => Promise<{ success: boolean; config?: any; error?: string }>;
-  getGatewayConfig: () => Promise<{ success: boolean; gateway?: any; error?: string }>;
-  getAgentsConfig: () => Promise<{ success: boolean; agents?: any; error?: string }>;
-  getDefaultAgent: () => Promise<{ success: boolean; agent?: any; error?: string }>;
+  getOpenClawConfig: () => Promise<{
+    success: boolean;
+    config?: any;
+    error?: string;
+  }>;
+  getGatewayConfig: () => Promise<{
+    success: boolean;
+    gateway?: any;
+    error?: string;
+  }>;
+  getAgentsConfig: () => Promise<{
+    success: boolean;
+    agents?: any;
+    error?: string;
+  }>;
+  getDefaultAgent: () => Promise<{
+    success: boolean;
+    agent?: any;
+    error?: string;
+  }>;
   setAgent: (agent: any) => Promise<{ success: boolean; error?: string }>;
-  removeAgent: (agentId: string) => Promise<{ success: boolean; error?: string }>;
-  setDefaultAgent: (agentId: string) => Promise<{ success: boolean; error?: string }>;
+  removeAgent: (
+    agentId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  setDefaultAgent: (
+    agentId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  setDefaultModel: (model: {
+    primary: string;
+    fallbacks?: string[];
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // OpenClaw API Key 管理API
-  setApiKey: (provider: string, apiKey: string, agentId?: string) => Promise<{ success: boolean; error?: string }>;
-  hasApiKey: (provider: string, agentId?: string) => Promise<{ success: boolean; hasKey?: boolean; error?: string }>;
-  getConfiguredProviders: (agentId?: string) => Promise<{ success: boolean; providers?: string[]; error?: string }>;
-  removeApiKey: (provider: string, agentId?: string) => Promise<{ success: boolean; error?: string }>;
+  setApiKey: (
+    provider: string,
+    apiKey: string,
+    agentId?: string,
+    endpoint?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  hasApiKey: (
+    provider: string,
+    agentId?: string
+  ) => Promise<{ success: boolean; hasKey?: boolean; error?: string }>;
+  getConfiguredProviders: (
+    agentId?: string
+  ) => Promise<{ success: boolean; providers?: string[]; error?: string }>;
+  removeApiKey: (
+    provider: string,
+    agentId?: string
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // OpenClaw 模型管理API（配置文件中的模型）
   getModelsList: () => Promise<{
     success: boolean;
-    models?: Array<{ provider: string; id: string; name: string; contextWindow?: number; maxTokens?: number }>;
+    models?: Array<{
+      provider: string;
+      id: string;
+      name: string;
+      contextWindow?: number;
+      maxTokens?: number;
+    }>;
     error?: string;
   }>;
   getProvidersList: () => Promise<{
     success: boolean;
-    providers?: Record<string, { baseUrl?: string; api?: string; models?: any[] }>;
+    providers?: Record<
+      string,
+      { baseUrl?: string; api?: string; models?: any[] }
+    >;
     error?: string;
   }>;
   getAuthProfiles: (agentId?: string) => Promise<{
@@ -174,7 +244,14 @@ export interface ElectronAPI {
   // OpenClaw 模型目录API（全量服务商和模型）
   getModelCatalog: () => Promise<{
     success: boolean;
-    models?: Array<{ id: string; name: string; provider: string; contextWindow?: number; reasoning?: boolean; input?: string[] }>;
+    models?: Array<{
+      id: string;
+      name: string;
+      provider: string;
+      contextWindow?: number;
+      reasoning?: boolean;
+      input?: string[];
+    }>;
     error?: string;
   }>;
   getCatalogProviders: () => Promise<{
@@ -184,13 +261,22 @@ export interface ElectronAPI {
   }>;
   getCatalogModelsByProvider: (providerId: string) => Promise<{
     success: boolean;
-    models?: Array<{ id: string; name: string; provider: string; contextWindow?: number; reasoning?: boolean; input?: string[] }>;
+    models?: Array<{
+      id: string;
+      name: string;
+      provider: string;
+      contextWindow?: number;
+      reasoning?: boolean;
+      input?: string[];
+    }>;
     error?: string;
   }>;
 
   // 监听主进程发送的消息
   onOpenClawReady: (callback: (event: any, data: any) => void) => void;
-  removeOpenClawReadyListener: (callback: (event: any, data: any) => void) => void;
+  removeOpenClawReadyListener: (
+    callback: (event: any, data: any) => void
+  ) => void;
   onNewConversation: (callback: () => void) => void;
   onToggleSearch: (callback: () => void) => void;
 
@@ -211,9 +297,9 @@ export interface User {
 
 // 用户偏好设置
 export interface UserPreferences {
-  theme?: 'light' | 'dark';
+  theme?: "light" | "dark";
   locale?: string;
-  fontSize?: 'small' | 'medium' | 'large';
+  fontSize?: "small" | "medium" | "large";
 }
 
 // 会话类型
@@ -229,7 +315,7 @@ export interface Conversation {
 export interface Message {
   id: number;
   conversationId: number;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
 }
@@ -239,7 +325,7 @@ export interface AuditLog {
   id: number;
   userId?: number;
   action: string;
-  level: 'INFO' | 'WARN' | 'ERROR';
+  level: "INFO" | "WARN" | "ERROR";
   details?: string;
   ipAddress?: string;
   userAgent?: string;

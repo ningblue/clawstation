@@ -27,16 +27,26 @@ const { spawn } = require('child_process');
 // 这样可以避免无限进程创建的问题
 process.env.OPENCLAW_NO_RESPAWN = '1';
 
-// 使用 exec -a 来设置进程名
-// 这样可以确保进程名正确显示为 clawstation-claw
 const processName = process.env.OPENCLAW_PROCESS_NAME || 'clawstation-engine';
-const cmd = `exec -a "${processName}" "${process.execPath}" "${openclawPath}" ${args.map(a => `"${a}"`).join(' ')}`;
 
-const child = spawn(cmd, [], {
-  stdio: 'inherit',
-  shell: true,
-  env: process.env
-});
+let child;
+if (process.platform === 'win32') {
+  // Windows 的 cmd/powershell 不支持 `exec -a`，直接启动即可
+  child = spawn(process.execPath, [openclawPath, ...args], {
+    stdio: 'inherit',
+    shell: false,
+    env: process.env
+  });
+} else {
+  // Unix-like 平台使用 exec -a 设置进程名
+  const cmd = `exec -a "${processName}" "${process.execPath}" "${openclawPath}" ${args.map(a => `"${a}"`).join(' ')}`;
+  child = spawn(cmd, [], {
+    stdio: 'inherit',
+    shell: true,
+    env: process.env
+  });
+}
+
 
 child.on('exit', (code, signal) => {
   process.exit(code || 0);

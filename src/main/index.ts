@@ -41,6 +41,15 @@ import { initializeApiHandlers } from "../api/handlers";
 export let mainWindow: BrowserWindow | null = null;
 export let openclawManager: OpenClawManager | null = null;
 let tray: Tray | null = null;
+let latestEngineStatus: {
+  isRunning: boolean;
+  isHealthy: boolean;
+  error?: string;
+} = {
+  isRunning: false,
+  isHealthy: false,
+};
+
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -97,8 +106,10 @@ async function createWindow() {
 
     // 初始化OpenClaw管理器（不自动启动，由用户手动控制）
     openclawManager = new OpenClawManager();
+    attachOpenClawEventHandlers();
 
     // 注册OpenClaw相关路由
+
     // 这样当窗口加载完成时，所有IPC处理器都已就绪
     console.log("Registering OpenClaw routes...");
     initializeApiHandlers(openclawManager);
@@ -117,7 +128,17 @@ async function createWindow() {
       })
       .catch((err) => {
         console.error("Failed to start AI engine:", err);
+        broadcastEngineStatus();
+        // 在生产环境显示错误弹窗，帮助用户诊断问题
+        if (app.isPackaged) {
+          const logPath = log.transports.file.getFile().path;
+          dialog.showErrorBox(
+            "AI Engine Startup Error",
+            `Failed to start AI engine.\n\nError: ${err.message}\n\nPlease check the log file for more details:\n${logPath}`,
+          );
+        }
       });
+
 
     // 加载应用主页面
     const entryUrl = path.join(__dirname, "../renderer/index.html");
@@ -175,15 +196,19 @@ async function createWindow() {
     });
 
     // 当窗口加载完成后，发送OpenClaw状态事件
-    mainWindow.webContents.once("did-finish-load", () => {
+    mainWindow.webContents.once("did-finish-load", async () => {
       console.log("Window finished loading, sending openclaw:ready event");
       if (openclawManager && mainWindow) {
+        await broadcastEngineStatus();
         mainWindow.webContents.send("openclaw:ready", {
-          isRunning: openclawManager.isRunning(),
+          isRunning: latestEngineStatus.isRunning,
+          isHealthy: latestEngineStatus.isHealthy,
+          error: latestEngineStatus.error,
           port: openclawManager.getConfig().port,
         });
       }
     });
+
   } catch (err) {
     log.error("Fatal error during window creation:", err);
     dialog.showErrorBox(
@@ -420,17 +445,51 @@ let isInitializing = false;
 /**
  * 广播引擎状态到所有窗口
  */
-function broadcastEngineStatus() {
-  if (mainWindow && openclawManager) {
-    const status = openclawManager.isRunning();
+async function broadcastEngineStatus() {
+  if (!openclawManager) return;
+
+  try {
+    const status = await openclawManager.getStatus();
+    latestEngineStatus = {
+      isRunning: status.isRunning,
+      isHealthy: status.isHealthy,
+      error: status.error,
+    };
+  } catch (error) {
+    latestEngineStatus = {
+      isRunning: false,
+      isHealthy: false,
+      error: (error as Error).message,
+    };
+  }
+
+  if (mainWindow) {
     mainWindow.webContents.send("openclaw:status-changed", {
-      isRunning: status,
+      ...latestEngineStatus,
       port: openclawManager.getConfig().port,
     });
-    // 更新托盘菜单状态
-    updateTrayMenu();
   }
+
+  // 更新托盘菜单状态
+  updateTrayMenu();
 }
+
+function attachOpenClawEventHandlers() {
+  if (!openclawManager) return;
+
+  const syncStatus = () => {
+    broadcastEngineStatus().catch((err) => {
+      console.error("Failed to sync engine status:", err);
+    });
+  };
+
+  openclawManager.on("started", syncStatus);
+  openclawManager.on("stopped", syncStatus);
+  openclawManager.on("error", syncStatus);
+  openclawManager.on("health_check_failed", syncStatus);
+  openclawManager.on("restarting", syncStatus);
+}
+
 
 /**
  * 创建系统托盘
@@ -502,9 +561,17 @@ function createTray() {
 function updateTrayMenu() {
   if (!tray) return;
 
-  const isEngineRunning = openclawManager?.isRunning() || false;
+  const isEngineRunning = latestEngineStatus.isRunning;
+  const isEngineHealthy = latestEngineStatus.isHealthy;
+
+  const statusLabel = !isEngineRunning
+    ? "⚪ AI引擎已停止"
+    : isEngineHealthy
+      ? "🟢 AI引擎运行中"
+      : "🟠 AI引擎异常";
 
   const contextMenu = Menu.buildFromTemplate([
+
     {
       label: "打开主页面",
       click: () => {
@@ -516,16 +583,26 @@ function updateTrayMenu() {
     },
     { type: "separator" },
     {
-      label: isEngineRunning ? "🔴 AI引擎运行中" : "⚪ AI引擎已停止",
+      label: statusLabel,
       enabled: false,
     },
+    ...(!isEngineHealthy && latestEngineStatus.error
+      ? [
+          {
+            label: `错误: ${latestEngineStatus.error}`,
+            enabled: false,
+          } as Electron.MenuItemConstructorOptions,
+        ]
+      : []),
+
     {
       label: "重启AI引擎",
       click: async () => {
         if (openclawManager) {
           try {
             await openclawManager.restart();
-            broadcastEngineStatus();
+            await broadcastEngineStatus();
+
           } catch (error) {
             console.error("Failed to restart engine from tray:", error);
           }
@@ -622,9 +699,41 @@ function killProcessOnPort(
   processNameFilter?: string,
 ): Promise<void> {
   return new Promise((resolve) => {
-    // Windows 平台暂时跳过，避免 lsof 报错
     if (process.platform === "win32") {
-      resolve();
+      exec(`netstat -ano -p tcp | findstr :${port}`, (error, stdout) => {
+        if (error || !stdout.trim()) {
+          resolve();
+          return;
+        }
+
+        const pids = Array.from(
+          new Set(
+            stdout
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => {
+                const match = line.match(/\s(\d+)$/);
+                return match?.[1] || "";
+              })
+              .filter((pid) => pid && pid !== "0" && pid !== "4"),
+          ),
+        );
+
+        if (pids.length === 0) {
+          resolve();
+          return;
+        }
+
+        if (processNameFilter) {
+          console.log(
+            `[ClawStation] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`,
+          );
+        }
+
+        killPids(pids, port, processNameFilter);
+        resolve();
+      });
       return;
     }
 
@@ -651,7 +760,7 @@ function killProcessOnPort(
 
         pids.forEach((pid) => {
           // 获取进程的实际进程名
-          exec(`ps -p ${pid} -o comm=`, (err, nameOutput) => {
+          exec(`ps -p ${pid} -o comm=`, (_err, nameOutput) => {
             const processName = nameOutput.trim().toLowerCase();
             // 检查进程名是否包含过滤关键词（精确匹配）
             if (processName.includes(processNameFilter.toLowerCase())) {
@@ -669,6 +778,7 @@ function killProcessOnPort(
       } else {
         // 没有过滤条件，杀死所有占用端口的进程
         killPids(pids, port);
+        resolve();
       }
     });
   });
@@ -684,7 +794,12 @@ function killPids(pids: string[], port: number, filter?: string): void {
   }
 
   pids.forEach((pid) => {
-    exec(`kill -9 ${pid}`, (killErr) => {
+    const cmd =
+      process.platform === "win32"
+        ? `taskkill /F /T /PID ${pid}`
+        : `kill -9 ${pid}`;
+
+    exec(cmd, () => {
       completed++;
       if (completed === pids.length) {
         const filterMsg = filter ? ` (matched: ${filter})` : "";
@@ -695,6 +810,7 @@ function killPids(pids: string[], port: number, filter?: string): void {
     });
   });
 }
+
 
 app.on("before-quit", async (event) => {
   // 设置退出标志，让窗口可以正常关闭

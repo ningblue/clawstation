@@ -6,6 +6,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app';
+import './styles/chat.css';
+import './components/ToolCard/styles.css';
 
 // 等待 DOM 加载完成
 document.addEventListener('DOMContentLoaded', () => {

@@ -8,6 +8,7 @@ import { Sidebar } from '../../components/Sidebar';
 import { MessageList } from '../../components/MessageList';
 import { ChatInput } from '../../components/ChatInput';
 import { useChatStore, useUserStore } from '../../stores';
+import { useModels } from '../../hooks/useModels';
 import type { Message } from '../../stores';
 
 // 欢迎消息
@@ -22,6 +23,7 @@ const WELCOME_MESSAGE: Message = {
  */
 export const ChatPage: React.FC = () => {
   const { user } = useUserStore();
+  const { isRestarting } = useModels();
 
   const {
     conversations,
@@ -138,6 +140,7 @@ export const ChatPage: React.FC = () => {
             disabled={loading || isTyping}
             isStreaming={isStreaming}
             onCancel={cancelStream}
+            engineRestarting={isRestarting}
           />
         </div>
       </div>

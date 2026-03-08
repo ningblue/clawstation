@@ -94,7 +94,13 @@ function extractFile(archivePath, destDir, ext) {
   if (ext === 'zip') {
     // Windows 使用 unzip 或 PowerShell
     if (process.platform === 'win32') {
-      execSync(`powershell -command "Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'inherit' });
+      try {
+        // 尝试使用 tar (Windows 10+ 自带)
+        execSync(`tar -xf "${archivePath}" -C "${destDir}"`, { stdio: 'inherit' });
+      } catch (e) {
+        // 回退到 PowerShell
+        execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'inherit' });
+      }
     } else {
       execSync(`unzip -o "${archivePath}" -d "${destDir}"`, { stdio: 'inherit' });
     }
@@ -115,7 +121,13 @@ async function main() {
   let nodePlatform = targetPlatform === 'win32' ? 'win' : targetPlatform;
   let ext = targetPlatform === 'win32' ? 'zip' : 'tar.gz';
   const filename = `node-v${NODE_VERSION}-${nodePlatform}-${targetArch}.${ext}`;
-  const url = `https://nodejs.org/dist/v${NODE_VERSION}/${filename}`;
+  
+  // 使用国内镜像源 (华为云)
+  const mirrorUrl = `https://mirrors.huaweicloud.com/nodejs/v${NODE_VERSION}/${filename}`;
+  // 备用源 (npmmirror)
+  // const mirrorUrl = `https://npmmirror.com/mirrors/node/v${NODE_VERSION}/${filename}`;
+  
+  const url = mirrorUrl;
   
   // 创建下载目录
   if (!fs.existsSync(DOWNLOAD_DIR)) {

@@ -3,9 +3,11 @@
  * 设置页面，左侧菜单导航，右侧内容展示
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserStore } from '../../stores';
 import type { Theme, FontSize, Locale } from '../../stores';
+import { useModels } from '../../hooks/useModels';
+import type { ProviderGroup, SubCategory } from '../../types/models';
 
 // 设置标签页类型
 type SettingsTab = 'general' | 'engine' | 'ai' | 'appearance' | 'account' | 'about';
@@ -587,112 +589,79 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
 };
 
 /**
- * AI模型设置面板（只包含模型配置）
+ * AI模型设置面板（三栏层级结构）
  */
 interface AIModelSettingsProps {
   onShowToast: (message: string, type: 'success' | 'error') => void;
 }
 
-// 搜索 API 提供商配置
-interface SearchProviderConfig {
-  id: string;
-  name: string;
-  hasKey: boolean;
-  description: string;
-}
-
-// 搜索 API 提供商列表
-const SEARCH_PROVIDERS: SearchProviderConfig[] = [
-  { id: 'brave', name: 'Brave Search', hasKey: false, description: '免费额度：每月 2000 次请求' },
-  { id: 'perplexity', name: 'Perplexity', hasKey: false, description: '需要 Perplexity API Key' },
-  { id: 'grok', name: 'Grok (xAI)', hasKey: false, description: '需要 xAI API Key' },
-  { id: 'gemini', name: 'Google Gemini', hasKey: false, description: '需要 Google AI API Key' },
-  { id: 'kimi', name: 'Kimi (Moonshot)', hasKey: false, description: '需要 Kimi API Key' },
-];
-
-// 初始搜索提供商列表
-const DEFAULT_SEARCH_PROVIDERS: SearchProviderConfig[] = [
-  { id: 'brave', name: 'Brave Search', hasKey: false, description: '免费额度：每月 2000 次请求' },
-  { id: 'perplexity', name: 'Perplexity', hasKey: false, description: '需要 Perplexity API Key' },
-  { id: 'grok', name: 'Grok (xAI)', hasKey: false, description: '需要 xAI API Key' },
-  { id: 'gemini', name: 'Google Gemini', hasKey: false, description: '需要 Google AI API Key' },
-  { id: 'kimi', name: 'Kimi (Moonshot)', hasKey: false, description: '需要 Kimi API Key' },
-];
-
 const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   const [loading, setLoading] = useState(false);
-  const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [apiKey, setApiKey] = useState('');
   const [showAddKey, setShowAddKey] = useState(false);
+
+  // 三栏浏览状态
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
 
   // 搜索 API Key 状态
   const [searchProvider, setSearchProvider] = useState<string>('brave');
   const [searchApiKey, setSearchApiKey] = useState('');
   const [searchEnabled, setSearchEnabled] = useState(true);
   const [showAddSearchKey, setShowAddSearchKey] = useState(false);
-  const [searchProviders, setSearchProviders] = useState<SearchProviderConfig[]>(DEFAULT_SEARCH_PROVIDERS);
 
-  const getProviderDisplayName = useCallback((provider: string): string => {
-    return PROVIDER_DISPLAY_NAMES[provider] || provider;
+  // 使用 useModels hook 获取三栏层级数据
+  const {
+    providerGroupList,
+    configuredProviders,
+    currentSelection,
+    isRestarting,
+    selectModel,
+    refresh: refreshModels,
+  } = useModels();
+
+  // 加载当前模型
+  useEffect(() => {
+    const loadCurrentModel = async () => {
+      try {
+        const agentResult = await window.electronAPI.getDefaultAgent();
+        if (agentResult.success && agentResult.agent?.model) {
+          const modelConfig = agentResult.agent.model;
+          let modelStr = '';
+          if (typeof modelConfig === 'string') {
+            modelStr = modelConfig;
+          } else if (modelConfig.primary) {
+            modelStr = modelConfig.primary;
+          }
+          setCurrentModel(modelStr);
+        }
+      } catch (error) {
+        console.error('Failed to load current model:', error);
+      }
+    };
+    loadCurrentModel();
   }, []);
 
-  const loadAISettings = useCallback(async () => {
-    try {
-      setLoading(true);
+  // 选中的分组
+  const selectedGroup = useMemo(() => {
+    if (!selectedGroupId) return null;
+    return providerGroupList.find(g => g.groupId === selectedGroupId) || null;
+  }, [selectedGroupId, providerGroupList]);
 
-      const [catalogResult, providersResult, authResult, agentResult] = await Promise.all([
-        window.electronAPI.getModelCatalog(),
-        window.electronAPI.getCatalogProviders(),
-        window.electronAPI.getAuthProfiles(),
-        window.electronAPI.getDefaultAgent(),
-      ]);
+  // 是否显示中栏
+  const showMiddleColumn = selectedGroup?.hasMultipleSubCategories ?? false;
 
-      const providerList: ProviderConfig[] = [];
-      const allModels = catalogResult.success && catalogResult.models ? catalogResult.models : [];
-      const providerData = providersResult.success && providersResult.providers ? providersResult.providers : [];
-      const authData = authResult.success && authResult.profiles ? authResult.profiles : [];
-
-      for (const p of providerData) {
-        const providerModels = allModels.filter((m: any) => m.provider === p.id);
-        const authProfile = authData.find((a: any) => a.provider === p.id);
-        providerList.push({
-          id: p.id,
-          name: p.name || getProviderDisplayName(p.id),
-          hasKey: authProfile?.hasKey || false,
-          models: providerModels.map((m: any) => ({
-            provider: m.provider,
-            id: m.id,
-            name: m.name,
-            contextWindow: m.contextWindow,
-          })),
-        });
-      }
-
-      setProviders(providerList);
-
-      if (agentResult.success && agentResult.agent?.model) {
-        const modelConfig = agentResult.agent.model;
-        let modelStr = '';
-        if (typeof modelConfig === 'string') {
-          modelStr = modelConfig;
-        } else if (modelConfig.primary) {
-          modelStr = modelConfig.primary;
-        }
-        setCurrentModel(modelStr);
-      }
-    } catch (error) {
-      console.error('Failed to load AI settings:', error);
-      onShowToast('加载AI设置失败', 'error');
-    } finally {
-      setLoading(false);
+  // 右栏展示的子分类
+  const displaySubCategories = useMemo(() => {
+    if (!selectedGroup) return [];
+    if (selectedSubCategoryId) {
+      const sc = selectedGroup.subCategories.find(s => s.id === selectedSubCategoryId);
+      return sc ? [sc] : [];
     }
-  }, [onShowToast, getProviderDisplayName]);
-
-  useEffect(() => {
-    loadAISettings();
-  }, [loadAISettings]);
+    return selectedGroup.subCategories;
+  }, [selectedGroup, selectedSubCategoryId]);
 
   const handleSaveApiKey = async () => {
     if (!selectedProvider || !apiKey.trim()) {
@@ -702,13 +671,18 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
 
     try {
       setLoading(true);
-      const result = await window.electronAPI.setApiKey(selectedProvider, apiKey);
+      // 对于 Z.AI，根据子分类确定 endpoint
+      let endpoint: string | undefined;
+      if (selectedProvider === 'zai' && selectedSubCategoryId) {
+        endpoint = selectedSubCategoryId; // "coding-cn", "coding-global", "cn", "global"
+      }
+      const result = await window.electronAPI.setApiKey(selectedProvider, apiKey, undefined, endpoint);
       if (result.success) {
         onShowToast('API Key 已保存', 'success');
         setApiKey('');
         setShowAddKey(false);
         setSelectedProvider('');
-        loadAISettings();
+        refreshModels();
       } else {
         throw new Error(result.error || '保存失败');
       }
@@ -720,7 +694,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   };
 
   const handleRemoveApiKey = async (providerId: string) => {
-    if (!confirm(`确定要删除 ${getProviderDisplayName(providerId)} 的API Key吗？`)) {
+    if (!confirm(`确定要删除此 API Key 吗？`)) {
       return;
     }
 
@@ -729,7 +703,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
       const result = await window.electronAPI.removeApiKey(providerId);
       if (result.success) {
         onShowToast('API Key 已删除', 'success');
-        loadAISettings();
+        refreshModels();
       } else {
         throw new Error(result.error || '删除失败');
       }
@@ -741,33 +715,33 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   };
 
   const handleSelectModel = async (providerId: string, modelId: string) => {
-    const modelString = `${providerId}/${modelId}`;
-
     try {
       setLoading(true);
-      const agentResult = await window.electronAPI.getDefaultAgent();
-      if (agentResult.success && agentResult.agent) {
-        const updatedAgent = {
-          ...agentResult.agent,
-          model: {
-            primary: modelString,
-            fallbacks: agentResult.agent.model?.fallbacks || [],
-          },
-        };
-
-        const updateResult = await window.electronAPI.setAgent(updatedAgent);
-        if (updateResult.success) {
-          setCurrentModel(modelString);
-          onShowToast('模型已切换', 'success');
-          window.dispatchEvent(new CustomEvent('model-changed'));
-        } else {
-          throw new Error(updateResult.error || '切换失败');
-        }
-      }
+      await selectModel(providerId, modelId);
+      setCurrentModel(`${providerId}/${modelId}`);
+      onShowToast('模型已切换', 'success');
     } catch (error) {
       onShowToast('切换失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGroupClick = (groupId: string) => {
+    if (selectedGroupId === groupId) {
+      setSelectedGroupId(null);
+      setSelectedSubCategoryId(null);
+    } else {
+      setSelectedGroupId(groupId);
+      setSelectedSubCategoryId(null);
+    }
+  };
+
+  const handleSubCategoryClick = (subCategoryId: string) => {
+    if (selectedSubCategoryId === subCategoryId) {
+      setSelectedSubCategoryId(null);
+    } else {
+      setSelectedSubCategoryId(subCategoryId);
     }
   };
 
@@ -780,16 +754,11 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
 
     try {
       setLoading(true);
-      // 调用后端保存搜索 API Key
       const result = await window.electronAPI.setSearchApiKey(searchProvider, searchApiKey);
       if (result.success) {
         onShowToast('搜索 API Key 已保存', 'success');
         setSearchApiKey('');
         setShowAddSearchKey(false);
-        // 更新本地状态
-        setSearchProviders(prev => prev.map(p =>
-          p.id === searchProvider ? { ...p, hasKey: true } : p
-        ));
       } else {
         throw new Error(result.error || '保存失败');
       }
@@ -800,157 +769,163 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
     }
   };
 
-  // 删除搜索 API Key
-  const handleRemoveSearchApiKey = async (providerId: string) => {
-    const providerName = searchProviders.find(p => p.id === providerId)?.name || providerId;
-    if (!confirm(`确定要删除 ${providerName} 的搜索 API Key 吗？`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const result = await window.electronAPI.removeSearchApiKey(providerId);
-      if (result.success) {
-        onShowToast('搜索 API Key 已删除', 'success');
-        setSearchProviders(prev => prev.map(p =>
-          p.id === providerId ? { ...p, hasKey: false } : p
-        ));
-      } else {
-        throw new Error(result.error || '删除失败');
-      }
-    } catch (error) {
-      onShowToast('删除失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const configuredProviders = providers.filter(p => p.hasKey);
-  const unconfiguredProviders = providers.filter(p => !p.hasKey);
-
   return (
     <div className="settings-section">
       <div className="settings-section-title">AI 模型</div>
 
       {/* 当前模型 */}
-      <div className="current-model-display">
-        <div className="current-model-label">当前使用</div>
-        <div className="current-model-value">
+      <div className="current-model-display" style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: 'var(--bg-secondary, #f9fafb)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary, #6b7280)' }}>当前使用</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500 }}>
           {currentModel ? (
             <>
-              <span className="current-model-icon">{getProviderIcon(currentModel.split('/')[0] || '')}</span>
-              <span className="current-model-name">{currentModel}</span>
+              <span>🤖</span>
+              <span>{currentModel}</span>
             </>
           ) : (
-            <span className="current-model-empty">未配置模型</span>
+            <span style={{ color: 'var(--text-secondary)' }}>未配置模型</span>
           )}
         </div>
       </div>
 
-      {/* 已配置的提供商 */}
+      {/* 三栏浏览器 */}
       <div className="settings-group">
         <div className="settings-group-title">
-          <span>已配置的提供商</span>
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setShowAddKey(true)}
-            disabled={loading}
-          >
-            + 添加
-          </button>
+          <span>模型供应商</span>
         </div>
 
-        {configuredProviders.length === 0 ? (
-          <div className="empty-state-card">
-            <div className="empty-icon">🔑</div>
-            <div className="empty-text">暂无配置的提供商</div>
-            <button className="btn btn-primary" onClick={() => setShowAddKey(true)}>
-              添加第一个API Key
-            </button>
-          </div>
-        ) : (
-          <div className="provider-list">
-            {configuredProviders.map(provider => (
-              <div key={provider.id} className="provider-item">
-                <div className="provider-header">
-                  <span className="provider-icon">{getProviderIcon(provider.id)}</span>
-                  <span className="provider-name">{provider.name}</span>
-                  <span className="provider-status configured">已配置</span>
-                  <button
-                    className="btn-icon-sm"
-                    onClick={() => handleRemoveApiKey(provider.id)}
-                    title="删除配置"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="provider-models">
-                  {provider.models.map(model => (
-                    <button
-                      key={model.id}
-                      className={`model-chip ${currentModel === `${provider.id}/${model.id}` ? 'active' : ''}`}
-                      onClick={() => handleSelectModel(provider.id, model.id)}
-                      disabled={loading}
-                    >
-                      {model.name}
-                    </button>
-                  ))}
-                </div>
+        <div className="ai-model-browser" style={{ display: 'flex', border: '1px solid var(--border-color, #e5e7eb)', borderRadius: '8px', overflow: 'hidden', minHeight: '320px', maxHeight: '480px' }}>
+          {/* 左栏: 供应商分组 */}
+          <div style={{ width: '140px', borderRight: '1px solid var(--border-color, #f3f4f6)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-secondary, #fafafa)', flexShrink: 0 }}>
+            {providerGroupList.map(group => (
+              <div
+                key={group.groupId}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 8px',
+                  borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginBottom: '2px',
+                  backgroundColor: selectedGroupId === group.groupId ? 'var(--primary-light, #eff6ff)' : 'transparent',
+                  color: selectedGroupId === group.groupId ? 'var(--primary, #2563eb)' : group.hasAnyApiKey ? 'var(--text-primary, #374151)' : 'var(--text-secondary, #9ca3af)',
+                  fontWeight: selectedGroupId === group.groupId ? 500 : 400,
+                  borderLeft: group.hasAnyApiKey ? '3px solid #22c55e' : '3px solid transparent',
+                }}
+                onClick={() => handleGroupClick(group.groupId)}
+              >
+                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.groupName}</span>
               </div>
             ))}
           </div>
-        )}
+
+          {/* 中栏: 子分类 (仅多子分类时显示) */}
+          {showMiddleColumn && selectedGroup && (
+            <div style={{ width: '110px', borderRight: '1px solid var(--border-color, #f3f4f6)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-tertiary, #f5f5f5)', flexShrink: 0 }}>
+              {selectedGroup.subCategories.map(sc => (
+                <div
+                  key={sc.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 8px',
+                    borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginBottom: '2px',
+                    backgroundColor: selectedSubCategoryId === sc.id ? 'var(--primary-light, #eff6ff)' : 'transparent',
+                    color: selectedSubCategoryId === sc.id ? 'var(--primary, #2563eb)' : sc.hasApiKey ? 'var(--text-primary, #374151)' : 'var(--text-secondary, #9ca3af)',
+                    fontWeight: selectedSubCategoryId === sc.id ? 500 : 400,
+                  }}
+                  onClick={() => handleSubCategoryClick(sc.id)}
+                >
+                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.label}</span>
+                  <span style={{ fontSize: '10px', color: '#9ca3af', backgroundColor: '#f3f4f6', padding: '1px 4px', borderRadius: '4px' }}>{sc.models.length}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 右栏: 模型列表 */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px', backgroundColor: 'var(--bg-primary, #ffffff)' }}>
+            {!selectedGroup ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary, #6b7280)', fontSize: '13px' }}>
+                请从左侧选择供应商
+              </div>
+            ) : displaySubCategories.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary, #6b7280)', fontSize: '13px' }}>
+                未找到子分类
+              </div>
+            ) : (
+              displaySubCategories.map(sc => (
+                <div key={sc.id} style={{ marginBottom: '12px' }}>
+                  {/* 子分类标题 */}
+                  {selectedGroup.hasMultipleSubCategories && (
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #6b7280)', textTransform: 'uppercase', letterSpacing: '0.3px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{sc.label}</span>
+                      {!sc.hasApiKey && (
+                        <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 500, backgroundColor: '#fef3c7', color: '#92400e', textTransform: 'none', letterSpacing: 0 }}>需配置</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* API Key 操作 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', marginBottom: '4px' }}>
+                    {sc.hasApiKey ? (
+                      <>
+                        <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500 }}>API Key 已配置</span>
+                        <button
+                          className="btn btn-sm"
+                          style={{ fontSize: '11px', padding: '2px 8px', color: '#ef4444' }}
+                          onClick={() => handleRemoveApiKey(sc.providerId)}
+                          disabled={loading}
+                        >
+                          删除
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        style={{ fontSize: '11px', padding: '2px 8px' }}
+                        onClick={() => {
+                          setSelectedProvider(sc.providerId);
+                          setShowAddKey(true);
+                        }}
+                        disabled={loading}
+                      >
+                        配置 API Key
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 模型列表 */}
+                  {sc.hasApiKey && sc.models.length > 0 ? (
+                    <div className="provider-models" style={{ paddingLeft: '8px' }}>
+                      {sc.models.map(model => (
+                        <button
+                          key={`${model.provider}/${model.id}`}
+                          className={`model-chip ${currentModel === `${model.provider}/${model.id}` ? 'active' : ''}`}
+                          onClick={() => handleSelectModel(model.provider, model.id)}
+                          disabled={loading || isRestarting}
+                          style={{ marginRight: '6px', marginBottom: '6px' }}
+                        >
+                          {model.name}
+                          {model.contextWindow ? ` (${model.contextWindow >= 1000 ? `${Math.round(model.contextWindow / 1000)}K` : model.contextWindow})` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  ) : sc.hasApiKey ? (
+                    <div style={{ padding: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      暂无可用模型
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* 未配置的提供商 */}
-      {unconfiguredProviders.length > 0 && (
-        <div className="settings-group">
-          <div className="settings-group-title">未配置的提供商</div>
-          <div className="provider-list">
-            {unconfiguredProviders.slice(0, 4).map(provider => (
-              <div key={provider.id} className="provider-item unconfigured">
-                <div className="provider-header">
-                  <span className="provider-icon">{getProviderIcon(provider.id)}</span>
-                  <span className="provider-name">{provider.name}</span>
-                  <span className="provider-status unconfigured">未配置</span>
-                </div>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => {
-                    setSelectedProvider(provider.id);
-                    setShowAddKey(true);
-                  }}
-                >
-                  配置
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 添加API Key弹窗 */}
-      {showAddKey && (
+      {/* 配置 API Key 弹窗 */}
+      {showAddKey && selectedProvider && (
         <div className="modal-overlay active" onClick={() => setShowAddKey(false)}>
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">添加 API Key</h3>
+              <h3 className="modal-title">配置 API Key</h3>
               <button className="modal-close" onClick={() => setShowAddKey(false)}>×</button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">选择提供商</label>
-                <select
-                  className="form-select"
-                  value={selectedProvider}
-                  onChange={e => setSelectedProvider(e.target.value)}
-                >
-                  <option value="">请选择...</option>
-                  {providers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
               <div className="form-group">
                 <label className="form-label">API Key</label>
                 <input
@@ -959,6 +934,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                   placeholder="输入 API Key"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
+                  autoFocus
                 />
               </div>
             </div>
@@ -967,7 +943,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
               <button
                 className="btn btn-primary"
                 onClick={handleSaveApiKey}
-                disabled={!selectedProvider || !apiKey.trim() || loading}
+                disabled={!apiKey.trim() || loading}
               >
                 {loading ? '保存中...' : '保存'}
               </button>
@@ -975,125 +951,9 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
           </div>
         </div>
       )}
-
-      {/* 网络搜索 API Key 配置 */}
-      <div className="settings-group" style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
-        <div className="settings-group-title">
-          <span>🌐 网络搜索</span>
-        </div>
-        <div className="settings-item-desc" style={{ marginBottom: '16px' }}>
-          配置网络搜索 API Key，启用 AI 实时联网搜索功能
-        </div>
-
-        {/* 启用搜索开关 */}
-        <div className="settings-item" style={{ marginBottom: '16px' }}>
-          <div className="settings-item-label">
-            <div className="settings-item-title">启用网络搜索</div>
-            <div className="settings-item-desc">允许 AI 使用网络搜索工具</div>
-          </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={searchEnabled}
-              onChange={(e) => setSearchEnabled(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-
-        {/* 搜索 API 提供商列表 */}
-        <div className="search-provider-list">
-          {searchProviders.map(provider => (
-            <div key={provider.id} className="provider-item" style={{ marginBottom: '12px' }}>
-              <div className="provider-header">
-                <span className="provider-name">{provider.name}</span>
-                <span className={`provider-status ${provider.hasKey ? 'configured' : 'unconfigured'}`}>
-                  {provider.hasKey ? '已配置' : '未配置'}
-                </span>
-                {provider.hasKey ? (
-                  <button
-                    className="btn-icon-sm"
-                    onClick={() => handleRemoveSearchApiKey(provider.id)}
-                    title="删除配置"
-                  >
-                    ×
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => {
-                      setSearchProvider(provider.id);
-                      setShowAddSearchKey(true);
-                    }}
-                  >
-                    配置
-                  </button>
-                )}
-              </div>
-              <div className="settings-item-desc" style={{ marginTop: '4px' }}>
-                {provider.description}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 添加搜索 API Key 弹窗 */}
-      {showAddSearchKey && (
-        <div className="modal-overlay active" onClick={() => setShowAddSearchKey(false)}>
-          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                配置 {searchProviders.find(p => p.id === searchProvider)?.name} API Key
-              </h3>
-              <button className="modal-close" onClick={() => setShowAddSearchKey(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">API Key</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="输入 API Key"
-                  value={searchApiKey}
-                  onChange={e => setSearchApiKey(e.target.value)}
-                />
-              </div>
-              <div className="form-hint">
-                {searchProvider === 'brave' && '获取 Brave API Key: https://brave.com/search/api/'}
-                {searchProvider === 'perplexity' && '获取 Perplexity API Key: https://www.perplexity.ai/settings'}
-                {searchProvider === 'grok' && '获取 xAI API Key: https://console.x.ai'}
-                {searchProvider === 'gemini' && '获取 Google AI API Key: https://aistudio.google.com/app/apikey'}
-                {searchProvider === 'kimi' && '获取 Kimi API Key: https://platform.moonshot.cn/'}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn" onClick={() => setShowAddSearchKey(false)}>取消</button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveSearchApiKey}
-                disabled={!searchApiKey.trim() || loading}
-              >
-                {loading ? '保存中...' : '保存'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 操作按钮 */}
-      <div className="settings-actions">
-        <button className="btn" onClick={loadAISettings} disabled={loading}>
-          刷新配置
-        </button>
-      </div>
     </div>
   );
 };
-
-// 旧的 AISettings 别名，用于兼容
-type AISettingsProps = AIEngineSettingsProps;
-const AISettings = AIEngineSettings;
 
 /**
  * 账户设置面板

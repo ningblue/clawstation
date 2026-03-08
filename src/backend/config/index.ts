@@ -8,7 +8,7 @@ export {
   getOpenClawConfigManager,
   resetOpenClawConfigManager,
   DEFAULT_CONFIG,
-} from './openclaw-config-manager';
+} from "./openclaw-config-manager";
 
 export type {
   OpenClawConfig,
@@ -22,6 +22,6 @@ export type {
   GatewayControlUiConfig,
   ModelsConfig,
   ModelProviderConfig,
-  AuthProfile,
-  AuthProfilesConfig,
-} from './openclaw-config-manager';
+  AuthProfileCredential,
+  AuthProfileStore,
+} from "./openclaw-config-manager";
