@@ -213,6 +213,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   removeOpenClawStatusChangedListener: (
     callback: (event: any, data: any) => void
   ) => ipcRenderer.removeListener("openclaw:status-changed", callback),
+
+  // 窗口控制 API
+  windowMinimize: () => ipcRenderer.invoke("window:minimize"),
+  windowMaximize: () => ipcRenderer.invoke("window:maximize"),
+  windowClose: () => ipcRenderer.invoke("window:close"),
+  isWindowMaximized: () => ipcRenderer.invoke("window:isMaximized"),
 });
 
 // 定义API接口以便在渲染进程中使用类型提示
@@ -546,6 +552,12 @@ declare global {
           data: { isRunning: boolean; port: number }
         ) => void
       ) => void;
+
+      // 窗口控制 API
+      windowMinimize: () => Promise<void>;
+      windowMaximize: () => Promise<boolean>;
+      windowClose: () => Promise<void>;
+      isWindowMaximized: () => Promise<boolean>;
     };
   }
 }

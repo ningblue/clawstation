@@ -50,7 +50,6 @@ let latestEngineStatus: {
   isHealthy: false,
 };
 
-
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -69,7 +68,7 @@ async function createWindow() {
       dialog.showErrorBox(
         "Database Error",
         "Failed to initialize database. The application may not function correctly.\n" +
-          String(dbError),
+          String(dbError)
       );
     }
 
@@ -84,6 +83,7 @@ async function createWindow() {
     initializeApiHandlers();
 
     // 创建浏览器窗口
+    const isMac = process.platform === "darwin";
     mainWindow = new BrowserWindow({
       height: 800,
       width: 1200,
@@ -95,9 +95,9 @@ async function createWindow() {
         contextIsolation: true,
         preload: path.join(__dirname, "../preload/index.js"),
       },
-      frame: true,
+      frame: false,
       titleBarStyle: "hidden",
-      trafficLightPosition: { x: 15, y: 15 },
+      ...(isMac && { trafficLightPosition: { x: 15, y: 15 } }),
       show: false, // 先隐藏窗口，等待加载完成后再显示
     });
 
@@ -134,11 +134,10 @@ async function createWindow() {
           const logPath = log.transports.file.getFile().path;
           dialog.showErrorBox(
             "AI Engine Startup Error",
-            `Failed to start AI engine.\n\nError: ${err.message}\n\nPlease check the log file for more details:\n${logPath}`,
+            `Failed to start AI engine.\n\nError: ${err.message}\n\nPlease check the log file for more details:\n${logPath}`
           );
         }
       });
-
 
     // 加载应用主页面
     const entryUrl = path.join(__dirname, "../renderer/index.html");
@@ -208,12 +207,11 @@ async function createWindow() {
         });
       }
     });
-
   } catch (err) {
     log.error("Fatal error during window creation:", err);
     dialog.showErrorBox(
       "Startup Error",
-      "A fatal error occurred during startup.\n" + String(err),
+      "A fatal error occurred during startup.\n" + String(err)
     );
   }
 }
@@ -323,7 +321,7 @@ function setupMenu() {
           label: "反馈问题",
           click: async () => {
             await shell.openExternal(
-              "https://github.com/clawstation/clawstation/issues",
+              "https://github.com/clawstation/clawstation/issues"
             );
           },
         },
@@ -410,7 +408,7 @@ function setupIpcHandlers() {
     "show-error-dialog",
     async (_, options: { title: string; message: string }) => {
       await dialog.showErrorBox(options.title, options.message);
-    },
+    }
   );
 
   // 显示确认对话框
@@ -424,7 +422,7 @@ function setupIpcHandlers() {
         buttons?: string[];
         defaultId?: number;
         cancelId?: number;
-      },
+      }
     ) => {
       const result = await dialog.showMessageBox({
         type: "question",
@@ -436,8 +434,38 @@ function setupIpcHandlers() {
         cancelId: options.cancelId ?? 1,
       });
       return result.response;
-    },
+    }
   );
+
+  // 窗口控制 IPC 处理
+  ipcMain.handle("window:minimize", () => {
+    if (mainWindow) {
+      mainWindow.minimize();
+    }
+  });
+
+  ipcMain.handle("window:maximize", () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+        return false;
+      } else {
+        mainWindow.maximize();
+        return true;
+      }
+    }
+    return false;
+  });
+
+  ipcMain.handle("window:close", () => {
+    if (mainWindow) {
+      mainWindow.close();
+    }
+  });
+
+  ipcMain.handle("window:isMaximized", () => {
+    return mainWindow ? mainWindow.isMaximized() : false;
+  });
 }
 
 let isInitializing = false;
@@ -489,7 +517,6 @@ function attachOpenClawEventHandlers() {
   openclawManager.on("health_check_failed", syncStatus);
   openclawManager.on("restarting", syncStatus);
 }
-
 
 /**
  * 创建系统托盘
@@ -567,11 +594,10 @@ function updateTrayMenu() {
   const statusLabel = !isEngineRunning
     ? "⚪ AI引擎已停止"
     : isEngineHealthy
-      ? "🟢 AI引擎运行中"
-      : "🟠 AI引擎异常";
+    ? "🟢 AI引擎运行中"
+    : "🟠 AI引擎异常";
 
   const contextMenu = Menu.buildFromTemplate([
-
     {
       label: "打开主页面",
       click: () => {
@@ -602,7 +628,6 @@ function updateTrayMenu() {
           try {
             await openclawManager.restart();
             await broadcastEngineStatus();
-
           } catch (error) {
             console.error("Failed to restart engine from tray:", error);
           }
@@ -643,6 +668,7 @@ app.whenReady().then(async () => {
 
 // 仅用于 activate 事件重新创建窗口（不重新启动 OpenClaw）
 async function recreateWindow() {
+  const isMac = process.platform === "darwin";
   mainWindow = new BrowserWindow({
     height: 800,
     width: 1200,
@@ -654,9 +680,9 @@ async function recreateWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, "../preload/index.js"),
     },
-    frame: true,
+    frame: false,
     titleBarStyle: "hidden",
-    trafficLightPosition: { x: 15, y: 15 },
+    ...(isMac && { trafficLightPosition: { x: 15, y: 15 } }),
     show: false,
   });
 
@@ -696,7 +722,7 @@ app.on("window-all-closed", () => {
  */
 function killProcessOnPort(
   port: number,
-  processNameFilter?: string,
+  processNameFilter?: string
 ): Promise<void> {
   return new Promise((resolve) => {
     if (process.platform === "win32") {
@@ -716,8 +742,8 @@ function killProcessOnPort(
                 const match = line.match(/\s(\d+)$/);
                 return match?.[1] || "";
               })
-              .filter((pid) => pid && pid !== "0" && pid !== "4"),
-          ),
+              .filter((pid) => pid && pid !== "0" && pid !== "4")
+          )
         );
 
         if (pids.length === 0) {
@@ -727,7 +753,7 @@ function killProcessOnPort(
 
         if (processNameFilter) {
           console.log(
-            `[ClawStation] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`,
+            `[ClawStation] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`
           );
         }
 
@@ -804,13 +830,14 @@ function killPids(pids: string[], port: number, filter?: string): void {
       if (completed === pids.length) {
         const filterMsg = filter ? ` (matched: ${filter})` : "";
         console.log(
-          `[ClawStation] Killed processes on port ${port}${filterMsg}: ${pids.join(", ")}`,
+          `[ClawStation] Killed processes on port ${port}${filterMsg}: ${pids.join(
+            ", "
+          )}`
         );
       }
     });
   });
 }
-
 
 app.on("before-quit", async (event) => {
   // 设置退出标志，让窗口可以正常关闭

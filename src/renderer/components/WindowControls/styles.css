@@ -1,0 +1,66 @@
+/* WindowControls 样式 */
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.window-control-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.window-control-btn.minimize:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.window-control-btn.maximize:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.window-control-btn.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+.window-control-btn svg {
+  pointer-events: none;
+}
+
+/* 深色主题适配 */
+body.dark-theme .window-control-btn {
+  color: #999;
+}
+
+body.dark-theme .window-control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .window-control-btn.minimize:hover,
+body.dark-theme .window-control-btn.maximize:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+body.dark-theme .window-control-btn.close:hover {
+  background: #e81123;
+  color: white;
+}

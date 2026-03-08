@@ -283,6 +283,12 @@ export interface ElectronAPI {
   // 移除监听器
   removeNewConversationListener: (callback: () => void) => void;
   removeToggleSearchListener: (callback: () => void) => void;
+
+  // 窗口控制 API
+  windowMinimize: () => Promise<void>;
+  windowMaximize: () => Promise<boolean>;
+  windowClose: () => Promise<void>;
+  isWindowMaximized: () => Promise<boolean>;
 }
 
 // 用户类型
@@ -341,6 +347,14 @@ export interface EngineStatus {
   version?: string;
   error?: string;
   port: number;
+}
+
+// 窗口控制 API
+export interface WindowControlsAPI {
+  windowMinimize: () => Promise<void>;
+  windowMaximize: () => Promise<boolean>;
+  windowClose: () => Promise<void>;
+  isWindowMaximized: () => Promise<boolean>;
 }
 
 export {};

@@ -9,10 +9,34 @@ files:
 extraResources:
   - from: resources/openclaw
     to: openclaw
+    filter:
+      - "**/*"
+      - "!docs/**/*.md" # 排除文档（保留templates）
+      - "!docs/**/images/**" # 排除图片
+      - "!docs/**/assets/**" # 排除资源文件
+      - "!node_modules/**/*.md" # 排除markdown文件
+      - "!node_modules/**/*.map" # 排除source map
+      - "!node_modules/**/test/**" # 排除测试文件
+      - "!node_modules/**/tests/**"
+      - "!node_modules/**/docs/**" # 排除依赖文档
+      - "!node_modules/**/examples/**" # 排除示例代码
+      - "!node_modules/**/.github/**" # 排除github配置
+      - "!node_modules/**/LICENSE*" # 排除许可证文件
+      - "!node_modules/**/README*"
+      - "!node_modules/**/CHANGELOG*"
+      - "!node_modules/**/AUTHORS*"
+      - "!node_modules/**/CONTRIBUTORS*"
+      - "!node_modules/**/*.d.ts" # 排除TypeScript定义（已编译）
+      - "!node_modules/**/*.tsbuildinfo" # 排除构建信息
+  - from: resources/openclaw/docs/reference/templates
+    to: openclaw/docs/reference/templates
+    filter:
+      - "**/*" # 单独包含templates（必需）
   - from: resources/
     to: resources/
     filter:
       - "**/*"
+      - "!openclaw/**" # openclaw单独处理
   - from: resources/node/${os}-${arch}/node
     to: node
     filter:

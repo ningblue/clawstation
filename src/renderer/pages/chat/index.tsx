@@ -7,6 +7,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Sidebar } from '../../components/Sidebar';
 import { MessageList } from '../../components/MessageList';
 import { ChatInput } from '../../components/ChatInput';
+import { WindowControls } from '../../components/WindowControls';
 import { useChatStore, useUserStore } from '../../stores';
 import { useModels } from '../../hooks/useModels';
 import type { Message } from '../../stores';
@@ -107,8 +108,11 @@ export const ChatPage: React.FC = () => {
 
   return (
     <div id="root">
-      {/* 顶部空白栏 */}
-      <div className="app-header" />
+      {/* 顶部标题栏 - 包含窗口控制按钮 */}
+      <div className="app-header">
+        <div className="app-header-drag-area" />
+        <WindowControls />
+      </div>
 
       <div className="main-content">
         <Sidebar
