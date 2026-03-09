@@ -84,6 +84,7 @@ export enum OpenClawProcessEvent {
   RESTARTING = "restarting",
   OUTPUT = "output",
   STDERR = "stderr",
+  READY = "ready", // OpenClaw 通过 stdout 报告已就绪
 }
 
 /**
@@ -97,7 +98,7 @@ const DEFAULT_CONFIG: OpenClawServiceConfig = {
   restartDelayMs: 5000,
   healthCheckIntervalMs: 30000,
   healthCheckTimeoutMs: 5000,
-  startupTimeoutMs: 30000,
+  startupTimeoutMs: 60000, // 增加到 60 秒，打包后的环境启动较慢
 };
 
 /**
@@ -116,6 +117,7 @@ export class OpenClawManager extends EventEmitter {
   private configManager: OpenClawConfigManager;
   private isExternal: boolean = false;
   private lastError: string | null = null;
+  private isReady: boolean = false; // 标记 OpenClaw 是否已就绪
 
   constructor(config: Partial<OpenClawServiceConfig> = {}) {
     super();
@@ -1397,6 +1399,8 @@ export class OpenClawManager extends EventEmitter {
       OPENCLAW_GATEWAY_TOKEN: this.gatewayToken || "",
       // 传递进程名，以便 entry.js 能够正确设置 process.title
       OPENCLAW_PROCESS_NAME: OPENCLAW_PROCESS_NAME,
+      // 禁用 OpenClaw 的进程重新生成行为，避免与子进程管理冲突
+      OPENCLAW_NO_RESPAWN: "1",
     };
 
     this.log.info(`NODE_PATH set to: ${nodeModulesPath}`);
@@ -1605,12 +1609,17 @@ export class OpenClawManager extends EventEmitter {
   private setupProcessHandlers(): void {
     if (!this.childProcess) return;
 
-    // 标准输出
+    // 标准输出 - 同时监听启动成功的标志
     this.childProcess.stdout?.on("data", (data: Buffer) => {
       const output = data.toString().trim();
       if (output) {
         this.log.info("[OpenClaw]", output);
         this.emit(OpenClawProcessEvent.OUTPUT, output);
+
+        // 检测 OpenClaw 启动成功的标志
+        if (output.includes("listening on ws://") || output.includes("[gateway] listening")) {
+          this.emit(OpenClawProcessEvent.READY);
+        }
       }
     });
 
@@ -1663,25 +1672,61 @@ export class OpenClawManager extends EventEmitter {
 
   /**
    * 等待服务启动
+   * 通过两种方式检测：
+   * 1. 监听 stdout 中的 "listening on ws://" 标志（最快）
+   * 2. 定期健康检查（备用）
    */
   private async waitForStartup(): Promise<void> {
     const startTime = Date.now();
     const timeout = this.config.startupTimeoutMs;
 
-    while (Date.now() - startTime < timeout) {
-      try {
-        const isHealthy = await this.performHealthCheck();
-        if (isHealthy) {
+    // 重置就绪状态
+    this.isReady = false;
+
+    // 设置一次性监听器，当 OpenClaw 输出 "listening on ws://" 时触发
+    const readyPromise = new Promise<void>((resolve) => {
+      const onReady = () => {
+        this.isReady = true;
+        this.log.info("OpenClaw reported ready via stdout");
+        resolve();
+      };
+      this.once(OpenClawProcessEvent.READY, onReady);
+
+      // 超时后清理监听器
+      setTimeout(() => {
+        this.off(OpenClawProcessEvent.READY, onReady);
+      }, timeout);
+    });
+
+    // 健康检查循环
+    const healthCheckPromise = (async () => {
+      while (Date.now() - startTime < timeout) {
+        try {
+          const isHealthy = await this.performHealthCheck();
+          if (isHealthy) {
+            this.log.info("OpenClaw health check passed");
+            return;
+          }
+        } catch {
+          // 继续等待
+        }
+
+        // 如果已经通过 stdout 检测到就绪，提前退出
+        if (this.isReady) {
           return;
         }
-      } catch {
-        // 继续等待
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+      throw new Error(`OpenClaw failed to start within ${timeout}ms`);
+    })();
 
-    throw new Error(`OpenClaw failed to start within ${timeout}ms`);
+    // 竞争：谁先完成就用谁的结果
+    await Promise.race([readyPromise, healthCheckPromise]);
+
+    // 给一点额外时间让服务完全初始化
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   /**
