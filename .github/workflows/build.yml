@@ -40,6 +40,11 @@ jobs:
         with:
           version: 9
 
+      - name: Fetch OpenClaw dependency
+        run: |
+          mkdir -p lib
+          git clone --depth 1 https://github.com/openclaw/openclaw.git lib/openclaw
+
       - name: Install dependencies
         run: npm install --ignore-scripts
 
@@ -90,6 +95,12 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
+
+      - name: Fetch OpenClaw dependency
+        shell: bash
+        run: |
+          mkdir -p lib
+          git clone --depth 1 https://github.com/openclaw/openclaw.git lib/openclaw
 
       - name: Install dependencies
         run: npm install --ignore-scripts

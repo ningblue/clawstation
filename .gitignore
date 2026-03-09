@@ -24,108 +24,6 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
-
-# Testing
-coverage/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Temporary files
-*.tmp
-*.temp
-"\\!"
-
-# OpenClaw data (sensitive)
-.clawstation/
-.clawstation.pid
-
-# Benchmark output
-_bmad-output/
-
-# Backup files
-*.backup.*
-
-# Development files
-clawstation (binary)
-*.exe
-*.dmg
-*.app
-
-# lobehub (optional UI components)
-lib/lobehub/
-
-# Build outputs
-dist/
-release/
-build/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*.sublime-*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Testing
-coverage/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Temporary files
-*.tmp
-*.temp
-"\\!"
-
-# OpenClaw data (sensitive)
-.clawstation/
-.clawstation.pid
-
-# Benchmark output
-_bmad-output/
-
-# Backup files
-*.backup.*
-
-# Development files
-clawstation (binary)
-*.exe
-*.dmg
-*.app
-
-# Build outputs
-dist/
-release/
-build/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs/
-*.log
-npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
@@ -140,7 +38,6 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
-"\\!"
 
 # OpenClaw data (sensitive)
 .clawstation/
@@ -151,3 +48,15 @@ _bmad-output/
 
 # Backup files
 *.backup.*
+
+# Third-party libraries (development only, fetched during build)
+lib/
+
+# Claude Code local settings
+.claude/
+
+# Development files
+clawstation (binary)
+*.exe
+*.dmg
+*.app
