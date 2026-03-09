@@ -1063,7 +1063,7 @@ export class OpenClawConfigManager {
     if (!fs.existsSync(systemMdPath)) {
       const defaultSystemPrompt = `# Default Agent System Prompt
 
-You are a helpful AI assistant running within ClawStation.
+You are a helpful AI assistant running within X-Claw.
 Your primary goal is to assist the user with their tasks effectively and safely.
 
 ## Capabilities

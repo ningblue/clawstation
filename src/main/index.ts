@@ -531,13 +531,13 @@ function createTray() {
 
     if (app.isPackaged) {
       // 生产环境：从 extraResources 中获取
-      // 图标在 /Applications/ClawStation.app/Contents/Resources/resources/icon.png
+      // 图标在 /Applications/X-Claw.app/Contents/Resources/resources/icon.png
       iconPath = path.join(process.resourcesPath, "resources/icon.png");
 
       // 备用方案
       if (!require("fs").existsSync(iconPath)) {
         iconPath =
-          "/Applications/ClawStation.app/Contents/Resources/resources/icon.png";
+          "/Applications/X-Claw.app/Contents/Resources/resources/icon.png";
       }
     } else {
       // 开发环境
@@ -561,7 +561,7 @@ function createTray() {
     }
 
     tray = new Tray(trayIcon);
-    tray.setToolTip("ClawStation - AI数字员工");
+    tray.setToolTip("X-Claw - AI数字员工");
 
     // 构建托盘菜单
     updateTrayMenu();
@@ -753,7 +753,7 @@ function killProcessOnPort(
 
         if (processNameFilter) {
           console.log(
-            `[ClawStation] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`
+            `[X-Claw] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`
           );
         }
 
@@ -830,7 +830,7 @@ function killPids(pids: string[], port: number, filter?: string): void {
       if (completed === pids.length) {
         const filterMsg = filter ? ` (matched: ${filter})` : "";
         console.log(
-          `[ClawStation] Killed processes on port ${port}${filterMsg}: ${pids.join(
+          `[X-Claw] Killed processes on port ${port}${filterMsg}: ${pids.join(
             ", "
           )}`
         );

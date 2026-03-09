@@ -1,5 +1,5 @@
 #!/bin/bash
-# ClawStation Setup Script
+# X-Claw Setup Script
 # This script sets up the required local dependencies
 
 set -e
@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "ClawStation Setup"
+echo "X-Claw Setup"
 echo "================="
 
 # Check if lib directory exists

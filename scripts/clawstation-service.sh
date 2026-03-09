@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================
-# ClawStation 服务管理脚本
-# 用于启动、停止和重启 ClawStation 应用及 AI 引擎
+# X-Claw 服务管理脚本
+# 用于启动、停止和重启 X-Claw 应用及 AI 引擎
 # ============================================
 
 # 颜色定义
@@ -112,13 +112,13 @@ kill_electron() {
 
 # 启动服务
 start_service() {
-    log_info "启动 ClawStation 服务..."
+    log_info "启动 X-Claw 服务..."
 
     # 检查是否已经在运行
     if [ -f "$PROJECT_ROOT/$PID_FILE" ]; then
         local old_pid=$(cat "$PROJECT_ROOT/$PID_FILE")
         if kill -0 $old_pid 2>/dev/null; then
-            log_warn "ClawStation 已经在运行 (PID: $old_pid)"
+            log_warn "X-Claw 已经在运行 (PID: $old_pid)"
             log_info "如需重启，请使用: $0 restart"
             return 1
         else
@@ -150,7 +150,7 @@ start_service() {
     cd "$PROJECT_ROOT"
 
     # 启动应用
-    log_info "启动 ClawStation..."
+    log_info "启动 X-Claw..."
     npm start > "$PROJECT_ROOT/$LOG_DIR/clawstation.log" 2>&1 &
     local main_pid=$!
 
@@ -162,12 +162,12 @@ start_service() {
 
     # 检查是否成功启动
     if kill -0 $main_pid 2>/dev/null; then
-        log_success "ClawStation 启动成功 (PID: $main_pid)"
+        log_success "X-Claw 启动成功 (PID: $main_pid)"
         log_info "应用正在启动，请稍等..."
         log_info "日志文件: $PROJECT_ROOT/$LOG_DIR/clawstation.log"
         return 0
     else
-        log_error "ClawStation 启动失败"
+        log_error "X-Claw 启动失败"
         rm -f "$PROJECT_ROOT/$PID_FILE"
         return 1
     fi
@@ -175,7 +175,7 @@ start_service() {
 
 # 停止服务
 stop_service() {
-    log_info "停止 ClawStation 服务..."
+    log_info "停止 X-Claw 服务..."
 
     local found_process=0
 
@@ -257,7 +257,7 @@ stop_service() {
     fi
 
     if [ $found_process -eq 0 ]; then
-        log_info "没有找到运行中的 ClawStation 进程"
+        log_info "没有找到运行中的 X-Claw 进程"
     fi
 
     # 清理 PID 文件
@@ -266,7 +266,7 @@ stop_service() {
 
 # 重启服务
 restart_service() {
-    log_info "重启 ClawStation 服务..."
+    log_info "重启 X-Claw 服务..."
     stop_service
     sleep 3
     start_service
@@ -274,7 +274,7 @@ restart_service() {
 
 # 查看状态
 status_service() {
-    log_info "检查 ClawStation 服务状态..."
+    log_info "检查 X-Claw 服务状态..."
 
     local running=0
 
@@ -282,7 +282,7 @@ status_service() {
     if [ -f "$PROJECT_ROOT/$PID_FILE" ]; then
         local main_pid=$(cat "$PROJECT_ROOT/$PID_FILE")
         if kill -0 $main_pid 2>/dev/null; then
-            log_success "ClawStation 主进程运行中 (PID: $main_pid)"
+            log_success "X-Claw 主进程运行中 (PID: $main_pid)"
             running=1
         else
             log_warn "PID 文件存在但进程未运行"
@@ -315,7 +315,7 @@ status_service() {
     fi
 
     if [ $running -eq 0 ]; then
-        log_info "ClawStation 当前未运行"
+        log_info "X-Claw 当前未运行"
     fi
 }
 
@@ -332,7 +332,7 @@ view_logs() {
 
 # 构建应用
 build_app() {
-    log_info "构建 ClawStation..."
+    log_info "构建 X-Claw..."
     cd "$PROJECT_ROOT"
 
     log_info "构建 OpenClaw 内置服务..."
@@ -392,15 +392,15 @@ reload_service() {
 # 显示帮助
 show_help() {
     echo "============================================"
-    echo "ClawStation 服务管理脚本"
+    echo "X-Claw 服务管理脚本"
     echo "============================================"
     echo ""
     echo "用法: $0 [命令]"
     echo ""
     echo "命令:"
-    echo "  start      启动 ClawStation 服务"
-    echo "  stop       停止 ClawStation 服务"
-    echo "  restart    重启 ClawStation 服务"
+    echo "  start      启动 X-Claw 服务"
+    echo "  stop       停止 X-Claw 服务"
+    echo "  restart    重启 X-Claw 服务"
     echo "  reload     完整重新加载（清理缓存+构建+重启）"
     echo "  status     查看服务状态"
     echo "  logs       查看实时日志"

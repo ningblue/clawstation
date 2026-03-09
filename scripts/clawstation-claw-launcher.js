@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ClawStation 内置 Claw 启动器
+ * X-Claw 内置 Claw 启动器
  * 用于将进程名设置为 clawstation-claw，避免与外部 Claw 冲突
  */
 

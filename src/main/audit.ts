@@ -57,7 +57,7 @@ export function setupAudit(): void {
   logAudit({
     action: AuditAction.SYSTEM_ERROR,
     level: AuditLevel.INFO,
-    details: `ClawStation application started - Version: ${process.env.npm_package_version || 'unknown'}, Platform: ${os.platform()}, Architecture: ${os.arch()}`
+    details: `X-Claw application started - Version: ${process.env.npm_package_version || 'unknown'}, Platform: ${os.platform()}, Architecture: ${os.arch()}`
   });
 }
 
@@ -241,7 +241,7 @@ function cleanupAudit(): void {
     logAudit({
       action: AuditAction.SYSTEM_ERROR,
       level: AuditLevel.INFO,
-      details: 'ClawStation application shutting down'
+      details: 'X-Claw application shutting down'
     });
 
     auditEnabled = false;

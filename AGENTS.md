@@ -1,8 +1,8 @@
-# ClawStation 服务管理指南
+# X-Claw 服务管理指南
 
 ## 概述
 
-本文档描述了 ClawStation 桌面应用的完整启停流程和管理脚本的使用方法。
+本文档描述了 X-Claw 桌面应用的完整启停流程和管理脚本的使用方法。
 
 ## 服务管理脚本
 
@@ -36,7 +36,7 @@ scripts/clawstation-service.sh
 这会：
 
 - 停止 Electron 主进程
-- 停止所有 ClawStation 相关子进程
+- 停止所有 X-Claw 相关子进程
 - 停止占用端口的 AI 引擎进程
 - 清理 PID 文件
 
@@ -80,7 +80,7 @@ scripts/clawstation-service.sh
 ## 进程结构
 
 ```
-ClawStation (主进程)
+X-Claw (主进程)
 ├── Electron Helper (GPU)      - 图形渲染
 ├── Electron Helper (Renderer) - 渲染进程
 ├── Electron Helper (Utility)  - 网络服务

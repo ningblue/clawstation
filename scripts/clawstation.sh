@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# ClawStation 服务管理脚本
-# 用于安全地启动、停止和管理 ClawStation 应用及 OpenClaw 服务
+# X-Claw 服务管理脚本
+# 用于安全地启动、停止和管理 X-Claw 应用及 OpenClaw 服务
 
 set -e
 
@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 PROJECT_DIR="$(cd "$(dirname "$0")"/.. && pwd)"
 PID_FILE="$PROJECT_DIR/.clawstation.pid"
 LOG_DIR="$PROJECT_DIR/logs"
-MAIN_LOG="$HOME/Library/Logs/ClawStation/main.log"
+MAIN_LOG="$HOME/Library/Logs/X-Claw/main.log"
 
 # 确保日志目录存在
 mkdir -p "$LOG_DIR"
@@ -26,13 +26,13 @@ SCRIPT_NAME=$(basename "$0")
 
 # 显示帮助信息
 show_help() {
-    echo -e "${BLUE}ClawStation 服务管理脚本${NC}"
+    echo -e "${BLUE}X-Claw 服务管理脚本${NC}"
     echo ""
     echo "用法: ./$SCRIPT_NAME [命令]"
     echo ""
     echo "命令:"
-    echo "  start     启动 ClawStation 应用和 OpenClaw 服务"
-    echo "  stop      安全停止 ClawStation 和 OpenClaw 服务"
+    echo "  start     启动 X-Claw 应用和 OpenClaw 服务"
+    echo "  stop      安全停止 X-Claw 和 OpenClaw 服务"
     echo "  restart   重启服务"
     echo "  status    查看服务运行状态"
     echo "  logs      查看实时日志"
@@ -58,9 +58,9 @@ check_status() {
     if [ -f "$PID_FILE" ]; then
         electron_pid=$(cat "$PID_FILE" 2>/dev/null)
         if [ -n "$electron_pid" ] && kill -0 "$electron_pid" 2>/dev/null; then
-            echo -e "${GREEN}✓ ClawStation 应用正在运行 (PID: $electron_pid)${NC}"
+            echo -e "${GREEN}✓ X-Claw 应用正在运行 (PID: $electron_pid)${NC}"
         else
-            echo -e "${RED}✗ ClawStation 应用未运行${NC}"
+            echo -e "${RED}✗ X-Claw 应用未运行${NC}"
             rm -f "$PID_FILE"
             electron_pid=""
         fi
@@ -68,10 +68,10 @@ check_status() {
         # 尝试查找 Electron 进程
         electron_pid=$(pgrep -f "$PROJECT_DIR/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" | head -1)
         if [ -n "$electron_pid" ]; then
-            echo -e "${GREEN}✓ ClawStation 应用正在运行 (PID: $electron_pid)${NC}"
+            echo -e "${GREEN}✓ X-Claw 应用正在运行 (PID: $electron_pid)${NC}"
             echo "$electron_pid" > "$PID_FILE"
         else
-            echo -e "${RED}✗ ClawStation 应用未运行${NC}"
+            echo -e "${RED}✗ X-Claw 应用未运行${NC}"
         fi
     fi
 
@@ -97,13 +97,13 @@ check_status() {
 
 # 启动服务
 start_service() {
-    echo -e "${BLUE}正在启动 ClawStation...${NC}"
+    echo -e "${BLUE}正在启动 X-Claw...${NC}"
 
     # 检查是否已经在运行
     if [ -f "$PID_FILE" ]; then
         local existing_pid=$(cat "$PID_FILE" 2>/dev/null)
         if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
-            echo -e "${YELLOW}⚠ ClawStation 已经在运行 (PID: $existing_pid)${NC}"
+            echo -e "${YELLOW}⚠ X-Claw 已经在运行 (PID: $existing_pid)${NC}"
             echo -e "${YELLOW}   使用 './$SCRIPT_NAME restart' 重启或 './$SCRIPT_NAME stop' 停止${NC}"
             return 1
         else
@@ -134,7 +134,7 @@ start_service() {
         if kill -0 $app_pid 2>/dev/null; then
             # 检查 OpenClaw 是否启动
             if lsof -i :$OPENCLAW_PORT >/dev/null 2>&1; then
-                echo -e "${GREEN}✓ ClawStation 启动成功！${NC}"
+                echo -e "${GREEN}✓ X-Claw 启动成功！${NC}"
                 echo -e "${GREEN}✓ OpenClaw 服务已运行在端口 $OPENCLAW_PORT${NC}"
                 echo ""
                 echo -e "${BLUE}应用日志: tail -f '$MAIN_LOG'${NC}"
@@ -158,7 +158,7 @@ start_service() {
 
 # 停止服务
 stop_service() {
-    echo -e "${BLUE}正在停止 ClawStation...${NC}"
+    echo -e "${BLUE}正在停止 X-Claw...${NC}"
 
     local stopped=false
 
@@ -213,7 +213,7 @@ stop_service() {
     fi
 
     if [ "$stopped" = true ]; then
-        echo -e "${GREEN}✓ ClawStation 已停止${NC}"
+        echo -e "${GREEN}✓ X-Claw 已停止${NC}"
     else
         echo -e "${YELLOW}⚠ 没有运行的服务需要停止${NC}"
     fi
@@ -221,7 +221,7 @@ stop_service() {
 
 # 重启服务
 restart_service() {
-    echo -e "${BLUE}重启 ClawStation...${NC}"
+    echo -e "${BLUE}重启 X-Claw...${NC}"
     stop_service
     sleep 2
     start_service
@@ -241,7 +241,7 @@ show_logs() {
 
 # 开发模式
 dev_mode() {
-    echo -e "${BLUE}以开发模式启动 ClawStation...${NC}"
+    echo -e "${BLUE}以开发模式启动 X-Claw...${NC}"
 
     # 检查并确保 dist/renderer/index.html 存在
     if [ ! -f "$PROJECT_DIR/dist/renderer/index.html" ]; then
@@ -257,7 +257,7 @@ dev_mode() {
 
 # 构建应用
 build_app() {
-    echo -e "${BLUE}构建 ClawStation 应用...${NC}"
+    echo -e "${BLUE}构建 X-Claw 应用...${NC}"
     cd "$PROJECT_DIR"
     npm run build
     echo -e "${GREEN}✓ 构建完成${NC}"

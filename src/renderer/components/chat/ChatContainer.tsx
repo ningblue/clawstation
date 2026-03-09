@@ -82,7 +82,7 @@ const WelcomeScreen: React.FC<{
             <line x1="9" y1="15" x2="15" y2="15"></line>
           </svg>
         </div>
-        <h1 className="welcome-title">ClawStation</h1>
+        <h1 className="welcome-title">X-Claw</h1>
         <p className="welcome-subtitle">
           {modelName ? `当前模型: ${modelName}` : '选择模型开始对话'}
         </p>

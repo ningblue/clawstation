@@ -1,10 +1,10 @@
-# ClawStation - AI数字员工桌面应用
+# X-Claw - AI数字员工桌面应用
 
 [English](./README_EN.md) | [中文](./README.md)
 
 ## 项目概述
 
-ClawStation 是一个跨平台的 AI 数字员工桌面应用，基于 Electron 框架开发，内置 OpenClaw AI 引擎。用户安装应用后即可直接使用 AI 对话功能，无需配置额外环境。
+X-Claw 是一个跨平台的 AI 数字员工桌面应用，基于 Electron 框架开发，内置 OpenClaw AI 引擎。用户安装应用后即可直接使用 AI 对话功能，无需配置额外环境。
 
 ## 核心特性
 

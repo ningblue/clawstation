@@ -1617,7 +1617,10 @@ export class OpenClawManager extends EventEmitter {
         this.emit(OpenClawProcessEvent.OUTPUT, output);
 
         // 检测 OpenClaw 启动成功的标志
-        if (output.includes("listening on ws://") || output.includes("[gateway] listening")) {
+        if (
+          output.includes("listening on ws://") ||
+          output.includes("[gateway] listening")
+        ) {
           this.emit(OpenClawProcessEvent.READY);
         }
       }

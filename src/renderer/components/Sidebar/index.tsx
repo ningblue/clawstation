@@ -279,7 +279,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <div className="logo-icon">C</div>
-            {!collapsed && <span className="logo-text">ClawStation</span>}
+            {!collapsed && <span className="logo-text">X-Claw</span>}
           </div>
           <button
             className="sidebar-toggle-btn"

@@ -1,5 +1,5 @@
-appId: ai.clawstation
-productName: ClawStation
+appId: ai.xclaw
+productName: X-Claw
 directories:
   output: release
   buildResources: resources

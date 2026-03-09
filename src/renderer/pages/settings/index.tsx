@@ -1009,7 +1009,7 @@ const AboutSettings: React.FC = () => {
 
       <div className="about-card">
         <div className="about-logo">🤖</div>
-        <div className="about-name">ClawStation</div>
+        <div className="about-name">X-Claw</div>
         <div className="about-version">版本 1.0.0</div>
         <div className="about-description">
           AI数字员工桌面应用
