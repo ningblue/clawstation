@@ -28,6 +28,15 @@ extraResources:
       - "!node_modules/**/CONTRIBUTORS*"
       - "!node_modules/**/*.d.ts" # 排除TypeScript定义（已编译）
       - "!node_modules/**/*.tsbuildinfo" # 排除构建信息
+      # 优化：排除大型但非必需的依赖
+      - "!node_modules/pdfjs-dist/build/*.min.mjs" # pdfjs 已打包，不需要单独文件
+      - "!node_modules/pdfjs-dist/cmaps/**" # PDF 字符映射表（中文用户可能不需要）
+      - "!node_modules/pdfjs-dist/legacy/**" # 旧版浏览器支持
+      - "!node_modules/pdfjs-dist/image_decoders/**" # 图片解码器（如不需要）
+      - "!node_modules/@napi-rs/canvas/**/*.dylib" # macOS 动态库
+      - "!node_modules/@napi-rs/canvas/**/*.so" # Linux 动态库
+      - "!node_modules/@napi-rs/canvas/**/*.node" # 保留当前平台的 .node 文件，asarUnpack 会处理
+      - "!node_modules/node-llama-cpp/**" # 本地 LLM 支持（如不需要可排除）
   - from: resources/openclaw/docs/reference/templates
     to: openclaw/docs/reference/templates
     filter:

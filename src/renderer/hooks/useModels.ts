@@ -32,19 +32,31 @@ const DEFAULT_PROVIDER_MODELS: Record<
   "minimax-portal": [
     { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
     { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
-    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000 },
+    {
+      id: "MiniMax-M2.5-highspeed",
+      name: "MiniMax M2.5 Highspeed",
+      contextWindow: 200000,
+    },
   ],
   // MiniMax - API Key
   minimax: [
     { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
     { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
-    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000 },
+    {
+      id: "MiniMax-M2.5-highspeed",
+      name: "MiniMax M2.5 Highspeed",
+      contextWindow: 200000,
+    },
   ],
   // MiniMax - CN 直连
   "minimax-cn": [
     { id: "MiniMax-VL-01", name: "MiniMax VL 01 (CN)", contextWindow: 200000 },
     { id: "MiniMax-M2.5", name: "MiniMax M2.5 (CN)", contextWindow: 200000 },
-    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed (CN)", contextWindow: 200000 },
+    {
+      id: "MiniMax-M2.5-highspeed",
+      name: "MiniMax M2.5 Highspeed (CN)",
+      contextWindow: 200000,
+    },
   ],
   // Moonshot / Kimi
   moonshot: [{ id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 256000 }],
@@ -56,15 +68,27 @@ const DEFAULT_PROVIDER_MODELS: Record<
   "qwen-portal": [{ id: "qwen-max", name: "Qwen Max", contextWindow: 128000 }],
   // Volcano Engine / BytePlus
   volcengine: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
-  "volcengine-plan": [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
+  "volcengine-plan": [
+    { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 },
+  ],
   byteplus: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
-  "byteplus-plan": [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
+  "byteplus-plan": [
+    { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 },
+  ],
   // Bailian Coding Plan (阿里云 Coding Plan) - 使用 bailian 作为 provider ID
   bailian: [
     { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", contextWindow: 1000000 },
     { id: "qwen3-max-2026-01-23", name: "Qwen 3 Max", contextWindow: 262144 },
-    { id: "qwen3-coder-next", name: "Qwen 3 Coder Next", contextWindow: 262144 },
-    { id: "qwen3-coder-plus", name: "Qwen 3 Coder Plus", contextWindow: 1000000 },
+    {
+      id: "qwen3-coder-next",
+      name: "Qwen 3 Coder Next",
+      contextWindow: 262144,
+    },
+    {
+      id: "qwen3-coder-plus",
+      name: "Qwen 3 Coder Plus",
+      contextWindow: 1000000,
+    },
     { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 196608 },
     { id: "glm-5", name: "GLM 5", contextWindow: 202752 },
     { id: "glm-4.7", name: "GLM 4.7", contextWindow: 202752 },
@@ -228,16 +252,13 @@ export function useModels() {
     }
   }, []);
 
-  // 切换模型（含静默重启引擎）
+  // 切换模型（OpenClaw 支持动态配置重载，无需重启引擎）
   const selectModel = useCallback(async (provider: string, modelId: string) => {
-    // 防抖：重启中忽略新的切换请求
-    if (restartingRef.current) return;
-
     try {
       const modelString = `${provider}/${modelId}`;
 
       // 使用 setDefaultModel 同时更新 agents.defaults.model 和默认 agent 的模型
-      // OpenClaw 引擎优先使用 agents.defaults.model
+      // OpenClaw 引擎会动态检测配置变化并重新加载，无需重启
       await window.electronAPI.setDefaultModel({
         primary: modelString,
         fallbacks: [],
@@ -245,41 +266,11 @@ export function useModels() {
 
       setCurrentSelection({ provider, model: modelId });
 
-      // 静默重启引擎
-      setIsRestarting(true);
-      restartingRef.current = true;
-
-      // 超时保护：10秒后强制恢复
-      const timeout = setTimeout(() => {
-        setIsRestarting(false);
-        restartingRef.current = false;
-        console.warn("[useModels] Engine restart timed out after 10s");
-      }, 10000);
-
-      try {
-        const restartResult = await window.electronAPI.restartOpenClaw();
-        clearTimeout(timeout);
-        if (!restartResult.success) {
-          console.error(
-            "[useModels] Engine restart failed:",
-            restartResult.error
-          );
-        }
-      } catch (restartErr) {
-        clearTimeout(timeout);
-        console.error("[useModels] Engine restart error:", restartErr);
-      } finally {
-        setIsRestarting(false);
-        restartingRef.current = false;
-      }
-
       // 通知全局模型已变更
       window.dispatchEvent(new CustomEvent("model-changed"));
     } catch (err) {
       console.error("Error selecting model:", err);
       setError(err instanceof Error ? err.message : "Failed to select model");
-      setIsRestarting(false);
-      restartingRef.current = false;
     }
   }, []);
 
