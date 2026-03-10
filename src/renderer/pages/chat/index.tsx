@@ -8,6 +8,7 @@ import { Sidebar } from '../../components/Sidebar';
 import { MessageList } from '../../components/MessageList';
 import { ChatInput } from '../../components/ChatInput';
 import { WindowControls } from '../../components/WindowControls';
+import { FeedbackButton, FeedbackModal } from '../../components/Feedback';
 import { useChatStore, useUserStore } from '../../stores';
 import { useModels } from '../../hooks/useModels';
 import type { Message } from '../../stores';
@@ -25,6 +26,8 @@ const WELCOME_MESSAGE: Message = {
 export const ChatPage: React.FC = () => {
   const { user } = useUserStore();
   const { isRestarting } = useModels();
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackScreenshot, setFeedbackScreenshot] = useState<string | null>(null);
 
   const {
     conversations,
@@ -48,6 +51,7 @@ export const ChatPage: React.FC = () => {
     cancelStream,
     startEngineStatusCheck,
     clearError,
+    resetCurrentConversation,
   } = useChatStore(user?.id ?? null);
 
   // 启动引擎状态检查
@@ -60,8 +64,9 @@ export const ChatPage: React.FC = () => {
 
   // 处理新建对话
   const handleNewConversation = useCallback(async () => {
-    await createConversation();
-  }, [createConversation]);
+    // 只是重置状态，不立即创建数据库记录
+    resetCurrentConversation();
+  }, [resetCurrentConversation]);
 
   // 处理选择对话
   const handleSelectConversation = useCallback(async (conversationId: number) => {
@@ -106,13 +111,46 @@ export const ChatPage: React.FC = () => {
       ? [WELCOME_MESSAGE]
       : messages;
 
+  // 处理反馈按钮点击
+  const handleFeedbackClick = useCallback(async () => {
+    try {
+      // 检查 API 是否可用
+      if (window.electronAPI && typeof window.electronAPI.captureScreen === 'function') {
+        // 截取当前屏幕
+        const screenshot = await window.electronAPI.captureScreen();
+        setFeedbackScreenshot(screenshot);
+      } else {
+        console.warn('captureScreen API not available');
+        setFeedbackScreenshot(null);
+      }
+      setIsFeedbackOpen(true);
+    } catch (err) {
+      console.error('Failed to capture screen:', err);
+      // 即使截图失败也打开反馈窗口
+      setFeedbackScreenshot(null);
+      setIsFeedbackOpen(true);
+    }
+  }, []);
+
+  const isMac = navigator.userAgent.toLowerCase().includes('mac');
+
   return (
     <div id="root">
       {/* 顶部标题栏 - 包含窗口控制按钮 */}
-      <div className="app-header">
+      <div className={`app-header ${isMac ? 'mac' : 'win'}`}>
         <div className="app-header-drag-area" />
+        <FeedbackButton onClick={handleFeedbackClick} />
         <WindowControls />
       </div>
+
+      <FeedbackModal 
+        isOpen={isFeedbackOpen} 
+        onClose={() => {
+          setIsFeedbackOpen(false);
+          setFeedbackScreenshot(null);
+        }} 
+        initialScreenshot={feedbackScreenshot}
+      />
 
       <div className="main-content">
         <Sidebar

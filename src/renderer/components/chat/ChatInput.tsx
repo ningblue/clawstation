@@ -38,6 +38,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [showPrompts, setShowPrompts] = useState(true);
+  const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -80,11 +81,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   // 处理键盘事件
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // 只有在非组合输入状态下按下 Enter 才发送
+    if (e.key === 'Enter' && !isComposing && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend]);
+  }, [handleSend, isComposing]);
 
   // 使用快捷提示
   const usePrompt = useCallback((prompt: string) => {
@@ -245,6 +247,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={disabled ? '请等待响应完成...' : placeholder}

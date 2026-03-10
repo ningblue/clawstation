@@ -69,6 +69,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   engineRestarting = false,
 }) => {
   const [inputValue, setInputValue] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const effectivePlaceholder = engineRestarting ? '正在切换模型...' : placeholder;
@@ -92,7 +93,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   // 处理发送
   const handleSend = useCallback(() => {
     const trimmed = inputValue.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || isStreaming || engineRestarting) return;
 
     // 长度限制检查
     if (trimmed.length > 10000) {
@@ -105,15 +106,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [inputValue, disabled, onSend]);
+  }, [inputValue, disabled, isStreaming, engineRestarting, onSend]);
 
   // 处理键盘事件
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // 只有在非组合输入状态下按下 Enter 才发送
+    if (e.key === 'Enter' && !isComposing && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend]);
+  }, [handleSend, isComposing]);
 
   // 处理智能提示选择
   const handlePromptSelect = useCallback((prompt: string) => {
@@ -137,6 +139,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           value={inputValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
           placeholder={effectivePlaceholder}
           disabled={effectiveDisabled}
           rows={1}

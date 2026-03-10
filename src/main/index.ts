@@ -466,6 +466,20 @@ function setupIpcHandlers() {
   ipcMain.handle("window:isMaximized", () => {
     return mainWindow ? mainWindow.isMaximized() : false;
   });
+
+  // 屏幕截图
+  ipcMain.handle("window:capture", async () => {
+    if (mainWindow) {
+      try {
+        const image = await mainWindow.capturePage();
+        return image.toDataURL();
+      } catch (e) {
+        console.error("Failed to capture screen:", e);
+        return null;
+      }
+    }
+    return null;
+  });
 }
 
 let isInitializing = false;

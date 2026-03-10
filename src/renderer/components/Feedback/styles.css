@@ -1,0 +1,250 @@
+.feedback-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.feedback-modal {
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 560px;
+  padding: 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.feedback-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.feedback-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.feedback-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.feedback-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #111827;
+  resize: none;
+  background-color: #f9fafb;
+  transition: all 0.2s;
+}
+
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.feedback-image-upload {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.feedback-image-item {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.feedback-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feedback-image-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.feedback-upload-btn {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: none;
+  padding: 8px;
+  text-align: center;
+}
+
+.feedback-upload-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.feedback-upload-icon {
+  font-size: 24px;
+  font-weight: 300;
+}
+
+.feedback-upload-text {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.feedback-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #111827;
+  background-color: #f9fafb;
+  transition: all 0.2s;
+}
+
+.feedback-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.feedback-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.feedback-btn {
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-btn-cancel {
+  background: none;
+  border: none;
+  color: #4b5563;
+}
+
+.feedback-btn-cancel:hover {
+  background-color: #f3f4f6;
+}
+
+.feedback-btn-submit {
+  background-color: #9ca3af;
+  color: white;
+  border: none;
+}
+
+.feedback-btn-submit.active {
+  background-color: #111827;
+}
+
+.feedback-btn-submit.active:hover {
+  background-color: #1f2937;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Header button style */
+.header-feedback-btn {
+  -webkit-app-region: no-drag;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: #4b5563;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.header-feedback-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+/* Platform specific positioning */
+.app-header.mac .header-feedback-btn {
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.app-header.win .header-feedback-btn {
+  margin-left: auto;
+  margin-right: 12px;
+}

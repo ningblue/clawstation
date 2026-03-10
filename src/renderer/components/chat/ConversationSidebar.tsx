@@ -87,6 +87,7 @@ const ConversationItem: React.FC<{
   onRename: (newTitle: string) => void;
 }> = ({ conversation, isActive, onSelect, onDelete, onRename }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.title);
 
   const handleRename = useCallback(() => {
@@ -97,13 +98,13 @@ const ConversationItem: React.FC<{
   }, [editTitle, conversation.title, onRename]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isComposing) {
       handleRename();
     } else if (e.key === 'Escape') {
       setEditTitle(conversation.title);
       setIsEditing(false);
     }
-  }, [handleRename, conversation.title]);
+  }, [handleRename, conversation.title, isComposing]);
 
   return (
     <div
@@ -124,6 +125,8 @@ const ConversationItem: React.FC<{
             onChange={(e) => setEditTitle(e.target.value)}
             onBlur={handleRename}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />

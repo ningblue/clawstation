@@ -157,6 +157,15 @@ export function useChatStore(userId: number | null) {
   }, []);
 
   /**
+   * 重置当前对话
+   */
+  const resetCurrentConversation = useCallback(() => {
+    setCurrentConversationId(null);
+    setMessages([]);
+    setIsTyping(false);
+  }, []);
+
+  /**
    * 创建新对话 - 重置状态
    */
   const createConversation = useCallback(async (title?: string) => {
@@ -234,15 +243,25 @@ export function useChatStore(userId: number | null) {
   /**
    * 添加消息到当前对话
    */
-  const addMessage = useCallback(async (role: MessageRole, content: string) => {
-    if (!currentConversationId) return null;
+  const addMessage = useCallback(async (role: MessageRole, content: string, conversationId?: number) => {
+    const targetId = conversationId || currentConversationId;
+    if (!targetId) return null;
     try {
       const message = await window.electronAPI.invoke('message:create', {
-        conversationId: currentConversationId,
+        conversationId: targetId,
         role,
         content,
       });
-      setMessages(prev => [...prev, message]);
+
+      // 更新消息状态
+      setMessages(prev => {
+        // 如果我们正在切换到这个对话（conversationId被传递）
+        // 或者这个消息属于当前对话
+        if (conversationId || targetId === currentConversationId) {
+          return [...prev, message];
+        }
+        return prev;
+      });
       return message;
     } catch (err) {
       console.error('Failed to add message:', err);
@@ -355,10 +374,12 @@ export function useChatStore(userId: number | null) {
 
     // 如果没有当前对话，先创建一个
     let conversationId = currentConversationId;
+    let isNewConversation = false;
     if (!conversationId) {
       const newConv = await createConversation();
       if (!newConv) return { success: false, error: '创建对话失败' };
       conversationId = newConv.id;
+      isNewConversation = true;
     }
 
     // 确保 conversationId 是 number 类型
@@ -372,7 +393,19 @@ export function useChatStore(userId: number | null) {
 
     try {
       // 添加用户消息
-      await addMessage('user', content);
+      await addMessage('user', content, targetConversationId);
+
+      // 自动重命名会话：如果是新会话或第一条消息
+      if (isNewConversation || messages.length === 0) {
+        let newTitle = content.trim();
+        // 移除换行符，避免标题显示异常
+        newTitle = newTitle.replace(/[\r\n]+/g, ' ');
+        if (newTitle.length > 20) {
+          newTitle = newTitle.substring(0, 20);
+        }
+        // 异步重命名，不阻塞
+        renameConversation(targetConversationId, newTitle).catch(console.error);
+      }
 
       // 开始流式响应 - 按会话隔离
       setStreamingStates(prev => ({
@@ -422,7 +455,7 @@ export function useChatStore(userId: number | null) {
           activeConversationRef.current = null;
 
           // 保存完整的AI回复到数据库
-          await addMessage('assistant', fullContent);
+          await addMessage('assistant', fullContent, targetConversationId);
 
           // 延迟清空流式内容（让用户看到完成状态）
           setTimeout(() => {
@@ -453,7 +486,7 @@ export function useChatStore(userId: number | null) {
           const errorContent = currentContent.trim()
             ? currentContent + '\n\n[生成中断: ' + (error || '未知错误') + ']'
             : `抱歉，AI引擎返回错误: ${error || '未知错误'}`;
-          await addMessage('assistant', errorContent);
+          await addMessage('assistant', errorContent, targetConversationId);
         }
       );
 
@@ -470,10 +503,10 @@ export function useChatStore(userId: number | null) {
       setIsTyping(false);
       cancelStreamRef.current = null;
       activeConversationRef.current = null;
-      await addMessage('assistant', '抱歉，获取AI回复时出现错误。请检查AI引擎状态。');
+      await addMessage('assistant', '抱歉，获取AI回复时出现错误。请检查AI引擎状态。', targetConversationId);
       return { success: false, error: err instanceof Error ? err.message : '发送失败' };
     }
-  }, [currentConversationId, createConversation, addMessage]);
+  }, [currentConversationId, createConversation, addMessage, messages, renameConversation]);
 
   /**
    * 取消当前流式响应
@@ -580,6 +613,7 @@ export function useChatStore(userId: number | null) {
     stopEngineStatusCheck,
     restartEngine,
     clearError,
+    resetCurrentConversation,
   };
 }
 

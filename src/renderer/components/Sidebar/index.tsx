@@ -55,6 +55,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   onDelete,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.title);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -90,13 +91,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   }, [editTitle, conversation.title, onRename]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isComposing) {
       handleFinishEdit();
     } else if (e.key === 'Escape') {
       setEditTitle(conversation.title);
       setIsEditing(false);
     }
-  }, [handleFinishEdit, conversation.title]);
+  }, [handleFinishEdit, conversation.title, isComposing]);
 
   const handleDelete = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,6 +138,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           onChange={(e) => setEditTitle(e.target.value)}
           onBlur={handleFinishEdit}
           onKeyDown={handleKeyDown}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
           autoFocus
           onClick={(e) => e.stopPropagation()}
         />

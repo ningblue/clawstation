@@ -219,6 +219,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   windowMaximize: () => ipcRenderer.invoke("window:maximize"),
   windowClose: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:isMaximized"),
+  captureScreen: () => ipcRenderer.invoke("window:capture"),
 });
 
 // 定义API接口以便在渲染进程中使用类型提示
@@ -558,6 +559,7 @@ declare global {
       windowMaximize: () => Promise<boolean>;
       windowClose: () => Promise<void>;
       isWindowMaximized: () => Promise<boolean>;
+      captureScreen: () => Promise<string>;
     };
   }
 }
