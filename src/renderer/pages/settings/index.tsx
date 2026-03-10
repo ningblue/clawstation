@@ -8,6 +8,7 @@ import { useUserStore } from '../../stores';
 import type { Theme, FontSize, Locale } from '../../stores';
 import { useModels } from '../../hooks/useModels';
 import type { ProviderGroup, SubCategory } from '../../types/models';
+import MiniMaxOAuth from '../../components/settings/MiniMaxOAuth';
 
 // 设置标签页类型
 type SettingsTab = 'general' | 'engine' | 'ai' | 'appearance' | 'account' | 'about';
@@ -27,27 +28,25 @@ export interface OpenSettingsEventDetail {
   tab?: SettingsTab;
 }
 
-// 提供商显示名称映射
+// 提供商显示名称映射（仅国内模型服务商）
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic (Claude)',
-  google: 'Google (Gemini)',
   'kimi-code': 'Kimi (月之暗面)',
+  'kimi-coding': 'Kimi Coding',
   kimi: 'Kimi',
+  moonshot: 'Moonshot',
   deepseek: 'DeepSeek',
-  ollama: 'Ollama (本地)',
   zai: 'ZAI',
-  qianfan: '百度千帆',
-  nvidia: 'NVIDIA',
-  kilocode: 'KiloCode',
-  xiaomi: '小米',
-  minimax: 'MiniMax',
+  minimax: 'MiniMax API Key',
+  'minimax-portal': 'MiniMax OAuth',
+  'minimax-cn': 'MiniMax API Key (CN)',
   volcengine: '火山引擎',
-  huggingface: 'HuggingFace',
-  together: 'Together AI',
-  venice: 'Venice AI',
-  bedrock: 'AWS Bedrock',
+  'volcengine-plan': '火山引擎 (套餐)',
+  byteplus: 'BytePlus',
+  'byteplus-plan': 'BytePlus (套餐)',
   doubao: '豆包',
+  bailian: '百炼/阿里云',
+  qwen: '通义千问',
+  'qwen-portal': '通义千问 OAuth',
 };
 
 // 模型配置接口
@@ -66,23 +65,33 @@ interface ProviderConfig {
   models: ModelConfig[];
 }
 
-// 提供商图标
+// 提供商图标（仅国内模型服务商）
 const getProviderIcon = (providerId: string): string => {
   const icons: Record<string, string> = {
-    anthropic: '🅰️',
-    openai: '🅾️',
-    google: '🇬',
-    'google-generative-ai': '🇬',
-    azure: '☁️',
-    bedrock: '🇧',
-    ollama: '🦙',
-    deepseek: '🔍',
-    cohere: '🇨',
-    minimax: '🇲',
-    moonshot: '🇰',
-    kimi: '🇰',
-    baidu: '度',
-    bytedance: '字节',
+    // MiniMax
+    minimax: 'MM',
+    'minimax-portal': 'MM',
+    'minimax-cn': 'MM',
+    // Moonshot/Kimi
+    moonshot: 'Ki',
+    kimi: 'Ki',
+    'kimi-coding': 'Ki',
+    // Volcano Engine
+    volcengine: 'VC',
+    'volcengine-plan': 'VC',
+    // BytePlus
+    byteplus: 'BP',
+    'byteplus-plan': 'BP',
+    // Z.AI
+    zai: 'Z',
+    // Qwen
+    qwen: 'QW',
+    'qwen-portal': 'QW',
+    // Bailian
+    bailian: 'BL',
+    // DeepSeek
+    deepseek: 'DS',
+    // Doubao
     doubao: '豆包',
   };
   return icons[providerId] || '🤖';
@@ -884,7 +893,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                         }}
                         disabled={loading}
                       >
-                        配置 API Key
+                        {sc.providerId === 'minimax-portal' ? 'OAuth 登录' : '配置'}
                       </button>
                     )}
                   </div>
@@ -919,35 +928,56 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
 
       {/* 配置 API Key 弹窗 */}
       {showAddKey && selectedProvider && (
-        <div className="modal-overlay active" onClick={() => setShowAddKey(false)}>
+        <div className="modal-overlay active" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">配置 API Key</h3>
-              <button className="modal-close" onClick={() => setShowAddKey(false)}>×</button>
+              <h3 className="modal-title">
+                {selectedProvider === 'minimax-portal' ? 'MiniMax OAuth 登录' : '配置 API Key'}
+              </h3>
+              <button className="modal-close" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>×</button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">API Key</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="输入 API Key"
-                  value={apiKey}
-                  onChange={e => setApiKey(e.target.value)}
-                  autoFocus
+              {selectedProvider === 'minimax-portal' ? (
+                <MiniMaxOAuth
+                  onShowToast={(msg, type) => {
+                    if (type === 'success') {
+                      // 成功提示
+                    } else {
+                      // 错误提示
+                    }
+                  }}
+                  onSuccess={() => {
+                    setShowAddKey(false);
+                    setSelectedProvider('');
+                    refreshModels();
+                  }}
                 />
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">API Key</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="输入 API Key"
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+            {selectedProvider !== 'minimax-portal' && (
+              <div className="modal-footer">
+                <button className="btn" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>取消</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveApiKey}
+                  disabled={!apiKey.trim() || loading}
+                >
+                  {loading ? '保存中...' : '保存'}
+                </button>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn" onClick={() => setShowAddKey(false)}>取消</button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveApiKey}
-                disabled={!apiKey.trim() || loading}
-              >
-                {loading ? '保存中...' : '保存'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -1009,7 +1039,7 @@ const AboutSettings: React.FC = () => {
 
       <div className="about-card">
         <div className="about-logo">🤖</div>
-        <div className="about-name">X-Claw</div>
+        <div className="about-name">XClaw</div>
         <div className="about-version">版本 1.0.0</div>
         <div className="about-description">
           AI数字员工桌面应用
@@ -1051,7 +1081,7 @@ const MenuIcon: React.FC<{ name: string }> = ({ name }) => {
         <circle cx="17.5" cy="10.5" r="2.5"></circle>
         <circle cx="8.5" cy="7.5" r="2.5"></circle>
         <circle cx="6.5" cy="12.5" r="2.5"></circle>
-        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"></path>
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.438-.18-.835-.438-1.125-.28-.289-.437-.652-.437-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"></path>
       </svg>
     ),
     brain: (

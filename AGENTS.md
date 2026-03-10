@@ -285,3 +285,10 @@ rm -rf ~/Library/Application\ Support/clawstation/Cache dist/renderer/* && npm r
 - `package.json` - npm 脚本定义
 - `src/main/index.ts` - 主进程入口
 - `src/renderer/` - 渲染进程代码
+- `lib/openclaw/` - OpenClaw 源代码（遇到 OpenClaw 相关问题时，优先查看此目录源码，而非 `resources/openclaw/dist/` 编译产物）
+
+## 开发提示
+
+### OpenClaw 问题排查
+
+遇到 OpenClaw 相关问题时（如配置验证、插件问题等），请优先查看 `lib/openclaw/` 目录的源代码，而不是搜索 `resources/openclaw/dist/` 目录的编译后代码。源代码更易理解和调试。

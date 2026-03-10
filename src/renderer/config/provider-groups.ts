@@ -1,5 +1,5 @@
 /**
- * 供应商分组配置
+ * 供应商分组配置 - 仅国内模型服务商
  *
  * 完全对齐 OpenClaw 的 AUTH_CHOICE_GROUP_DEFS
  * (lib/openclaw/src/commands/auth-choice-options.ts)
@@ -34,83 +34,10 @@ export interface ProviderGroupDef {
 }
 
 // ───────────────────────────────────────────────────────
-// 对齐 AUTH_CHOICE_GROUP_DEFS（按原始顺序）
+// 国内模型服务商配置
 // ───────────────────────────────────────────────────────
 
-const AUTH_ALIGNED_GROUPS: ProviderGroupDef[] = [
-  {
-    groupId: "openai",
-    groupName: "OpenAI",
-    icon: "OA",
-    hint: "Codex OAuth + API key",
-    members: [
-      {
-        label: "OpenAI Codex (ChatGPT OAuth)",
-        providerIds: ["openai"],
-      },
-      {
-        label: "OpenAI API key",
-        providerIds: ["openai"],
-      },
-    ],
-  },
-  {
-    groupId: "anthropic",
-    groupName: "Anthropic",
-    icon: "A",
-    hint: "setup-token + API key",
-    members: [
-      {
-        label: "Anthropic token (setup-token)",
-        providerIds: ["anthropic"],
-      },
-      {
-        label: "Anthropic API key",
-        providerIds: ["anthropic"],
-      },
-    ],
-  },
-  {
-    groupId: "chutes",
-    groupName: "Chutes",
-    icon: "CH",
-    hint: "OAuth",
-    members: [{ label: "Chutes (OAuth)", providerIds: ["chutes"] }],
-  },
-  {
-    groupId: "vllm",
-    groupName: "vLLM",
-    icon: "VL",
-    hint: "Local/self-hosted",
-    members: [{ label: "vLLM (custom URL + model)", providerIds: ["vllm"] }],
-  },
-  {
-    groupId: "minimax",
-    groupName: "MiniMax",
-    icon: "MM",
-    hint: "M2.5 (recommended)",
-    members: [
-      {
-        label: "MiniMax OAuth",
-        hint: "OAuth plugin for MiniMax",
-        providerIds: ["minimax-portal"],
-      },
-      {
-        label: "MiniMax M2.5",
-        providerIds: ["minimax"],
-      },
-      {
-        label: "MiniMax M2.5 (CN)",
-        hint: "China endpoint (api.minimaxi.com)",
-        providerIds: ["minimax-cn", "minimax"],
-      },
-      {
-        label: "MiniMax M2.5 Highspeed",
-        hint: "Official fast tier",
-        providerIds: ["minimax"],
-      },
-    ],
-  },
+const DOMESTIC_PROVIDER_GROUPS: ProviderGroupDef[] = [
   {
     groupId: "moonshot",
     groupName: "Moonshot AI (Kimi K2.5)",
@@ -132,82 +59,37 @@ const AUTH_ALIGNED_GROUPS: ProviderGroupDef[] = [
       },
     ],
   },
-  {
-    groupId: "google",
-    groupName: "Google",
-    icon: "G",
-    hint: "Gemini API key + OAuth",
-    members: [
-      {
-        label: "Google Gemini API key",
-        providerIds: ["google", "google-generative-ai", "google-gemini"],
-      },
-      {
-        label: "Google Gemini CLI OAuth",
-        hint: "Unofficial flow",
-        providerIds: ["google", "google-generative-ai", "google-gemini"],
-      },
-    ],
-  },
-  {
-    groupId: "xai",
-    groupName: "xAI (Grok)",
-    icon: "X",
-    hint: "API key",
-    members: [{ label: "xAI API key", providerIds: ["xai"] }],
-  },
-  {
-    groupId: "mistral",
-    groupName: "Mistral AI",
-    icon: "MI",
-    hint: "API key",
-    members: [{ label: "Mistral API key", providerIds: ["mistral"] }],
-  },
-  {
-    groupId: "volcengine",
-    groupName: "Volcano Engine",
-    icon: "VC",
-    hint: "API key",
-    members: [
-      {
-        label: "Volcano Engine API key",
-        providerIds: ["volcengine", "volcengine-plan"],
-      },
-    ],
-  },
-  {
-    groupId: "byteplus",
-    groupName: "BytePlus",
-    icon: "BP",
-    hint: "API key",
-    members: [
-      {
-        label: "BytePlus API key",
-        providerIds: ["byteplus", "byteplus-plan"],
-      },
-    ],
-  },
-  {
-    groupId: "openrouter",
-    groupName: "OpenRouter",
-    icon: "OR",
-    hint: "API key",
-    members: [{ label: "OpenRouter API key", providerIds: ["openrouter"] }],
-  },
-  {
-    groupId: "kilocode",
-    groupName: "Kilo Gateway",
-    icon: "KC",
-    hint: "OpenRouter-compatible",
-    members: [{ label: "Kilo Gateway API key", providerIds: ["kilocode"] }],
-  },
-  {
-    groupId: "qwen",
-    groupName: "Qwen",
-    icon: "QW",
-    hint: "OAuth",
-    members: [{ label: "Qwen OAuth", providerIds: ["qwen-portal", "qwen"] }],
-  },
+  // {
+  //   groupId: "volcengine",
+  //   groupName: "Volcano Engine",
+  //   icon: "VC",
+  //   hint: "API key",
+  //   members: [
+  //     {
+  //       label: "Volcano Engine API key",
+  //       providerIds: ["volcengine", "volcengine-plan"],
+  //     },
+  //   ],
+  // },
+  // {
+  //   groupId: "byteplus",
+  //   groupName: "BytePlus",
+  //   icon: "BP",
+  //   hint: "API key",
+  //   members: [
+  //     {
+  //       label: "BytePlus API key",
+  //       providerIds: ["byteplus", "byteplus-plan"],
+  //     },
+  //   ],
+  // },
+  // {
+  //   groupId: "qwen",
+  //   groupName: "Qwen",
+  //   icon: "QW",
+  //   hint: "OAuth",
+  //   members: [{ label: "Qwen OAuth", providerIds: ["qwen-portal", "qwen"] }],
+  // },
   {
     groupId: "zai",
     groupName: "Z.AI",
@@ -237,137 +119,28 @@ const AUTH_ALIGNED_GROUPS: ProviderGroupDef[] = [
     ],
   },
   {
-    groupId: "qianfan",
-    groupName: "Qianfan",
-    icon: "QF",
-    hint: "API key",
-    members: [{ label: "Qianfan API key", providerIds: ["qianfan"] }],
-  },
-  {
-    groupId: "copilot",
-    groupName: "Copilot",
-    icon: "GH",
-    hint: "GitHub + local proxy",
+    groupId: "bailian",
+    groupName: "Bailian (阿里云)",
+    icon: "BL",
+    hint: "Coding Plan / API Key",
     members: [
       {
-        label: "GitHub Copilot (GitHub device login)",
-        providerIds: ["github-copilot"],
+        label: "Coding Plan (推荐)",
+        hint: "阿里云 Coding Plan 套餐 (coding.dashscope.aliyuncs.com)",
+        providerIds: ["bailian"],
       },
       {
-        label: "Copilot Proxy (local)",
-        hint: "Local proxy for VS Code Copilot models",
-        providerIds: ["github-copilot"],
-      },
-    ],
-  },
-  {
-    groupId: "ai-gateway",
-    groupName: "Vercel AI Gateway",
-    icon: "VG",
-    hint: "API key",
-    members: [
-      {
-        label: "Vercel AI Gateway API key",
-        providerIds: ["vercel-ai-gateway"],
-      },
-    ],
-  },
-  {
-    groupId: "opencode-zen",
-    groupName: "OpenCode Zen",
-    icon: "OZ",
-    hint: "Multi-model proxy",
-    members: [
-      {
-        label: "OpenCode Zen (multi-model proxy)",
-        hint: "Claude, GPT, Gemini via opencode.ai/zen",
-        providerIds: ["opencode-zen"],
-      },
-    ],
-  },
-  {
-    groupId: "xiaomi",
-    groupName: "Xiaomi",
-    icon: "XM",
-    hint: "API key",
-    members: [{ label: "Xiaomi API key", providerIds: ["xiaomi"] }],
-  },
-  {
-    groupId: "synthetic",
-    groupName: "Synthetic",
-    icon: "SY",
-    hint: "Anthropic-compatible",
-    members: [{ label: "Synthetic API key", providerIds: ["synthetic"] }],
-  },
-  {
-    groupId: "together",
-    groupName: "Together AI",
-    icon: "TG",
-    hint: "API key",
-    members: [{ label: "Together AI API key", providerIds: ["together"] }],
-  },
-  {
-    groupId: "huggingface",
-    groupName: "Hugging Face",
-    icon: "HF",
-    hint: "Inference API",
-    members: [
-      {
-        label: "Hugging Face API key (HF token)",
-        providerIds: ["huggingface"],
-      },
-    ],
-  },
-  {
-    groupId: "venice",
-    groupName: "Venice AI",
-    icon: "VN",
-    hint: "Privacy-focused",
-    members: [{ label: "Venice API key", providerIds: ["venice"] }],
-  },
-  {
-    groupId: "litellm",
-    groupName: "LiteLLM",
-    icon: "LL",
-    hint: "100+ providers",
-    members: [
-      {
-        label: "LiteLLM API key",
-        hint: "Unified LLM gateway",
-        providerIds: ["litellm"],
-      },
-    ],
-  },
-  {
-    groupId: "cloudflare-ai-gateway",
-    groupName: "Cloudflare AI Gateway",
-    icon: "CF",
-    hint: "Account ID + Gateway ID + API key",
-    members: [
-      {
-        label: "Cloudflare AI Gateway",
-        providerIds: ["cloudflare-ai-gateway"],
-      },
-    ],
-  },
-  {
-    groupId: "custom",
-    groupName: "Custom Provider",
-    icon: "CU",
-    hint: "OpenAI/Anthropic compatible",
-    members: [
-      {
-        label: "Custom Provider",
-        hint: "Any OpenAI or Anthropic compatible endpoint",
-        providerIds: ["custom"],
+        label: "Bailian API Key",
+        hint: "百炼平台 API Key (dashscope.aliyuncs.com)",
+        providerIds: ["bailian-api"],
       },
     ],
   },
 ];
 
-/** 全部分组定义（完全对齐 OpenClaw AUTH_CHOICE_GROUP_DEFS 顺序） */
+/** 全部分组定义（仅国内模型服务商） */
 export const PROVIDER_GROUP_DEFINITIONS: ProviderGroupDef[] =
-  AUTH_ALIGNED_GROUPS;
+  DOMESTIC_PROVIDER_GROUPS;
 
 /**
  * 建立 providerId → groupId 的快速查找表
