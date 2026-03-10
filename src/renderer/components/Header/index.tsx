@@ -189,8 +189,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
         <div className="logo">
-          <div className="logo-icon">C</div>
-          <span className="logo-text">X-Claw</span>
+          <div className="logo-icon">XA</div>
+          <span className="logo-text">XClaw</span>
         </div>
       </div>
 

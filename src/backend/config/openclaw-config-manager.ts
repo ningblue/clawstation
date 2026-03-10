@@ -191,8 +191,10 @@ export interface OpenClawConfig {
 export interface AuthProfileCredential {
   type: "api_key" | "oauth" | "token";
   provider: string;
-  key?: string; // api_key 类型使用
+  key?: string; // api_key 或 oauth 类型使用 (存储 access token)
   baseUrl?: string;
+  refreshToken?: string; // oauth 类型使用
+  expiresAt?: number; // oauth 类型使用 (unix timestamp)
 }
 
 /**
@@ -770,6 +772,15 @@ export class OpenClawConfigManager {
   }
 
   /**
+   * 检查是否存在 Auth Profile
+   */
+  hasAuthProfile(agentId: string, provider: string): boolean {
+    const authConfig = this.loadAuthProfiles(agentId);
+    const profileId = `${provider}:default`;
+    return profileId in authConfig.profiles;
+  }
+
+  /**
    * 设置 API Key (OpenClaw 原生格式)
    * 同时更新:
    * 1. auth-profiles.json - 存储 API Key
@@ -893,7 +904,113 @@ export class OpenClawConfigManager {
             },
           ],
         }),
-        // 可以添加更多 provider...
+        // MiniMax (国内 API Key 方式)
+        minimax: () => ({
+          baseUrl: "https://api.minimax.chat/v1",
+          api: "openai-completions",
+          authHeader: true,
+          models: [
+            { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000, maxTokens: 8192, input: ["text", "image"] },
+            { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+            { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+          ],
+        }),
+        "minimax-portal": () => ({
+          baseUrl: "https://api.minimax.io/anthropic",
+          api: "anthropic-messages",
+          authHeader: true,
+          models: [
+            { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000, maxTokens: 8192, input: ["text", "image"] },
+            { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+            { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+          ],
+        }),
+        "minimax-cn": () => ({
+          baseUrl: "https://api.minimaxi.com/v1",
+          api: "openai-completions",
+          authHeader: true,
+          models: [
+            { id: "MiniMax-VL-01", name: "MiniMax VL 01 (CN)", contextWindow: 200000, maxTokens: 8192, input: ["text", "image"] },
+            { id: "MiniMax-M2.5", name: "MiniMax M2.5 (CN)", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+            { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed (CN)", contextWindow: 200000, maxTokens: 8192, input: ["text"] },
+          ],
+        }),
+        // Moonshot / Kimi
+        moonshot: () => ({
+          baseUrl: "https://api.moonshot.cn/v1",
+          auth: "api-key",
+          models: [
+            { id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 256000, maxTokens: 8192 },
+          ],
+        }),
+        "kimi-coding": () => ({
+          baseUrl: "https://api.kimi.com/coding/",
+          auth: "api-key",
+          models: [
+            { id: "k2p5", name: "Kimi for Coding", contextWindow: 262144, maxTokens: 32768 },
+          ],
+        }),
+        // Volcano Engine
+        volcengine: () => ({
+          baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+          auth: "api-key",
+          models: [
+            { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        "volcengine-plan": () => ({
+          baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+          auth: "api-key",
+          models: [
+            { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        // BytePlus
+        byteplus: () => ({
+          baseUrl: "https://ark.byteplus.com/api/v3",
+          auth: "api-key",
+          models: [
+            { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        "byteplus-plan": () => ({
+          baseUrl: "https://ark.byteplus.com/api/v3",
+          auth: "api-key",
+          models: [
+            { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        // Qwen
+        qwen: () => ({
+          baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          auth: "api-key",
+          models: [
+            { id: "qwen-max", name: "Qwen Max", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        "qwen-portal": () => ({
+          baseUrl: "https://portal.qwen.ai/v1",
+          auth: "api-key",
+          models: [
+            { id: "coder-model", name: "Qwen Coder", contextWindow: 128000, maxTokens: 8192 },
+          ],
+        }),
+        // Bailian Coding Plan (阿里云 Coding Plan) - 使用 bailian 作为 provider 名称
+        "bailian": () => ({
+          baseUrl: "https://coding.dashscope.aliyuncs.com/v1",
+          api: "openai-completions",
+          auth: "api-key",
+          models: [
+            { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", contextWindow: 1000000, maxTokens: 65536 },
+            { id: "qwen3-max-2026-01-23", name: "Qwen 3 Max", contextWindow: 262144, maxTokens: 65536 },
+            { id: "qwen3-coder-next", name: "Qwen 3 Coder Next", contextWindow: 262144, maxTokens: 65536 },
+            { id: "qwen3-coder-plus", name: "Qwen 3 Coder Plus", contextWindow: 1000000, maxTokens: 65536 },
+            { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 196608, maxTokens: 32768 },
+            { id: "glm-5", name: "GLM 5", contextWindow: 202752, maxTokens: 16384 },
+            { id: "glm-4.7", name: "GLM 4.7", contextWindow: 202752, maxTokens: 16384 },
+            { id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 262144, maxTokens: 32768 },
+          ],
+        }),
       };
 
     const configFn = configs[provider];
@@ -901,9 +1018,9 @@ export class OpenClawConfigManager {
       return configFn(endpoint);
     }
 
-    // 默认配置
+    // 默认配置 - 提供一个有效的 baseUrl 避免验证失败
     return {
-      baseUrl: "",
+      baseUrl: "https://api.example.com",
       auth: "api-key",
       models: [],
     };
@@ -1063,7 +1180,7 @@ export class OpenClawConfigManager {
     if (!fs.existsSync(systemMdPath)) {
       const defaultSystemPrompt = `# Default Agent System Prompt
 
-You are a helpful AI assistant running within X-Claw.
+You are a helpful AI assistant running within XClaw.
 Your primary goal is to assist the user with their tasks effectively and safely.
 
 ## Capabilities

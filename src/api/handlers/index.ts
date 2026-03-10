@@ -8,6 +8,8 @@ import { setupMessageRoutes } from '../routes/message.route';
 import { setupOpenClawRoutes } from '../routes/openclaw.route';
 import { setupOpenClawMonitorRoutes } from '../routes/openclaw-monitor.route';
 import { setupAuditRoutes } from '../routes/audit.route';
+import { setupReminderHandlers } from './reminders';
+import { setupMiniMaxOAuthRoutes } from '../routes/minimax-oauth.route';
 
 // 跟踪已注册的处理器
 let handlersInitialized = false;
@@ -28,6 +30,7 @@ export function initializeApiHandlers(openclawManager?: OpenClawManager): void {
     setupConversationRoutes();
     setupMessageRoutes();
     setupAuditRoutes();
+    setupReminderHandlers();
     handlersInitialized = true;
     console.log('Basic API handlers registered');
   }
@@ -36,6 +39,7 @@ export function initializeApiHandlers(openclawManager?: OpenClawManager): void {
   if (openclawManager && !openClawHandlersInitialized) {
     setupOpenClawRoutes(openclawManager);
     setupOpenClawMonitorRoutes(openclawManager);
+    setupMiniMaxOAuthRoutes(openclawManager);
     openClawHandlersInitialized = true;
     console.log('OpenClaw routes initialized');
   }

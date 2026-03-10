@@ -560,6 +560,38 @@ export function useChatStore(userId: number | null) {
     }
   }, [userId, loadConversations]);
 
+  // 监听提醒触发事件
+  useEffect(() => {
+    const handleReminderTriggered = async (_event: any, data: {
+      reminderId: string;
+      message: string;
+      sessionId: number;
+    }) => {
+      console.log('[ChatStore] Received reminder triggered:', data);
+
+      // 如果提醒属于当前会话，直接添加消息
+      if (data.sessionId === currentConversationId) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now(), // 临时 ID
+            conversationId: data.sessionId,
+            role: 'assistant' as const,
+            content: `⏰ 提醒：${data.message}`,
+            createdAt: new Date().toISOString(),
+          }
+        ]);
+      }
+    };
+
+    // 注册监听器
+    window.electronAPI?.onReminderTriggered?.(handleReminderTriggered);
+
+    return () => {
+      window.electronAPI?.removeReminderTriggeredListener?.(handleReminderTriggered);
+    };
+  }, [currentConversationId]);
+
   // 清理定时器
   useEffect(() => {
     return () => {

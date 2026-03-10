@@ -215,6 +215,34 @@ export interface ElectronAPI {
     agentId?: string
   ) => Promise<{ success: boolean; error?: string }>;
 
+  // MiniMax OAuth API
+  miniMaxOAuthStart: (region?: 'cn' | 'global') => Promise<{
+    success: boolean;
+    userCode?: string;
+    verificationUri?: string;
+    expiresAt?: number;
+    error?: string;
+  }>;
+  miniMaxOAuthPoll: () => Promise<{
+    success: boolean;
+    pending?: boolean;
+    token?: {
+      access: string;
+      resourceUrl?: string;
+      notification?: string;
+    };
+    error?: string;
+  }>;
+  miniMaxOAuthCancel: () => Promise<{ success: boolean; error?: string }>;
+  miniMaxOAuthStatus: () => Promise<{
+    success: boolean;
+    configured?: boolean;
+    hasSavedToken?: boolean;
+    region?: 'cn' | 'global';
+    error?: string;
+  }>;
+  miniMaxOAuthClear: () => Promise<{ success: boolean; error?: string }>;
+
   // OpenClaw 模型管理API（配置文件中的模型）
   getModelsList: () => Promise<{
     success: boolean;

@@ -545,13 +545,13 @@ function createTray() {
 
     if (app.isPackaged) {
       // 生产环境：从 extraResources 中获取
-      // 图标在 /Applications/X-Claw.app/Contents/Resources/resources/icon.png
+      // 图标在 /Applications/XClaw.app/Contents/Resources/resources/icon.png
       iconPath = path.join(process.resourcesPath, "resources/icon.png");
 
       // 备用方案
       if (!require("fs").existsSync(iconPath)) {
         iconPath =
-          "/Applications/X-Claw.app/Contents/Resources/resources/icon.png";
+          "/Applications/XClaw.app/Contents/Resources/resources/icon.png";
       }
     } else {
       // 开发环境
@@ -575,7 +575,7 @@ function createTray() {
     }
 
     tray = new Tray(trayIcon);
-    tray.setToolTip("X-Claw - AI数字员工");
+    tray.setToolTip("XClaw - AI数字员工");
 
     // 构建托盘菜单
     updateTrayMenu();

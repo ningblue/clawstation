@@ -348,7 +348,7 @@ const TypingIndicator: React.FC = () => {
 const EmptyState: React.FC = () => {
   return (
     <div className="info-panel">
-      <h2>欢迎使用 X-Claw</h2>
+      <h2>欢迎使用 XClaw</h2>
       <p>AI数字员工桌面应用</p>
       <p>开始一个新对话或选择现有对话</p>
     </div>

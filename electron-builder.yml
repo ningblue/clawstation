@@ -1,5 +1,5 @@
 appId: ai.xclaw
-productName: X-Claw
+productName: XClaw
 directories:
   output: release
   buildResources: resources

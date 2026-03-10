@@ -86,8 +86,8 @@ const SplashScreen: React.FC<{
     <div className="splash-screen" id="splashScreen">
       <div className="splash-content">
         <div className="splash-logo">
-          <div className="splash-logo-icon">C</div>
-          <h1 className="splash-title">X-Claw</h1>
+          <div className="splash-logo-icon">XA</div>
+          <h1 className="splash-title">XClaw</h1>
         </div>
         <div className="splash-progress-container">
           <div
@@ -308,7 +308,7 @@ export const App: React.FC = () => {
         // 等待 OpenClaw 就绪
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(() => {
-            console.log('[X-Claw] OpenClaw ready timeout');
+            console.log('[XClaw] OpenClaw ready timeout');
             resolve();
           }, 3000);
 

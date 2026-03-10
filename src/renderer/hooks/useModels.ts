@@ -16,7 +16,7 @@ import {
 } from "../config/provider-groups";
 import type { ProviderGroupDef } from "../config/provider-groups";
 
-// 默认模型配置（与 OpenClaw 内置模型对齐，当模型目录中没有该 provider 的模型时使用）
+// 默认模型配置（仅国内模型服务商，与 OpenClaw 内置模型对齐）
 const DEFAULT_PROVIDER_MODELS: Record<
   string,
   { id: string; name: string; contextWindow?: number }[]
@@ -28,111 +28,70 @@ const DEFAULT_PROVIDER_MODELS: Record<
     { id: "glm-4.7-flash", name: "GLM-4.7 Flash", contextWindow: 128000 },
     { id: "glm-4.7-flashx", name: "GLM-4.7 FlashX", contextWindow: 128000 },
   ],
-  // MiniMax
+  // MiniMax - OAuth (推荐)
+  "minimax-portal": [
+    { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
+    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
+    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000 },
+  ],
+  // MiniMax - API Key
   minimax: [
-    { id: "MiniMax-M2.5", name: "MiniMax-M2.5", contextWindow: 200000 },
+    { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
+    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
+    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed", contextWindow: 200000 },
+  ],
+  // MiniMax - CN 直连
+  "minimax-cn": [
+    { id: "MiniMax-VL-01", name: "MiniMax VL 01 (CN)", contextWindow: 200000 },
+    { id: "MiniMax-M2.5", name: "MiniMax M2.5 (CN)", contextWindow: 200000 },
+    { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 Highspeed (CN)", contextWindow: 200000 },
   ],
   // Moonshot / Kimi
   moonshot: [{ id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 256000 }],
   "kimi-coding": [
     { id: "k2p5", name: "Kimi K2.5 Coding", contextWindow: 256000 },
   ],
-  // xAI
-  xai: [{ id: "grok-2", name: "Grok 2", contextWindow: 128000 }],
-  // Mistral
-  mistral: [
-    {
-      id: "mistral-large-latest",
-      name: "Mistral Large",
-      contextWindow: 128000,
-    },
-  ],
   // Qwen
   qwen: [{ id: "qwen-max", name: "Qwen Max", contextWindow: 128000 }],
-  // Qianfan
-  qianfan: [{ id: "ernie-4.0", name: "ERNIE 4.0", contextWindow: 128000 }],
+  "qwen-portal": [{ id: "qwen-max", name: "Qwen Max", contextWindow: 128000 }],
   // Volcano Engine / BytePlus
   volcengine: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
+  "volcengine-plan": [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
   byteplus: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
-  // OpenRouter
-  openrouter: [{ id: "auto", name: "Auto", contextWindow: 128000 }],
-  // Together AI
-  together: [
-    { id: "llama-3.1-70b", name: "Llama 3.1 70B", contextWindow: 128000 },
-  ],
-  // HuggingFace
-  huggingface: [
-    {
-      id: "meta-llama/Llama-3.1-70B-Instruct",
-      name: "Llama 3.1 70B",
-      contextWindow: 128000,
-    },
-  ],
-  // Venice
-  venice: [
-    { id: "llama-3.3-70b", name: "Llama 3.3 70B", contextWindow: 128000 },
-  ],
-  // Synthetic
-  synthetic: [
-    {
-      id: "claude-3-5-sonnet",
-      name: "Claude 3.5 Sonnet",
-      contextWindow: 200000,
-    },
+  "byteplus-plan": [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
+  // Bailian Coding Plan (阿里云 Coding Plan) - 使用 bailian 作为 provider ID
+  bailian: [
+    { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", contextWindow: 1000000 },
+    { id: "qwen3-max-2026-01-23", name: "Qwen 3 Max", contextWindow: 262144 },
+    { id: "qwen3-coder-next", name: "Qwen 3 Coder Next", contextWindow: 262144 },
+    { id: "qwen3-coder-plus", name: "Qwen 3 Coder Plus", contextWindow: 1000000 },
+    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 196608 },
+    { id: "glm-5", name: "GLM 5", contextWindow: 202752 },
+    { id: "glm-4.7", name: "GLM 4.7", contextWindow: 202752 },
+    { id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 262144 },
   ],
 };
 
-// 服务商显示名称映射 - 与 openclaw 支持的全部供应商对齐
+// 服务商显示名称映射 - 仅国内模型服务商
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  // 主流云服务商
-  anthropic: "Anthropic",
-  openai: "OpenAI",
-  google: "Google",
-  "google-generative-ai": "Google Gemini",
-  "google-gemini": "Google Gemini",
-  "azure-openai": "Azure OpenAI",
-  "azure-openai-responses": "Azure OpenAI (Responses)",
-  "amazon-bedrock": "Amazon Bedrock",
-  "github-copilot": "GitHub Copilot",
-  // 国际 AI 供应商
-  mistral: "Mistral AI",
-  cohere: "Cohere",
-  ai21: "AI21 Labs",
-  groq: "Groq",
-  together: "Together AI",
-  fireworks: "Fireworks AI",
-  perplexity: "Perplexity",
-  xai: "xAI",
-  zai: "Z.ai",
-  deepseek: "DeepSeek",
-  nvidia: "NVIDIA",
-  kilocode: "Kilo Code",
-  huggingface: "HuggingFace",
-  openrouter: "OpenRouter",
-  venice: "Venice",
-  synthetic: "Synthetic",
   // 国内 AI 供应商
   moonshot: "Moonshot AI",
   "kimi-coding": "Kimi Coding",
+  kimi: "Kimi",
   minimax: "MiniMax",
-  "minimax-portal": "MiniMax Portal",
-  volcengine: "Volcengine",
-  "volcengine-plan": "Volcengine Plan",
+  "minimax-portal": "MiniMax OAuth",
+  "minimax-cn": "MiniMax (国内)",
+  volcengine: "火山引擎",
+  "volcengine-plan": "火山引擎 (套餐)",
   byteplus: "BytePlus",
-  "byteplus-plan": "BytePlus Plan",
-  "qwen-portal": "Qwen",
-  qianfan: "Qianfan",
-  zhipu: "Zhipu AI",
-  xiaomi: "Xiaomi",
-  siliconflow: "SiliconFlow",
-  stepfun: "StepFun",
-  ppio: "PPIO",
-  // 本地/自托管
-  ollama: "Ollama",
-  vllm: "vLLM",
-  // 网关/代理
-  "cloudflare-ai-gateway": "Cloudflare AI Gateway",
-  "vercel-ai-gateway": "Vercel AI Gateway",
+  "byteplus-plan": "BytePlus (套餐)",
+  qwen: "通义千问",
+  "qwen-portal": "通义千问 OAuth",
+  zai: "Z.AI",
+  bailian: "百炼/阿里云",
+  "bailian-coding-plan": "Bailian Coding Plan",
+  deepseek: "DeepSeek",
+  doubao: "豆包",
 };
 
 /**

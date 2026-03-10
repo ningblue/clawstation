@@ -25,40 +25,14 @@ export interface ProviderInfo {
   description?: string;
 }
 
-// 提供商显示名称映射 - 与 openclaw 支持的全部供应商对齐
+// 国内 AI 供应商显示名称映射 - 仅保留国内模型服务商
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  // 主流云服务商
-  anthropic: "Anthropic",
-  openai: "OpenAI",
-  google: "Google",
-  "google-generative-ai": "Google Gemini",
-  "google-gemini": "Google Gemini",
-  "azure-openai": "Azure OpenAI",
-  "azure-openai-responses": "Azure OpenAI (Responses)",
-  "amazon-bedrock": "Amazon Bedrock",
-  "github-copilot": "GitHub Copilot",
-  // 国际 AI 供应商
-  mistral: "Mistral AI",
-  cohere: "Cohere",
-  ai21: "AI21 Labs",
-  groq: "Groq",
-  together: "Together AI",
-  fireworks: "Fireworks AI",
-  perplexity: "Perplexity",
-  xai: "xAI",
-  zai: "Z.ai",
-  deepseek: "DeepSeek",
-  nvidia: "NVIDIA",
-  kilocode: "Kilo Code",
-  huggingface: "HuggingFace",
-  openrouter: "OpenRouter",
-  venice: "Venice",
-  synthetic: "Synthetic",
   // 国内 AI 供应商
   moonshot: "Moonshot AI",
   "kimi-coding": "Kimi Coding",
   minimax: "MiniMax",
   "minimax-portal": "MiniMax Portal",
+  "minimax-cn": "MiniMax CN",
   volcengine: "Volcengine",
   "volcengine-plan": "Volcengine Plan",
   byteplus: "BytePlus",
@@ -66,18 +40,13 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   doubao: "Doubao",
   "qwen-portal": "Qwen",
   qwen: "Qwen",
-  qianfan: "Qianfan",
-  zhipu: "Zhipu AI",
-  xiaomi: "Xiaomi",
-  siliconflow: "SiliconFlow",
+  zai: "Z.AI",
+  bailian: "Bailian",
   stepfun: "StepFun",
   ppio: "PPIO",
   // 本地/自托管
   ollama: "Ollama",
   vllm: "vLLM",
-  // 网关/代理
-  "cloudflare-ai-gateway": "Cloudflare AI Gateway",
-  "vercel-ai-gateway": "Vercel AI Gateway",
 };
 
 class ModelCatalogService {
@@ -127,12 +96,38 @@ class ModelCatalogService {
       const content = fs.readFileSync(modelsJsonPath, "utf8");
       const data = JSON.parse(content);
 
-      // Handle both formats: { count, models: [...] } and raw array
-      const modelArray = Array.isArray(data) ? data : data.models;
+      // Handle multiple formats:
+      // 1. Raw array: [...]
+      // 2. { models: [...] }
+      // 3. { providers: { providerId: { models: [...] } } }
+      let modelArray: any[] = [];
 
-      if (!Array.isArray(modelArray)) {
+      if (Array.isArray(data)) {
+        modelArray = data;
+      } else if (data.models && Array.isArray(data.models)) {
+        modelArray = data.models;
+      } else if (data.providers && typeof data.providers === "object") {
+        // Handle nested provider format: { providers: { providerId: { models: [...] } } }
+        for (const [providerId, providerData] of Object.entries(data.providers)) {
+          if (
+            providerData &&
+            typeof providerData === "object" &&
+            (providerData as any).models &&
+            Array.isArray((providerData as any).models)
+          ) {
+            for (const model of (providerData as any).models) {
+              modelArray.push({
+                ...model,
+                provider: providerId,
+              });
+            }
+          }
+        }
+      }
+
+      if (!Array.isArray(modelArray) || modelArray.length === 0) {
         logger.warn(
-          "Invalid models.json format: expected array or { models: [...] }"
+          "Invalid models.json format: expected array, { models: [...] }, or { providers: {...} }"
         );
         return await this.loadStaticModelCatalog();
       }
@@ -140,14 +135,16 @@ class ModelCatalogService {
       const models: ModelCatalogEntry[] = modelArray
         .filter((entry: any) => entry && typeof entry === "object")
         .map((entry: any) => {
-          // Parse provider from key (format: "provider/model-id")
-          const key = String(entry.key || entry.id || "").trim();
-          const provider = key.includes("/")
-            ? key.split("/")[0]
-            : String(entry.provider || "").trim();
+          // Parse provider from key (format: "provider/model-id") or from entry.provider
+          const key = String(entry.key || "").trim();
+          const providerFromKey = key.includes("/") ? key.split("/")[0] : "";
+          const provider =
+            providerFromKey ||
+            String(entry.provider || "").trim() ||
+            "unknown";
           const id = key.includes("/")
             ? key.split("/").slice(1).join("/")
-            : key;
+            : String(entry.id || "").trim();
 
           // Parse input format (e.g., "text+image" or ["text", "image"])
           let input: Array<"text" | "image"> | undefined;

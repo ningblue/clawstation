@@ -281,8 +281,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 第一行：Logo + 伸缩按钮 */}
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <div className="logo-icon">C</div>
-            {!collapsed && <span className="logo-text">X-Claw</span>}
+            <div className="logo-icon">XA</div>
+            {!collapsed && <span className="logo-text">XClaw</span>}
           </div>
           <button
             className="sidebar-toggle-btn"

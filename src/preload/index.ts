@@ -155,6 +155,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   removeApiKey: (provider: string, agentId?: string) =>
     ipcRenderer.invoke("openclaw:apikey:remove", provider, agentId),
 
+  // MiniMax OAuth API
+  miniMaxOAuthStart: (region?: 'cn' | 'global') =>
+    ipcRenderer.invoke("minimax:oauth:start", region),
+  miniMaxOAuthPoll: () =>
+    ipcRenderer.invoke("minimax:oauth:poll"),
+  miniMaxOAuthCancel: () =>
+    ipcRenderer.invoke("minimax:oauth:cancel"),
+  miniMaxOAuthStatus: () =>
+    ipcRenderer.invoke("minimax:oauth:status"),
+  miniMaxOAuthClear: () =>
+    ipcRenderer.invoke("minimax:oauth:clear"),
+
   // 搜索 API Key 管理
   setSearchApiKey: (provider: string, apiKey: string) =>
     ipcRenderer.invoke("openclaw:search:apikey:set", provider, apiKey),
@@ -220,6 +232,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   windowClose: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   captureScreen: () => ipcRenderer.invoke("window:capture"),
+
+  // 提醒相关 API
+  listReminders: () => ipcRenderer.invoke("reminder:list"),
+  createReminder: (input: any) => ipcRenderer.invoke("reminder:create", input),
+  deleteReminder: (id: string) => ipcRenderer.invoke("reminder:delete", id),
+  toggleReminder: (params: { id: string; enabled: boolean }) =>
+    ipcRenderer.invoke("reminder:toggle", params),
+  updateReminder: (params: { id: string; updates: any }) =>
+    ipcRenderer.invoke("reminder:update", params),
+  triggerReminder: (id: string) => ipcRenderer.invoke("reminder:trigger", id),
+
+  // 提醒事件监听
+  onReminderTriggered: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.on("reminder:triggered", callback),
+  removeReminderTriggeredListener: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.removeListener("reminder:triggered", callback),
+  onReminderNavigateToSession: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.on("reminder:navigate-to-session", callback),
+  removeReminderNavigateToSessionListener: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.removeListener("reminder:navigate-to-session", callback),
 });
 
 // 定义API接口以便在渲染进程中使用类型提示
@@ -421,6 +453,34 @@ declare global {
         error?: string;
       }>;
 
+      // MiniMax OAuth API
+      miniMaxOAuthStart: (region?: 'cn' | 'global') => Promise<{
+        success: boolean;
+        userCode?: string;
+        verificationUri?: string;
+        expiresAt?: number;
+        error?: string;
+      }>;
+      miniMaxOAuthPoll: () => Promise<{
+        success: boolean;
+        pending?: boolean;
+        token?: {
+          access: string;
+          resourceUrl?: string;
+          notification?: string;
+        };
+        error?: string;
+      }>;
+      miniMaxOAuthCancel: () => Promise<{ success: boolean; error?: string }>;
+      miniMaxOAuthStatus: () => Promise<{
+        success: boolean;
+        configured?: boolean;
+        hasSavedToken?: boolean;
+        region?: 'cn' | 'global';
+        error?: string;
+      }>;
+      miniMaxOAuthClear: () => Promise<{ success: boolean; error?: string }>;
+
       // 搜索 API Key 管理
       setSearchApiKey: (
         provider: string,
@@ -560,6 +620,40 @@ declare global {
       windowClose: () => Promise<void>;
       isWindowMaximized: () => Promise<boolean>;
       captureScreen: () => Promise<string>;
+
+      // 提醒相关 API
+      listReminders: () => Promise<{
+        success: boolean;
+        reminders?: any[];
+        error?: string;
+      }>;
+      createReminder: (input: any) => Promise<{
+        success: boolean;
+        reminder?: any;
+        error?: string;
+      }>;
+      deleteReminder: (id: string) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      toggleReminder: (params: { id: string; enabled: boolean }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      updateReminder: (params: { id: string; updates: any }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      triggerReminder: (id: string) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+
+      // 提醒事件监听
+      onReminderTriggered: (callback: (event: any, data: any) => void) => void;
+      removeReminderTriggeredListener: (callback: (event: any, data: any) => void) => void;
+      onReminderNavigateToSession: (callback: (event: any, data: any) => void) => void;
+      removeReminderNavigateToSessionListener: (callback: (event: any, data: any) => void) => void;
     };
   }
 }

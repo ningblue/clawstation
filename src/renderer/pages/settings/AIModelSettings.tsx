@@ -3,6 +3,7 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useModels } from '../../hooks/useModels';
+import MiniMaxOAuth from '../../components/settings/MiniMaxOAuth';
 
 interface AIModelSettingsProps {
   onShowToast: (message: string, type: 'success' | 'error') => void;
@@ -24,23 +25,33 @@ const DEFAULT_SEARCH_PROVIDERS: SearchProviderConfig[] = [
   { id: 'kimi', name: 'Kimi (Moonshot)', hasKey: false, description: '需要 Kimi API Key' },
 ];
 
-// 提供商图标
+// 提供商图标（仅国内模型服务商）
 const getProviderIcon = (providerId: string): string => {
   const icons: Record<string, string> = {
-    anthropic: '🅰️',
-    openai: '🅾️',
-    google: '🇬',
-    'google-generative-ai': '🇬',
-    azure: '☁️',
-    bedrock: '🇧',
-    ollama: '🦙',
-    deepseek: '🔍',
-    cohere: '🇨',
-    minimax: '🇲',
-    moonshot: '🇰',
-    kimi: '🇰',
-    baidu: '度',
-    bytedance: '字节',
+    // MiniMax
+    minimax: 'MM',
+    'minimax-portal': 'MM',
+    'minimax-cn': 'MM',
+    // Moonshot/Kimi
+    moonshot: 'Ki',
+    kimi: 'Ki',
+    'kimi-coding': 'Ki',
+    // Volcano Engine
+    volcengine: 'VC',
+    'volcengine-plan': 'VC',
+    // BytePlus
+    byteplus: 'BP',
+    'byteplus-plan': 'BP',
+    // Z.AI
+    zai: 'Z',
+    // Qwen
+    qwen: 'QW',
+    'qwen-portal': 'QW',
+    // Bailian
+    bailian: 'BL',
+    // DeepSeek
+    deepseek: 'DS',
+    // Doubao
     doubao: '豆包',
   };
   return icons[providerId] || '🤖';
@@ -360,7 +371,7 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast })
                           </svg>
                           <span>未配置 API Key</span>
                           <button className="btn btn-xs btn-primary" onClick={() => { setSelectedProvider(sc.providerId); setShowAddKey(true); }} disabled={loading}>
-                            配置
+                            {sc.providerId === 'minimax-portal' ? 'OAuth 登录' : '配置'}
                           </button>
                         </div>
                       )}
@@ -399,36 +410,56 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast })
 
       {/* API Key弹窗 */}
       {showAddKey && (
-        <div className="modal-overlay active" onClick={() => setShowAddKey(false)}>
+        <div className="modal-overlay active" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">添加 API Key</h3>
-              <button className="modal-close" onClick={() => setShowAddKey(false)}>×</button>
+              <h3 className="modal-title">
+                {selectedProvider === 'minimax-portal' ? 'MiniMax OAuth 登录' : '添加 API Key'}
+              </h3>
+              <button className="modal-close" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>×</button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">选择提供商</label>
-                <select className="form-select" value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}>
-                  <option value="">请选择...</option>
-                  {providerGroupList.flatMap(g => g.subCategories.map(sc => (
-                    <option key={sc.id} value={sc.providerId}>
-                      {g.hasMultipleSubCategories ? `${g.groupName} - ${sc.label}` : g.groupName}
-                    </option>
-                  )))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">API Key</label>
-                <input type="password" className="form-input" placeholder="输入 API Key" value={apiKey} onChange={e => setApiKey(e.target.value)} />
-                <div className="form-hint">API Key 将安全存储在本地</div>
-              </div>
+              {!selectedProvider && (
+                <div className="form-group">
+                  <label className="form-label">选择提供商</label>
+                  <select className="form-select" value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}>
+                    <option value="">请选择...</option>
+                    {providerGroupList.flatMap(g => g.subCategories.map(sc => (
+                      <option key={sc.id} value={sc.providerId}>
+                        {g.hasMultipleSubCategories ? `${g.groupName} - ${sc.label}` : g.groupName}
+                      </option>
+                    )))}
+                  </select>
+                </div>
+              )}
+
+              {selectedProvider === 'minimax-portal' ? (
+                <MiniMaxOAuth
+                  onShowToast={onShowToast}
+                  onSuccess={() => {
+                    setShowAddKey(false);
+                    setSelectedProvider('');
+                    refreshModels();
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">API Key</label>
+                    <input type="password" className="form-input" placeholder="输入 API Key" value={apiKey} onChange={e => setApiKey(e.target.value)} />
+                    <div className="form-hint">API Key 将安全存储在本地</div>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="modal-footer">
-              <button className="btn" onClick={() => setShowAddKey(false)}>取消</button>
-              <button className="btn btn-primary" onClick={handleSaveApiKey} disabled={!selectedProvider || !apiKey.trim() || loading}>
-                {loading ? '保存中...' : '保存'}
-              </button>
-            </div>
+            {selectedProvider !== 'minimax-portal' && (
+              <div className="modal-footer">
+                <button className="btn" onClick={() => { setShowAddKey(false); setSelectedProvider(''); }}>取消</button>
+                <button className="btn btn-primary" onClick={handleSaveApiKey} disabled={!selectedProvider || !apiKey.trim() || loading}>
+                  {loading ? '保存中...' : '保存'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
