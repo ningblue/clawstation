@@ -17,6 +17,16 @@ export default defineConfig({
       input: {
         main: path.join(__dirname, "src", "renderer", "index.html"),
       },
+      onwarn(warning, warn) {
+        // 忽略 highlight.js 的警告
+        if (warning.code === 'UNRESOLVED_IMPORT') {
+          return;
+        }
+        if (warning.code === 'MODULE_NOT_FOUND') {
+          return;
+        }
+        warn(warning);
+      }
     },
   },
   resolve: {

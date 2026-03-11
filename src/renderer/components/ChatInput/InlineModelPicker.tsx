@@ -37,7 +37,9 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ bottom: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -156,10 +158,31 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // 打开时聚焦搜索框
+  // 打开时聚焦搜索框并计算位置
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
+    if (isOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
+      // 计算下拉面板位置
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const dropdownHeight = 400; // 下拉面板最大高度
+        const spaceAbove = rect.top;
+        const spaceBelow = viewportHeight - rect.bottom;
+
+        // 优先向上弹出，如果空间不够则向下
+        if (spaceAbove >= dropdownHeight || spaceAbove > spaceBelow) {
+          setDropdownPosition({
+            bottom: viewportHeight - rect.top + 8,
+            left: rect.left,
+          });
+        } else {
+          setDropdownPosition({
+            bottom: 0,
+            left: rect.left,
+          });
+        }
+      }
     }
     if (!isOpen) {
       setSearchKeyword('');
@@ -226,6 +249,7 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
     <div ref={dropdownRef} className="inline-model-picker">
       {/* 触发按钮 */}
       <button
+        ref={triggerRef}
         className={`inline-model-picker__trigger ${isRestarting ? 'restarting' : ''} ${!currentModelInfo?.model && !isRestarting ? 'no-model' : ''}`}
         onClick={handleToggle}
         disabled={disabled}
@@ -247,9 +271,16 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
         </svg>
       </button>
 
-      {/* 下拉面板（向上弹出） */}
+      {/* 下拉面板（使用 fixed 定位） */}
       {isOpen && (
-        <div className={`inline-model-picker__dropdown ${showMiddleColumn ? 'three-col' : ''}`}>
+        <div
+          className={`inline-model-picker__dropdown ${showMiddleColumn ? 'three-col' : ''}`}
+          style={{
+            bottom: dropdownPosition.bottom || 'auto',
+            top: dropdownPosition.bottom === 0 ? 'auto' : undefined,
+            left: dropdownPosition.left,
+          }}
+        >
           {/* 搜索栏 */}
           <div className="inline-model-picker__search">
             <input

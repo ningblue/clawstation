@@ -28,6 +28,7 @@ export const ChatPage: React.FC = () => {
   const { isRestarting } = useModels();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackScreenshot, setFeedbackScreenshot] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // 侧边栏状态
 
   const {
     conversations,
@@ -135,37 +136,57 @@ export const ChatPage: React.FC = () => {
   const isMac = navigator.userAgent.toLowerCase().includes('mac');
 
   return (
-    <div id="root">
-      {/* 顶部标题栏 - 包含窗口控制按钮 */}
-      <div className={`app-header ${isMac ? 'mac' : 'win'}`}>
-        <div className="app-header-drag-area" />
-        <FeedbackButton onClick={handleFeedbackClick} />
-        <WindowControls />
-      </div>
-
-      <FeedbackModal 
-        isOpen={isFeedbackOpen} 
-        onClose={() => {
-          setIsFeedbackOpen(false);
-          setFeedbackScreenshot(null);
-        }} 
-        initialScreenshot={feedbackScreenshot}
+    <div className="chat-wrapper">
+      {/* 左侧边栏 */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+        onRenameConversation={renameConversation}
+        onDeleteConversation={deleteConversation}
+        user={user ? { username: user.username, email: user.email } : undefined}
+        onOpenSettings={handleOpenSettings}
+        onLogout={handleLogout}
       />
 
-      <div className="main-content">
-        <Sidebar
-          conversations={conversations}
-          currentConversationId={currentConversationId}
-          onSelectConversation={handleSelectConversation}
-          onNewConversation={handleNewConversation}
-          onRenameConversation={renameConversation}
-          onDeleteConversation={deleteConversation}
-          user={user ? { username: user.username, email: user.email } : undefined}
-          onOpenSettings={handleOpenSettings}
-          onLogout={handleLogout}
+      {/* 右侧聊天区域 */}
+      <div className="chat-container">
+        {/* 顶部标题栏 - 包含窗口控制按钮 */}
+        <div className={`chat-header ${isMac ? 'mac' : 'win'}`}>
+          <div className="header-left">
+            {!sidebarOpen && (
+              <button 
+                className="sidebar-toggle-btn"
+                onClick={() => setSidebarOpen(true)}
+                title="展开侧边栏"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="header-drag-area" />
+          <div className="header-right">
+            <FeedbackButton onClick={handleFeedbackClick} />
+            <WindowControls />
+          </div>
+        </div>
+
+        <FeedbackModal
+          isOpen={isFeedbackOpen}
+          onClose={() => {
+            setIsFeedbackOpen(false);
+            setFeedbackScreenshot(null);
+          }}
+          initialScreenshot={feedbackScreenshot}
         />
 
-        <div className="chat-area">
+        {/* 主内容区 */}
+        <div className="chat-main">
           <MessageList
             messages={displayMessages}
             isTyping={isTyping}

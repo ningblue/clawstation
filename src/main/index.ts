@@ -11,6 +11,9 @@ import {
 import { exec } from "child_process";
 import log from "electron-log";
 
+// Admin Platform SDK
+import { ClawstationAdminSDK } from "@clawstation/admin-sdk";
+
 // 配置日志
 log.transports.file.level = "info";
 log.transports.console.level = "info";
@@ -41,6 +44,10 @@ import { initializeApiHandlers } from "../api/handlers";
 export let mainWindow: BrowserWindow | null = null;
 export let openclawManager: OpenClawManager | null = null;
 let tray: Tray | null = null;
+
+// Admin Platform SDK
+let adminSDK: ClawstationAdminSDK | null = null;
+
 let latestEngineStatus: {
   isRunning: boolean;
   isHealthy: boolean;
@@ -74,6 +81,11 @@ async function createWindow() {
 
     // 初始化审计系统
     setupAudit();
+
+    // 初始化 Admin Platform SDK（非阻塞）
+    initializeAdminSDK().catch((err) => {
+      log.error("Failed to initialize Admin SDK:", err);
+    });
 
     // 注册应用级IPC处理器
     setupIpcHandlers();
@@ -485,6 +497,59 @@ function setupIpcHandlers() {
 let isInitializing = false;
 
 /**
+ * 初始化 Admin Platform SDK
+ */
+async function initializeAdminSDK(): Promise<void> {
+  try {
+    log.info("[AdminSDK] Initializing...");
+
+    // 创建 SDK 实例（配置从环境变量或配置文件加载）
+    adminSDK = new ClawstationAdminSDK({
+      appVersion: app.getVersion(),
+      autoRegister: true,
+      autoHeartbeat: true,
+      debug: !app.isPackaged, // 开发模式启用调试
+    });
+
+    // 初始化 SDK
+    await adminSDK.init();
+
+    log.info("[AdminSDK] Initialized successfully");
+    log.info("[AdminSDK] Device ID:", await adminSDK.getDeviceId());
+
+    // 开始会话追踪
+    adminSDK.startSession();
+
+    // 检查更新
+    const updateInfo = await adminSDK.checkUpdate();
+    if (updateInfo.has_update && updateInfo.latest_version) {
+      log.info("[AdminSDK] Update available:", updateInfo.latest_version.version);
+      // 可以在这里触发更新提示
+    }
+  } catch (error) {
+    log.error("[AdminSDK] Initialization failed:", error);
+    // SDK 初始化失败不应影响应用启动
+    adminSDK = null;
+  }
+}
+
+/**
+ * 清理 Admin Platform SDK
+ */
+async function destroyAdminSDK(): Promise<void> {
+  if (adminSDK) {
+    try {
+      await adminSDK.endSession();
+      adminSDK.destroy();
+      log.info("[AdminSDK] Destroyed");
+    } catch (error) {
+      log.error("[AdminSDK] Error during destroy:", error);
+    }
+    adminSDK = null;
+  }
+}
+
+/**
  * 广播引擎状态到所有窗口
  */
 async function broadcastEngineStatus() {
@@ -856,6 +921,9 @@ function killPids(pids: string[], port: number, filter?: string): void {
 app.on("before-quit", async (event) => {
   // 设置退出标志，让窗口可以正常关闭
   app.isQuitting = true;
+
+  // 清理 Admin Platform SDK
+  await destroyAdminSDK();
 
   // 先停止内部引擎
   openclawManager?.stop();

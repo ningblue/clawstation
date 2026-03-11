@@ -216,35 +216,29 @@
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Header button style */
+/* Header button style - 完全参考 QClaw */
 .header-feedback-btn {
   -webkit-app-region: no-drag;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: #4b5563;
+  padding: 0 8px;
+  font-size: 12px;
+  color: #666;
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: all 0.2s;
   height: 28px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  margin-right: 8px;
+  gap: 4px;
 }
 
 .header-feedback-btn:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.06);
 }
 
-/* Platform specific positioning */
-.app-header.mac .header-feedback-btn {
-  margin-left: auto;
-  margin-right: 12px;
-}
-
-.app-header.win .header-feedback-btn {
-  margin-left: auto;
-  margin-right: 12px;
+.header-feedback-btn svg {
+  width: 14px;
+  height: 14px;
 }

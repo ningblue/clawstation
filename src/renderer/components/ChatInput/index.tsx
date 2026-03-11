@@ -145,30 +145,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           disabled={effectiveDisabled}
           rows={1}
         />
-        <div className="chat-input-bottom-bar">
-          <InlineModelPicker disabled={effectiveDisabled} />
-          {isStreaming ? (
-            <button
-              className="send-btn stop-btn"
-              onClick={onCancel}
-              title="停止生成"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <rect x="6" y="6" width="12" height="12" rx="2"/>
-              </svg>
-            </button>
-          ) : (
-            <button
-              className="send-btn"
-              onClick={handleSend}
-              disabled={effectiveDisabled || !inputValue.trim()}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          )}
+        <div className="chat-input-footer">
+          <div className="chat-input-footer-left">
+            <InlineModelPicker disabled={effectiveDisabled} />
+          </div>
+          <div className="chat-input-footer-right">
+            {isStreaming ? (
+              <button
+                className="send-btn stop-btn"
+                onClick={onCancel}
+                title="停止生成"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+              </button>
+            ) : (
+              <button
+                className="send-btn"
+                onClick={handleSend}
+                disabled={effectiveDisabled || !inputValue.trim()}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

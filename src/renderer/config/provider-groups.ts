@@ -45,10 +45,6 @@ const DOMESTIC_PROVIDER_GROUPS: ProviderGroupDef[] = [
     hint: "Kimi K2.5 + Kimi Coding",
     members: [
       {
-        label: "Kimi API key (.ai)",
-        providerIds: ["moonshot"],
-      },
-      {
         label: "Kimi API key (.cn)",
         providerIds: ["moonshot"],
       },
@@ -94,21 +90,11 @@ const DOMESTIC_PROVIDER_GROUPS: ProviderGroupDef[] = [
     groupId: "zai",
     groupName: "Z.AI",
     icon: "Z",
-    hint: "GLM Coding Plan / Global / CN",
+    hint: "GLM Coding Plan / CN",
     members: [
-      {
-        label: "Coding-Plan-Global",
-        hint: "GLM Coding Plan Global (api.z.ai)",
-        providerIds: ["zai"],
-      },
       {
         label: "Coding-Plan-CN",
         hint: "GLM Coding Plan CN (open.bigmodel.cn)",
-        providerIds: ["zai"],
-      },
-      {
-        label: "Global",
-        hint: "Z.AI Global (api.z.ai)",
         providerIds: ["zai"],
       },
       {

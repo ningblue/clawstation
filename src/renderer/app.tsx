@@ -63,48 +63,27 @@ const SplashScreen: React.FC<{
   status: string;
   progress: number;
   currentStep: string;
-}> = ({ isVisible, status, progress, currentStep }) => {
+}> = ({ isVisible, status, progress }) => {
   if (!isVisible) return null;
-
-  const steps = [
-    { key: 'database', label: '数据库' },
-    { key: 'security', label: '安全服务' },
-    { key: 'ai', label: 'AI引擎' },
-    { key: 'ready', label: '准备就绪' },
-  ];
-
-  const getStepClass = (stepKey: string) => {
-    const stepOrder = steps.findIndex((s) => s.key === stepKey);
-    const currentOrder = steps.findIndex((s) => s.key === currentStep);
-
-    if (stepKey === currentStep) return 'active';
-    if (stepOrder < currentOrder) return 'completed';
-    return '';
-  };
 
   return (
     <div className="splash-screen" id="splashScreen">
       <div className="splash-content">
         <div className="splash-logo">
-          <div className="splash-logo-icon">XA</div>
-          <h1 className="splash-title">XClaw</h1>
+          <div className="splash-logo-icon">X</div>
+          <h1 className="splash-title">{status}</h1>
         </div>
-        <div className="splash-progress-container">
-          <div
-            className="splash-progress-bar"
-            id="splashProgressBar"
-            style={{ width: `${progress}%` }}
-          ></div>
+        <div className="splash-progress-wrapper">
+          <div className="splash-progress-container">
+            <div
+              className="splash-progress-bar"
+              id="splashProgressBar"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
         </div>
-        <div className="splash-status" id="splashStatus">
-          {status}
-        </div>
-        <div className="splash-steps" id="splashSteps">
-          {steps.map((step) => (
-            <div key={step.key} className={`splash-step ${getStepClass(step.key)}`} data-step={step.key}>
-              {step.label}
-            </div>
-          ))}
+        <div className="splash-hint">
+          首次初始化可能需要几分钟时间，请勿关闭窗口
         </div>
       </div>
     </div>
@@ -287,23 +266,23 @@ export const App: React.FC = () => {
       try {
         // 数据库
         setSplashStep('database');
-        setSplashStatus('正在连接数据库...');
-        setSplashProgress(10);
+        setSplashStatus('正在初始化 XClaw，请稍后');
+        setSplashProgress(15);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        setSplashProgress(30);
+        setSplashProgress(35);
         await initializeUser();
 
         // 安全服务
         setSplashStep('security');
-        setSplashStatus('正在初始化安全服务...');
-        setSplashProgress(50);
+        setSplashStatus('正在初始化 XClaw，请稍后');
+        setSplashProgress(55);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         // AI引擎
         setSplashStep('ai');
-        setSplashStatus('正在启动AI引擎...');
-        setSplashProgress(70);
+        setSplashStatus('正在初始化 XClaw，请稍后');
+        setSplashProgress(75);
 
         // 等待 OpenClaw 就绪
         await new Promise<void>((resolve) => {
@@ -320,7 +299,7 @@ export const App: React.FC = () => {
 
         // 准备就绪
         setSplashStep('ready');
-        setSplashStatus('准备就绪');
+        setSplashStatus('正在初始化 XClaw，请稍后');
         setSplashProgress(100);
         await new Promise((resolve) => setTimeout(resolve, 500));
 

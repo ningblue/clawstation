@@ -170,119 +170,113 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
       className={`message ${isUser ? 'user-message' : 'assistant-message'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{
-        display: 'flex',
-        flexDirection: isUser ? 'row-reverse' : 'row',
-        alignItems: 'flex-start',
-        gap: '12px',
-        margin: '16px 0',
-        maxWidth: '85%',
-        alignSelf: isUser ? 'flex-end' : 'flex-start',
-      }}
     >
       {/* 只有 AI 消息显示头像 */}
       {!isUser && (
-        <div
-          className="avatar assistant-avatar"
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            fontWeight: 'bold',
-            color: 'white',
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-          }}
-        >
+        <div className="avatar assistant-avatar">
           AI
         </div>
       )}
-      <div
-        className="message-wrapper"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          maxWidth: isUser ? '100%' : 'calc(100% - 48px)',
-          alignItems: isUser ? 'flex-end' : 'flex-start',
-        }}
-      >
-        {/* 操作按钮栏 - 悬浮显示 */}
-        <div className={`message-actions-bar ${isHovered ? 'visible' : ''}`}>
-          {!isUser && (
-            <button
-              className="message-action-btn regenerate"
-              onClick={handleRegenerate}
-              title="重新生成"
-            >
-              ↻
-            </button>
-          )}
-          <div className="message-actions-dropdown" ref={menuRef}>
-            <button
-              className="message-menu-btn"
-              onClick={() => setShowMenu(!showMenu)}
-              aria-label="消息操作"
-            >
-              ⋮
-            </button>
-            {showMenu && (
-              <div className="message-menu">
-                <button onClick={handleCopy} className="menu-item">
-                  复制
-                </button>
-                {!isUser && (
-                  <button onClick={handleRegenerate} className="menu-item">
-                    重新生成
-                  </button>
-                )}
-                {isUser && (
-                  <button onClick={handleEdit} className="menu-item">
-                    编辑
-                  </button>
-                )}
-                <button onClick={handleDelete} className="menu-item delete">
-                  删除
-                </button>
+
+      {/* 用户消息：简洁的类QClaw设计 */}
+      {isUser ? (
+        <div className="message-content-wrapper">
+          <div className="message-bubble-user">
+            {isEditing ? (
+              <div className="message-edit">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="message-edit-input"
+                  rows={Math.max(3, editContent.split('\n').length)}
+                />
+                <div className="message-edit-actions">
+                  <button onClick={handleSaveEdit} className="btn-save">保存</button>
+                  <button onClick={handleCancelEdit} className="btn-cancel">取消</button>
+                </div>
               </div>
+            ) : (
+              <MarkdownRenderer content={mainContent} />
             )}
           </div>
+          {/* 用户消息操作按钮 - 位于消息下方 */}
+          <div className={`message-actions-user ${isHovered ? 'visible' : ''}`}>
+            <button className="action-btn-small" onClick={handleCopy} title="复制">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button className="action-btn-small" onClick={handleEdit} title="编辑">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button className="action-btn-small" onClick={handleDelete} title="删除">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-
-        <div className="message-content">
-          {isEditing ? (
-            <div className="message-edit">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="message-edit-input"
-                rows={Math.max(3, editContent.split('\n').length)}
-              />
-              <div className="message-edit-actions">
-                <button onClick={handleSaveEdit} className="btn-save">保存</button>
-                <button onClick={handleCancelEdit} className="btn-cancel">取消</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <MarkdownRenderer content={mainContent} />
-              {/* 显示思考过程 */}
-              {thinking && <Thinking content={thinking} />}
-              {/* 显示工具调用 */}
-              {tools.length > 0 && (
-                <div className="message-tools">
-                  {tools.map((item, index) => (
-                    <ToolCard key={index} tool={item.tool} status={item.status} />
-                  ))}
+      ) : (
+        /* AI消息：简洁设计，操作按钮位于消息下方 */
+        <div className="message-content-wrapper assistant">
+          <div className="message-bubble assistant">
+            {isEditing ? (
+              <div className="message-edit">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="message-edit-input"
+                  rows={Math.max(3, editContent.split('\n').length)}
+                />
+                <div className="message-edit-actions">
+                  <button onClick={handleSaveEdit} className="btn-save">保存</button>
+                  <button onClick={handleCancelEdit} className="btn-cancel">取消</button>
                 </div>
-              )}
-            </>
-          )}
+              </div>
+            ) : (
+              <>
+                <MarkdownRenderer content={mainContent} />
+                {/* 显示思考过程 */}
+                {thinking && <Thinking content={thinking} />}
+                {/* 显示工具调用 */}
+                {tools.length > 0 && (
+                  <div className="message-tools">
+                    {tools.map((item, index) => (
+                      <ToolCard key={index} tool={item.tool} status={item.status} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {/* AI消息操作按钮 - 位于消息下方 */}
+          <div className={`message-actions-ai ${isHovered ? 'visible' : ''}`}>
+            <button className="action-btn-small" onClick={handleCopy} title="复制">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button className="action-btn-small" onClick={handleRegenerate} title="重新生成">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+            <button className="action-btn-small" onClick={handleDelete} title="删除">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -292,46 +286,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
  */
 const TypingIndicator: React.FC = () => {
   return (
-    <div
-      className="message assistant-message"
-      id="typingIndicator"
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: '12px',
-        margin: '16px 0',
-        maxWidth: '85%',
-        alignSelf: 'flex-start',
-      }}
-    >
-      <div
-        className="avatar assistant-avatar"
-        style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          fontWeight: 'bold',
-          color: 'white',
-          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-        }}
-      >
-        AI
-      </div>
-      <div
-        className="message-content"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          maxWidth: 'calc(100% - 48px)',
-          alignItems: 'flex-start',
-        }}
-      >
+    <div className="message assistant-message" id="typingIndicator">
+      <div className="avatar assistant-avatar">AI</div>
+      <div className="message-bubble assistant">
         <div className="typing-indicator">
           <div className="typing-dot"></div>
           <div className="typing-dot"></div>
@@ -343,14 +300,50 @@ const TypingIndicator: React.FC = () => {
 };
 
 /**
- * 空状态组件
+ * 空状态组件 - 参考 QClaw 设计
  */
 const EmptyState: React.FC = () => {
+  const features = [
+    {
+      title: '每日天气定时提醒',
+      desc: '自动推送天气状况，给出穿衣 & 出行建议',
+    },
+    {
+      title: '远程操控电脑文件',
+      desc: '不带电脑，手机随时编辑，管理本地文件',
+    },
+    {
+      title: '手机远程办公',
+      desc: '不带电脑，手机随时查阅、处理在线任务',
+    },
+    {
+      title: '社媒自动运营涨粉',
+      desc: '不用团队自动互动发帖，轻松涨粉',
+    },
+    {
+      title: 'GitHub项目自动开发',
+      desc: '你出创意，我来实现，自动建库冲千星',
+    },
+  ];
+
   return (
-    <div className="info-panel">
-      <h2>欢迎使用 XClaw</h2>
-      <p>AI数字员工桌面应用</p>
-      <p>开始一个新对话或选择现有对话</p>
+    <div className="empty-state">
+      <div className="empty-state-center">
+        <div className="empty-state-logo">
+          <div className="empty-state-icon">X</div>
+        </div>
+        <h1 className="empty-state-title">XClaw</h1>
+        <p className="empty-state-subtitle">7x24小时，随时随地召唤的全能电脑 AI 助手</p>
+      </div>
+
+      <div className="empty-state-features">
+        {features.map((feature, index) => (
+          <div key={index} className="feature-card">
+            <h3 className="feature-card-title">{feature.title}</h3>
+            <p className="feature-card-desc">{feature.desc}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -413,36 +406,10 @@ export const MessageList: React.FC<MessageListProps> = ({
         ))
       )}
       {/* 流式响应内容 */}
-      {/* 流式响应内容 */}
       {isStreaming && (
         <div className="message assistant-message">
-          <div
-            className="avatar assistant-avatar"
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              fontWeight: 'bold',
-              color: 'white',
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-            }}
-          >
-            AI
-          </div>
-          <div
-            className="message-content"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              maxWidth: 'calc(100% - 48px)',
-              alignItems: 'flex-start',
-            }}
-          >
+          <div className="avatar assistant-avatar">AI</div>
+          <div className="message-bubble assistant">
             {streamingContent ? (
               <>
                 <MarkdownRenderer content={streamingContent} />
