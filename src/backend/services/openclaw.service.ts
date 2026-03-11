@@ -419,9 +419,9 @@ export class OpenClawManager extends EventEmitter {
    */
   /**
    * 获取占用指定端口的进程信息
-   * @returns {Promise<{pid: string, cmd: string} | null>}
+   * @returns {Promise<{pid: string, cmd: string, fullCmd?: string} | null>}
    */
-  private async getPortOccupier(): Promise<{ pid: string; cmd: string } | null> {
+  private async getPortOccupier(): Promise<{ pid: string; cmd: string; fullCmd?: string } | null> {
     const { execSync } = require("child_process");
 
     try {
@@ -451,7 +451,7 @@ export class OpenClawManager extends EventEmitter {
           }
         }
       } else {
-        // macOS/Linux: 使用 lsof
+        // macOS/Linux: 使用 lsof 获取完整命令行
         const output = execSync(
           `lsof -i:${this.config.port} -sTCP:LISTEN 2>/dev/null`,
           { encoding: "utf-8" }
@@ -463,7 +463,18 @@ export class OpenClawManager extends EventEmitter {
             const cmd = parts[0];
             const pid = parts[1];
             if (cmd && pid && !isNaN(parseInt(pid))) {
-              return { pid, cmd };
+              // 获取完整命令行
+              let fullCmd = cmd;
+              try {
+                const psOutput = execSync(
+                  `ps -p ${pid} -o command= 2>/dev/null`,
+                  { encoding: "utf-8" }
+                );
+                fullCmd = psOutput.trim() || cmd;
+              } catch {
+                // 忽略
+              }
+              return { pid, cmd, fullCmd };
             }
           }
         }
@@ -472,6 +483,24 @@ export class OpenClawManager extends EventEmitter {
       // 忽略错误
     }
     return null;
+  }
+
+  /**
+   * 检查进程是否是 OpenClaw 相关进程
+   */
+  private isOpenClawProcess(cmd: string, fullCmd?: string): boolean {
+    const checkStr = fullCmd || cmd;
+    return (
+      checkStr.includes(OPENCLAW_PROCESS_NAME) ||
+      checkStr.includes("openclaw") ||
+      checkStr.includes("clawstation") ||
+      // Node 进程运行 OpenClaw wrapper 或 entry
+      (cmd === "node" && (
+        checkStr.includes("wrapper.js") ||
+        checkStr.includes("entry.js") ||
+        checkStr.includes("gateway run")
+      ))
+    );
   }
 
   async forceCleanup(): Promise<{
@@ -1285,35 +1314,41 @@ export class OpenClawManager extends EventEmitter {
           const occupier = await this.getPortOccupier();
 
           if (occupier) {
-            if (occupier.cmd.includes(OPENCLAW_PROCESS_NAME)) {
-              // 如果是 clawstation-engine 进程，尝试清理它
+            // 检查是否是 OpenClaw 相关进程（包括 node 运行的 wrapper/entry）
+            if (this.isOpenClawProcess(occupier.cmd, occupier.fullCmd)) {
+              // 如果是 OpenClaw 相关进程，尝试清理它
               this.log.info(
-                `Port ${this.config.port} is in use by ${occupier.cmd} (PID: ${occupier.pid}), cleaning up to use own instance...`
+                `Port ${this.config.port} is in use by OpenClaw process (${occupier.fullCmd || occupier.cmd}, PID: ${occupier.pid}), cleaning up...`
               );
-              if (retryCount < 1) {
-                const cleanupResult = await this.forceCleanup();
-                if (cleanupResult.success) {
-                  try {
-                    await this.ensurePortAvailable(retryCount + 1);
-                    resolve();
-                    return;
-                  } catch (retryError) {
-                    reject(retryError);
-                    return;
-                  }
+              if (retryCount < 2) {
+                try {
+                  // 直接杀死该进程
+                  const { execSync } = require("child_process");
+                  execSync(`kill -9 ${occupier.pid} 2>/dev/null`);
+                  this.log.info(`Killed process ${occupier.pid}`);
+                  // 等待端口释放
+                  await new Promise((r) => setTimeout(r, 1000));
+                  await this.ensurePortAvailable(retryCount + 1);
+                  resolve();
+                  return;
+                } catch (killError) {
+                  this.log.warn(`Failed to kill process ${occupier.pid}:`, killError);
                 }
               }
               reject(
                 new Error(
-                  `Port ${this.config.port} is occupied by ${OPENCLAW_PROCESS_NAME} and could not be freed`
+                  `Port ${this.config.port} is occupied by OpenClaw and could not be freed. Please close the application and try again.`
                 )
               );
               return;
             } else {
-              // 如果是其他进程，报错提示端口被占用
+              // 如果是其他进程，显示用户友好的错误
+              this.log.error(
+                `Port ${this.config.port} is occupied by another application: ${occupier.fullCmd || occupier.cmd} (PID: ${occupier.pid})`
+              );
               reject(
                 new Error(
-                  `Port ${this.config.port} is occupied by ${occupier.cmd} (PID: ${occupier.pid}). Please free the port or change the port in configuration.`
+                  `端口 ${this.config.port} 被其他应用占用。请关闭占用该端口的应用后重试。`
                 )
               );
               return;
@@ -1340,7 +1375,7 @@ export class OpenClawManager extends EventEmitter {
 
           reject(
             new Error(
-              `Port ${this.config.port} is occupied by an unknown process`
+              `端口 ${this.config.port} 被占用，无法启动。请重启应用。`
             )
           );
         })();
