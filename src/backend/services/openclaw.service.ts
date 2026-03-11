@@ -486,15 +486,14 @@ export class OpenClawManager extends EventEmitter {
   }
 
   /**
-   * 检查进程是否是 OpenClaw 相关进程
+   * 检查进程是否是 AI 引擎相关进程 (clawstation-engine)
    */
-  private isOpenClawProcess(cmd: string, fullCmd?: string): boolean {
+  private isEngineProcess(cmd: string, fullCmd?: string): boolean {
     const checkStr = fullCmd || cmd;
     return (
       checkStr.includes(OPENCLAW_PROCESS_NAME) ||
-      checkStr.includes("openclaw") ||
       checkStr.includes("clawstation") ||
-      // Node 进程运行 OpenClaw wrapper 或 entry
+      // Node 进程运行 AI 引擎 wrapper 或 entry
       (cmd === "node" && (
         checkStr.includes("wrapper.js") ||
         checkStr.includes("entry.js") ||
@@ -1314,11 +1313,11 @@ export class OpenClawManager extends EventEmitter {
           const occupier = await this.getPortOccupier();
 
           if (occupier) {
-            // 检查是否是 OpenClaw 相关进程（包括 node 运行的 wrapper/entry）
-            if (this.isOpenClawProcess(occupier.cmd, occupier.fullCmd)) {
-              // 如果是 OpenClaw 相关进程，尝试清理它
+            // 检查是否是 AI 引擎相关进程（包括 node 运行的 wrapper/entry）
+            if (this.isEngineProcess(occupier.cmd, occupier.fullCmd)) {
+              // 如果是 AI 引擎相关进程，尝试清理它
               this.log.info(
-                `Port ${this.config.port} is in use by OpenClaw process (${occupier.fullCmd || occupier.cmd}, PID: ${occupier.pid}), cleaning up...`
+                `Port ${this.config.port} is in use by AI engine process (${occupier.fullCmd || occupier.cmd}, PID: ${occupier.pid}), cleaning up...`
               );
               if (retryCount < 2) {
                 try {
@@ -1337,7 +1336,7 @@ export class OpenClawManager extends EventEmitter {
               }
               reject(
                 new Error(
-                  `Port ${this.config.port} is occupied by OpenClaw and could not be freed. Please close the application and try again.`
+                  `端口 ${this.config.port} 被 AI 引擎占用且无法释放。请关闭应用后重试。`
                 )
               );
               return;
