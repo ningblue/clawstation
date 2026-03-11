@@ -61,3 +61,4 @@ clawstation (binary)
 *.dmg
 *.app
 resources/node/
+resources/openclaw.zip

@@ -56,19 +56,19 @@ const copyRecursive = (src, dest) => {
 
 copyRecursive(
   path.join(OPENCLAW_SRC, "dist"),
-  path.join(RESOURCES_DIR, "dist")
+  path.join(RESOURCES_DIR, "dist"),
 );
 copyRecursive(
   path.join(OPENCLAW_SRC, "docs"),
-  path.join(RESOURCES_DIR, "docs")
+  path.join(RESOURCES_DIR, "docs"),
 );
 fs.copyFileSync(
   path.join(OPENCLAW_SRC, "package.json"),
-  path.join(RESOURCES_DIR, "package.json")
+  path.join(RESOURCES_DIR, "package.json"),
 );
 fs.copyFileSync(
   path.join(OPENCLAW_SRC, "openclaw.mjs"),
-  path.join(RESOURCES_DIR, "openclaw.mjs")
+  path.join(RESOURCES_DIR, "openclaw.mjs"),
 );
 
 // Copy standard templates from node_modules (if not present in docs)
@@ -78,7 +78,7 @@ const templatesDir = path.join(RESOURCES_DIR, "docs", "reference", "templates");
 const openclawNodeModulesPath = path.join(
   OPENCLAW_SRC,
   "node_modules",
-  ".pnpm"
+  ".pnpm",
 );
 let nodeModulesTemplatesDir = null;
 
@@ -93,7 +93,7 @@ if (fs.existsSync(openclawNodeModulesPath)) {
         "openclaw",
         "docs",
         "reference",
-        "templates"
+        "templates",
       );
       if (fs.existsSync(possiblePath)) {
         nodeModulesTemplatesDir = possiblePath;
@@ -111,7 +111,7 @@ if (!nodeModulesTemplatesDir) {
     "openclaw",
     "docs",
     "reference",
-    "templates"
+    "templates",
   );
 }
 
@@ -132,14 +132,49 @@ if (nodeModulesTemplatesDir && fs.existsSync(nodeModulesTemplatesDir)) {
 
 // 5. Install Production Dependencies
 log("Installing production dependencies in resources...");
+
+// FIX: Force libsignal-node to use HTTPS instead of SSH to avoid permission errors
+try {
+  const pkgJsonPath = path.join(RESOURCES_DIR, "package.json");
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+
+  if (!pkgJson.overrides) pkgJson.overrides = {};
+  pkgJson.overrides["libsignal-node"] =
+    "git+https://github.com/whiskeysockets/libsignal-node.git";
+
+  // Also add resolution for pnpm just in case
+  if (!pkgJson.resolutions) pkgJson.resolutions = {};
+  pkgJson.resolutions["libsignal-node"] =
+    "git+https://github.com/whiskeysockets/libsignal-node.git";
+
+  fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2));
+  log("Patched package.json to force HTTPS for libsignal-node");
+} catch (e) {
+  error("Failed to patch package.json: " + e.message);
+}
+
 try {
   execSync("npm install --production --legacy-peer-deps", {
     cwd: RESOURCES_DIR,
     stdio: "inherit",
   });
+
+  // 确保 chalk 已安装 (OpenClaw 运行时依赖)
+  // 如果 npm install 部分失败，可能导致 chalk 缺失
+  const chalkPath = path.join(RESOURCES_DIR, "node_modules", "chalk");
+  if (!fs.existsSync(chalkPath)) {
+    log("Chalk missing, attempting to install explicitly...");
+    execSync("npm install chalk@5.3.0 --no-save --legacy-peer-deps", {
+      cwd: RESOURCES_DIR,
+      stdio: "inherit",
+    });
+  }
 } catch (e) {
-  error("Failed to install production dependencies");
-  process.exit(1);
+  // error("Failed to install production dependencies");
+  // process.exit(1);
+  log(
+    "Warning: Failed to install production dependencies. Continuing anyway...",
+  );
 }
 
 // 6. Create Wrapper
@@ -184,7 +219,7 @@ files.forEach((file) => {
   patchFile(
     filePath,
     /(process[\w$]*)\.title\s*=\s*"openclaw"/g,
-    '$1.title = $1.env.OPENCLAW_PROCESS_NAME || "openclaw"'
+    '$1.title = $1.env.OPENCLAW_PROCESS_NAME || "openclaw"',
   );
 
   // Patch program*.js: process.title = `${cliName}-${name}`
@@ -193,7 +228,7 @@ files.forEach((file) => {
   patchFile(
     filePath,
     /process\.title\s*=\s*`\$\{cliName\}-\$\{name\}`/g,
-    "process.title = process.env.OPENCLAW_PROCESS_NAME || `${cliName}-${name}`"
+    "process.title = process.env.OPENCLAW_PROCESS_NAME || `${cliName}-${name}`",
   );
 
   // Patch entry.js to force execution even when imported (via wrapper)
@@ -203,7 +238,7 @@ files.forEach((file) => {
     patchFile(
       filePath,
       /if \(!isMainModule\(\{/g,
-      "if (false && !isMainModule({"
+      "if (false && !isMainModule({",
     );
   }
 });
