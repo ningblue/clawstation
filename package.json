@@ -17,7 +17,8 @@
     "build:win": "npm run build -- --win",
     "build:mac": "npm run build -- --mac",
     "build:linux": "npm run build -- --linux",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
   },
   "keywords": [
     "ai",

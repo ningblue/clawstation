@@ -292,3 +292,27 @@ rm -rf ~/Library/Application\ Support/clawstation/Cache dist/renderer/* && npm r
 ### OpenClaw 问题排查
 
 遇到 OpenClaw 相关问题时（如配置验证、插件问题等），请优先查看 `lib/openclaw/` 目录的源代码，而不是搜索 `resources/openclaw/dist/` 目录的编译后代码。源代码更易理解和调试。
+
+### better-sqlite3 原生模块架构不匹配
+
+**问题原因：**
+- Electron 使用内置的 Node.js 运行时，与系统 Node.js 的 ABI 不同
+- 从其他机器（如 Windows x64）拉取代码后，原生模块是为错误架构编译的
+- `npm install` 后原生模块会重置为系统 Node.js 版本
+
+**解决方案：**
+
+```bash
+# 重新编译原生模块为 Electron 版本
+npm run rebuild:native
+```
+
+或者手动执行：
+
+```bash
+npx electron-rebuild -f -w better-sqlite3
+```
+
+**预防措施：**
+- `package.json` 已配置 `postinstall` 自动处理
+- 跨平台拉代码后，先运行 `npm run rebuild:native` 再启动

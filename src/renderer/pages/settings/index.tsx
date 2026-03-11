@@ -1038,9 +1038,9 @@ const AboutSettings: React.FC = () => {
       <div className="settings-section-title">关于</div>
 
       <div className="about-card">
-        <div className="about-logo">🤖</div>
+        <div className="about-logo">XA</div>
         <div className="about-name">XClaw</div>
-        <div className="about-version">版本 1.0.0</div>
+        <div className="about-version">版本 0.1.0</div>
         <div className="about-description">
           AI数字员工桌面应用
         </div>

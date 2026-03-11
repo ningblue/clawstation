@@ -60,3 +60,4 @@ clawstation (binary)
 *.exe
 *.dmg
 *.app
+resources/node/
