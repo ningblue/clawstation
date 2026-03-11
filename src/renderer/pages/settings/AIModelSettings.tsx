@@ -155,6 +155,7 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast })
         setShowAddKey(false);
         setSelectedProvider('');
         refreshModels();
+        window.dispatchEvent(new CustomEvent('model-changed'));
       } else {
         throw new Error(result.error || '保存失败');
       }
@@ -173,6 +174,7 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast })
       if (result.success) {
         onShowToast('API Key 已删除', 'success');
         refreshModels();
+        window.dispatchEvent(new CustomEvent('model-changed'));
       } else {
         throw new Error(result.error || '删除失败');
       }

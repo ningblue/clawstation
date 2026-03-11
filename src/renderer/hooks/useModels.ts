@@ -128,7 +128,7 @@ export function getProviderDisplayName(providerId: string): string {
 export function useModels() {
   const [models, setModels] = useState<ModelConfig[]>([]);
   const [providerGroups, setProviderGroups] = useState<ProviderModelGroup[]>(
-    []
+    [],
   );
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
   const [currentSelection, setCurrentSelection] =
@@ -144,27 +144,20 @@ export function useModels() {
       setLoading(true);
       setError(null);
 
-      console.log("[Frontend] Starting to load model data...");
-      console.log("[Frontend] electronAPI exists:", !!window.electronAPI);
-      console.log(
-        "[Frontend] getModelCatalog exists:",
-        typeof window.electronAPI?.getModelCatalog
-      );
-      console.log(
-        "[Frontend] getCatalogProviders exists:",
-        typeof window.electronAPI?.getCatalogProviders
-      );
-
       // 并行获取全量模型目录、提供商列表和已配置的认证信息
-      const [catalogResult, providersResult, authResult] = await Promise.all([
-        window.electronAPI.getModelCatalog(),
-        window.electronAPI.getCatalogProviders(),
-        window.electronAPI.getAuthProfiles(),
-      ]);
+      // 添加超时处理
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Loading timed out")), 10000),
+      );
 
-      console.log("[Frontend] catalogResult:", catalogResult);
-      console.log("[Frontend] providersResult:", providersResult);
-      console.log("[Frontend] authResult:", authResult);
+      const [catalogResult, providersResult, authResult] = (await Promise.race([
+        Promise.all([
+          window.electronAPI.getModelCatalog(),
+          window.electronAPI.getCatalogProviders(),
+          window.electronAPI.getAuthProfiles(),
+        ]),
+        timeoutPromise,
+      ])) as [any, any, any];
 
       // 处理模型数据
       const catalogModels = catalogResult.models || [];
@@ -191,7 +184,7 @@ export function useModels() {
       for (const provider of providers) {
         const providerId = provider.id;
         let providerModels = loadedModels.filter(
-          (m: ModelConfig) => m.provider === providerId
+          (m: ModelConfig) => m.provider === providerId,
         );
 
         // 如果没有找到模型，但配置了 API Key，使用默认模型
@@ -255,6 +248,7 @@ export function useModels() {
   // 切换模型（OpenClaw 支持动态配置重载，无需重启引擎）
   const selectModel = useCallback(async (provider: string, modelId: string) => {
     try {
+      setIsRestarting(true);
       const modelString = `${provider}/${modelId}`;
 
       // 使用 setDefaultModel 同时更新 agents.defaults.model 和默认 agent 的模型
@@ -271,6 +265,8 @@ export function useModels() {
     } catch (err) {
       console.error("Error selecting model:", err);
       setError(err instanceof Error ? err.message : "Failed to select model");
+    } finally {
+      setIsRestarting(false);
     }
   }, []);
 
