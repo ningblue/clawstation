@@ -42,7 +42,7 @@ archive.pipe(output);
 // 添加文件，同时应用过滤规则
 // 参考 electron-builder.yml 中的 exclude 规则
 const ignorePatterns = [
-    'docs/**/*.md',
+    // 注意：不要排除 docs/**/*.md，因为 templates 中的 .md 文件是必需的
     'docs/**/images/**',
     'docs/**/assets/**',
     'node_modules/**/*.md',

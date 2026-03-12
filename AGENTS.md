@@ -170,6 +170,8 @@ logs/build-renderer.log        - 渲染进程构建日志
 ./scripts/clawstation-service.sh build
 ```
 
+**应用打包后无法启动（Launch failed / Code 163）：** 参考 `BUILD_LESSONS.md` 中的经验教训，不要手动修改构建脚本。
+
 ### 问题 5：macOS 架构不匹配 (dlopen error)
 
 **症状：** 启动时报错 `dlopen(...): tried: '...' (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64'))`

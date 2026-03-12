@@ -143,6 +143,9 @@ npx electron-rebuild -f -w better-sqlite3
 ### OpenClaw 问题排查
 遇到配置验证、插件问题时，**优先查看 `lib/openclaw/` 源代码**，而非 `resources/openclaw/dist/` 编译产物。
 
+### 构建问题排查
+遇到应用打包后无法启动、签名相关错误时，**参考 `BUILD_LESSONS.md`**，避免重复踩坑。
+
 ## 重要约束
 
 1. **禁止直接使用 pkill/kill**：始终使用 `./scripts/clawstation-service.sh stop`

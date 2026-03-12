@@ -1,6 +1,6 @@
 {
   "name": "xclaw",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI数字员工桌面应用，基于OpenClaw引擎",
   "main": "dist/main/index.js",
   "engines": {
@@ -30,13 +30,14 @@
   "author": "XClaw Team",
   "license": "MIT",
   "devDependencies": {
+    "7zip-bin": "^5.2.0",
+    "@electron/fuses": "^2.1.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^5.1.4",
-    "7zip-bin": "^5.2.0",
     "archiver": "^7.0.1",
     "electron": "^40.0.0",
     "electron-builder": "^25.0.0",

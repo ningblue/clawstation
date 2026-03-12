@@ -453,5 +453,11 @@
         }
       }
     }
+  },
+  "overrides": {
+    "libsignal-node": "git+https://github.com/whiskeysockets/libsignal-node.git"
+  },
+  "resolutions": {
+    "libsignal-node": "git+https://github.com/whiskeysockets/libsignal-node.git"
   }
 }

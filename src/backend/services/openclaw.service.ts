@@ -17,6 +17,7 @@ import {
   OPENCLAW_BIND_ADDRESS,
   OPENCLAW_PROCESS_NAME,
 } from "../../shared/constants";
+import { ProcessManager } from "../../main/process-manager";
 
 /**
  * OpenClaw 引擎状态接口
@@ -118,11 +119,13 @@ export class OpenClawManager extends EventEmitter {
   private isExternal: boolean = false;
   private lastError: string | null = null;
   private isReady: boolean = false; // 标记 OpenClaw 是否已就绪
+  private processManager: ProcessManager;
 
   constructor(config: Partial<OpenClawServiceConfig> = {}) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.configManager = getOpenClawConfigManager();
+    this.processManager = new ProcessManager(OPENCLAW_PROCESS_NAME, OPENCLAW_PORT);
   }
 
   /**
@@ -244,16 +247,11 @@ export class OpenClawManager extends EventEmitter {
   /**
    * 停止 OpenClaw 引擎
    */
-  stop(): void {
+  async stop(): Promise<void> {
     // 如果是外部实例，不尝试杀死进程
     if (this.isExternal) {
       this.log.info("Using external OpenClaw instance, skipping stop");
       this.cleanup();
-      return;
-    }
-
-    if (!this.childProcess) {
-      this.log.warn("OpenClaw is not running");
       return;
     }
 
@@ -263,22 +261,28 @@ export class OpenClawManager extends EventEmitter {
     // 停止健康检查
     this.stopHealthCheck();
 
-    // 尝试优雅关闭
-    this.gracefulShutdown();
+    // 尝试优雅关闭当前进程
+    if (this.childProcess) {
+      this.gracefulShutdown();
+    }
+
+    // 注销子进程 PID
+    this.processManager.unregisterChildProcess();
+
+    // 使用 ProcessManager 清理所有相关进程（保险措施）
+    await this.processManager.cleanupAllProcesses();
+
+    this.log.info("OpenClaw stopped");
   }
 
   /**
    * 强制停止 OpenClaw 引擎
    */
-  forceStop(): void {
+  async forceStop(): Promise<void> {
     // 如果是外部实例，不尝试杀死进程
     if (this.isExternal) {
       this.log.info("Using external OpenClaw instance, skipping force stop");
       this.cleanup();
-      return;
-    }
-
-    if (!this.childProcess) {
       return;
     }
 
@@ -287,9 +291,19 @@ export class OpenClawManager extends EventEmitter {
 
     this.stopHealthCheck();
 
-    // 强制终止
-    this.childProcess.kill("SIGKILL");
+    // 强制终止当前进程
+    if (this.childProcess) {
+      this.childProcess.kill("SIGKILL");
+    }
+
+    // 注销子进程 PID
+    this.processManager.unregisterChildProcess();
+
+    // 使用 ProcessManager 清理所有相关进程
+    await this.processManager.cleanupAllProcesses();
+
     this.cleanup();
+    this.log.info("OpenClaw force stopped");
   }
 
   /**
@@ -297,7 +311,7 @@ export class OpenClawManager extends EventEmitter {
    */
   async restart(): Promise<void> {
     this.log.info("Restarting OpenClaw engine...");
-    this.stop();
+    await this.stop();
     // 等待1秒确保进程完全终止
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await this.start();
@@ -1297,95 +1311,12 @@ export class OpenClawManager extends EventEmitter {
   /**
    * 确保端口可用
    */
-  private async ensurePortAvailable(retryCount: number = 0): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const net = require("net");
-      const tester = net.createServer();
-
-      tester.once("error", (err: any) => {
-        if (err.code !== "EADDRINUSE") {
-          reject(err);
-          return;
-        }
-
-        void (async () => {
-          // 先检查占用端口的进程
-          const occupier = await this.getPortOccupier();
-
-          if (occupier) {
-            // 检查是否是 AI 引擎相关进程（包括 node 运行的 wrapper/entry）
-            if (this.isEngineProcess(occupier.cmd, occupier.fullCmd)) {
-              // 如果是 AI 引擎相关进程，尝试清理它
-              this.log.info(
-                `Port ${this.config.port} is in use by AI engine process (${occupier.fullCmd || occupier.cmd}, PID: ${occupier.pid}), cleaning up...`
-              );
-              if (retryCount < 2) {
-                try {
-                  // 直接杀死该进程
-                  const { execSync } = require("child_process");
-                  execSync(`kill -9 ${occupier.pid} 2>/dev/null`);
-                  this.log.info(`Killed process ${occupier.pid}`);
-                  // 等待端口释放
-                  await new Promise((r) => setTimeout(r, 1000));
-                  await this.ensurePortAvailable(retryCount + 1);
-                  resolve();
-                  return;
-                } catch (killError) {
-                  this.log.warn(`Failed to kill process ${occupier.pid}:`, killError);
-                }
-              }
-              reject(
-                new Error(
-                  `端口 ${this.config.port} 被 AI 引擎占用且无法释放。请关闭应用后重试。`
-                )
-              );
-              return;
-            } else {
-              // 如果是其他进程，显示用户友好的错误
-              this.log.error(
-                `Port ${this.config.port} is occupied by another application: ${occupier.fullCmd || occupier.cmd} (PID: ${occupier.pid})`
-              );
-              reject(
-                new Error(
-                  `端口 ${this.config.port} 被其他应用占用。请关闭占用该端口的应用后重试。`
-                )
-              );
-              return;
-            }
-          }
-
-          // 无法确定占用进程，尝试清理一次
-          if (retryCount < 1) {
-            this.log.warn(
-              `Port ${this.config.port} is occupied by unknown process, attempting cleanup...`
-            );
-            const cleanupResult = await this.forceCleanup();
-            if (cleanupResult.success) {
-              try {
-                await this.ensurePortAvailable(retryCount + 1);
-                resolve();
-                return;
-              } catch (retryError) {
-                reject(retryError);
-                return;
-              }
-            }
-          }
-
-          reject(
-            new Error(
-              `端口 ${this.config.port} 被占用，无法启动。请重启应用。`
-            )
-          );
-        })();
-      });
-
-      tester.once("listening", () => {
-        tester.close(() => resolve());
-      });
-
-      tester.listen(this.config.port, this.config.bindAddress);
-    });
+  private async ensurePortAvailable(): Promise<void> {
+    this.log.info("Checking port availability...");
+    const available = await this.processManager.ensurePortAvailable();
+    if (!available) {
+      this.log.warn("Port may still be in use, but will attempt to start anyway");
+    }
   }
 
   /**
@@ -1555,6 +1486,9 @@ export class OpenClawManager extends EventEmitter {
     if (!this.childProcess.pid) {
       throw new Error("Failed to spawn Claw process");
     }
+
+    // 注册子进程 PID 用于退出清理
+    this.processManager.registerChildProcess(this.childProcess.pid);
 
     // 设置进程事件处理
     this.setupProcessHandlers();

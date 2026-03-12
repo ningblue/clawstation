@@ -36,6 +36,7 @@ declare global {
 import * as path from "path";
 import { OpenClawManager } from "../backend/services/openclaw.service";
 import { OPENCLAW_PORT, OPENCLAW_PROCESS_NAME } from "../shared/constants";
+import { getProcessManager } from "./process-manager";
 import { initializeDatabase } from "../data/database";
 import { setupSecurity } from "./security";
 import { setupAudit } from "./audit";
@@ -387,10 +388,10 @@ function setupIpcHandlers() {
   // 处理退出请求
   ipcMain.handle("app-exit", async () => {
     app.isQuitting = true;
-    // 先停止内部引擎
-    openclawManager?.stop();
-    // 强制关闭端口上的进程
-    await killProcessOnPort(OPENCLAW_PORT, OPENCLAW_PROCESS_NAME);
+    // 使用 ProcessManager 优雅地停止引擎并清理所有相关进程
+    if (openclawManager) {
+      await openclawManager.stop();
+    }
     // 然后退出应用
     app.quit();
   });
@@ -522,9 +523,12 @@ async function initializeAdminSDK(): Promise<void> {
 
     // 检查更新
     const updateInfo = await adminSDK.checkUpdate();
-    if (updateInfo.has_update && updateInfo.latest_version) {
-      log.info("[AdminSDK] Update available:", updateInfo.latest_version.version);
-      // 可以在这里触发更新提示
+    if (updateInfo && typeof updateInfo === 'object') {
+      const info = updateInfo as {has_update?: boolean; latest_version?: {version: string}};
+      if (info.has_update && info.latest_version) {
+        log.info("[AdminSDK] Update available:", info.latest_version.version);
+        // 可以在这里触发更新提示
+      }
     }
   } catch (error) {
     log.error("[AdminSDK] Initialization failed:", error);
@@ -716,11 +720,12 @@ function updateTrayMenu() {
     { type: "separator" },
     {
       label: "退出",
-      click: () => {
+      click: async () => {
         app.isQuitting = true;
-        // 停止内部引擎
-        openclawManager?.stop();
-        // 设置退出标志后立即退出，before-quit 事件会处理端口清理
+        // 使用 ProcessManager 优雅地停止引擎
+        if (openclawManager) {
+          await openclawManager.stop();
+        }
         app.quit();
       },
     },
@@ -922,12 +927,25 @@ app.on("before-quit", async (event) => {
   // 设置退出标志，让窗口可以正常关闭
   app.isQuitting = true;
 
-  // 清理 Admin Platform SDK
-  await destroyAdminSDK();
+  // 阻止立即退出，等待清理完成
+  event.preventDefault();
 
-  // 先停止内部引擎
-  openclawManager?.stop();
+  try {
+    // 清理 Admin Platform SDK
+    await destroyAdminSDK();
 
-  // 强制关闭端口上的进程
-  await killProcessOnPort(OPENCLAW_PORT, OPENCLAW_PROCESS_NAME);
+    // 使用 ProcessManager 优雅地停止引擎并清理所有相关进程
+    if (openclawManager) {
+      await openclawManager.stop();
+    }
+
+    // 最后清理所有残留进程（保险措施）
+    const processManager = getProcessManager(OPENCLAW_PROCESS_NAME, OPENCLAW_PORT);
+    await processManager.cleanupAllProcesses();
+  } catch (error) {
+    console.error("Error during cleanup:", error);
+  } finally {
+    // 清理完成后真正退出
+    app.exit(0);
+  }
 });
