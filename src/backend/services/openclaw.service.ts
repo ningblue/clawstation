@@ -753,7 +753,7 @@ export class OpenClawManager extends EventEmitter {
             temperature: request.temperature,
             max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(600000), // 600秒（10分钟）超时，与 OpenClaw 默认超时一致
+          signal: AbortSignal.timeout(1800000), // 1800秒（30分钟）超时
         }
       );
 
@@ -887,7 +887,7 @@ export class OpenClawManager extends EventEmitter {
             temperature: request.temperature,
             max_tokens: request.maxTokens,
           }),
-          signal: AbortSignal.timeout(600000), // 600秒（10分钟）超时，与 OpenClaw 默认超时一致
+          signal: AbortSignal.timeout(1800000), // 1800秒（30分钟）超时
         }
       );
 

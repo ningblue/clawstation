@@ -520,14 +520,16 @@ export function setupOpenClawRoutes(openclawManager: OpenClawManager): void {
             } else if (chunk.type === "tool_call") {
               try {
                 const toolData = JSON.parse(chunk.data);
-                toolCalls.push({
+                // 只提取 name 和 arguments 字段，去掉多余的 type 字段
+                const toolInfo = {
                   name: toolData.name,
                   arguments: toolData.arguments,
-                });
+                };
+                toolCalls.push(toolInfo);
                 // 发送工具调用信息给前端
                 event.sender.send("openclaw:stream:chunk", {
                   type: "tool_call",
-                  tool: toolData,
+                  tool: toolInfo,
                 });
               } catch {
                 // 忽略解析错误

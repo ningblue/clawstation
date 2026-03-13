@@ -6,72 +6,66 @@
 
 .message {
   display: flex;
-  margin-bottom: 16px;
-  align-items: flex-start;
+  flex-direction: column;
+  margin-bottom: 20px;
+  max-width: 90%;
 }
 
 .message.user-message {
-  justify-content: flex-end;
+  align-items: flex-end;
+  margin-left: auto;
 }
 
 .message.assistant-message {
-  justify-content: flex-start;
+  align-items: flex-start;
+  margin-right: auto;
 }
 
-/* 头像样式 */
-.message .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+/* 助手名称 */
+.message-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-weight: bold;
-  color: white;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-left: 4px;
 }
 
-.message .avatar.user-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.assistant-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
 }
 
-.message .avatar.assistant-avatar {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+.model-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  color: #666;
 }
 
 /* ---------- 消息气泡 ---------- */
 
 .message-bubble {
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 24px 28px !important;
+  border-radius: 20px;
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
 }
 
-/* 用户消息 - 简洁的类QClaw设计 */
-.message-content-wrapper {
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
+/* 用户消息气泡 */
 .message-bubble-user {
-  background: #f3f4f6;
+  background: #f44c4c14;
   color: #181818;
-  padding: 12px 16px;
-  border-radius: 16px;
-  border-bottom-right-radius: 4px;
-  font-size: 14px;
-  line-height: 1.6;
-  word-break: break-word;
+  border-radius: 20px;
 }
 
+/* 助手消息气泡 */
 .message-bubble.assistant {
   background: transparent;
-  border-bottom-left-radius: 4px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* 消息内容样式 */
@@ -228,6 +222,9 @@
 .message-time {
   font-size: 11px;
   color: #9ca3af;
+  margin-top: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .message-content {
@@ -312,9 +309,16 @@
 }
 
 /* AI消息操作按钮 - 位于消息下方 */
-.message-content-wrapper.assistant {
+/* 助手消息的宽度应该是100%，不受70%限制 */
+.assistant-message .message-content-wrapper {
   max-width: 100%;
   align-items: flex-start;
+}
+
+/* 用户消息的宽度也应该100% */
+.user-message .message-content-wrapper {
+  max-width: 100%;
+  align-items: flex-end;
 }
 
 .message-actions-ai {
@@ -626,18 +630,26 @@
   color: #ef4444;
 }
 
-.message-content .inline-code {
-  background-color: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'SF Mono', Monaco, monospace;
-  font-size: 0.9em;
-  color: #ef4444;
+/* 行内代码样式 - 支持 message-content 和 message-text 两种容器 */
+/* 行内代码样式 - 使用更高特异性确保不被外部库覆盖 */
+.message-content .inline-code,
+.message-text .inline-code,
+code.inline-code {
+  background-color: #f1f5f9 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace !important;
+  font-size: 0.875em !important;
+  color: #be123c !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
-.message.user .message-content .inline-code {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
+.message.user .message-content .inline-code,
+.message.user .message-text .inline-code,
+.message.user code.inline-code {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #1f2937 !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 /* 代码块包装器 */
@@ -766,6 +778,65 @@
   max-width: 100%;
   border-radius: 8px;
   margin: 8px 0;
+}
+
+/* 消息中的图片样式 */
+.message-image-container {
+  margin: 8px 0;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.message-image {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.message-image-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 100px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  color: #6b7280;
+}
+
+.message-image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.message-image-error svg {
+  color: #f87171;
+  margin-bottom: 4px;
+}
+
+.message-image-error a {
+  color: #3b82f6;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.message-image-error a:hover {
+  text-decoration: underline;
 }
 
 .markdown-content hr {
@@ -3597,6 +3668,56 @@ body.dark-theme .thinking-content {
   gap: 6px;
   padding: 12px 8px;
   align-items: center;
+}
+
+/* 工具调用进度展示 */
+.tool-calls-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 8px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.tool-call-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.tool-call-icon {
+  font-size: 16px;
+}
+
+.tool-call-name {
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.tool-call-detail {
+  color: #6b7280;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .typing-dot {

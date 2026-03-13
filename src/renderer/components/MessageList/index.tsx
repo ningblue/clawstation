@@ -9,6 +9,67 @@ import { MarkdownRenderer } from '../MarkdownRenderer';
 import { ToolCard, type ToolCall, type ToolResult } from '../ToolCard';
 import { Thinking, parseThinkingFromContent } from '../Thinking';
 
+// 工具名称映射为用户可读的描述
+const getToolDisplayName = (toolName: string): string => {
+  const toolNames: Record<string, string> = {
+    'browser': '浏览器',
+    'web_search': '网络搜索',
+    'exec': '执行命令',
+    'read': '读取文件',
+    'write': '写入文件',
+    'process': '处理',
+    'str_replace_editor': '编辑文件',
+    'bash': '执行命令',
+    'shell': '执行命令',
+    'Playwright': '浏览器操作',
+  };
+  return toolNames[toolName] || toolName;
+};
+
+// 获取工具图标
+const getToolIcon = (toolName: string): string => {
+  const toolIcons: Record<string, string> = {
+    'browser': '🌐',
+    'web_search': '🔍',
+    'exec': '⚡',
+    'read': '📖',
+    'write': '✏️',
+    'process': '⚙️',
+    'str_replace_editor': '📝',
+    'bash': '💻',
+    'shell': '💻',
+    'Playwright': '🌍',
+  };
+  return toolIcons[toolName] || '🔧';
+};
+
+// 获取工具执行详情
+const getToolDetail = (tool: { name: string; arguments: Record<string, unknown> }): string => {
+  const args = tool.arguments;
+  if (!args) return '';
+
+  // 根据不同工具提取关键信息
+  if (args.command) {
+    const cmd = String(args.command);
+    // 简化命令显示，只取前30个字符
+    return cmd.length > 30 ? cmd.slice(0, 30) + '...' : cmd;
+  }
+  if (args.url) {
+    const url = String(args.url);
+    return url.length > 40 ? url.slice(0, 40) + '...' : url;
+  }
+  if (args.path) {
+    const path = String(args.path);
+    const filename = path.split('/').pop() || path;
+    return filename;
+  }
+  if (args.query) {
+    return String(args.query);
+  }
+
+  return '';
+};
+
 export interface MessageListProps {
   /** 消息列表 */
   messages: Message[];
@@ -409,20 +470,35 @@ export const MessageList: React.FC<MessageListProps> = ({
       {isStreaming && (
         <div className="message assistant-message">
           <div className="avatar assistant-avatar">AI</div>
-          <div className="message-bubble assistant">
-            {streamingContent ? (
-              <>
-                <MarkdownRenderer content={streamingContent} />
-                <span className="streaming-cursor">▋</span>
-              </>
-            ) : (
-              <div className="typing-indicator">
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-              </div>
-            )}
+          <div className="message-content-wrapper assistant">
+            <div className="message-bubble assistant">
+              {streamingContent ? (
+                <>
+                  <MarkdownRenderer content={streamingContent} />
+                  <span className="streaming-cursor">▋</span>
+                </>
+              ) : (
+                <div className="typing-indicator">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* 正在执行的工具调用 - 展示进度 */}
+      {isStreaming && streamingToolCalls.length > 0 && (
+        <div className="tool-calls-progress">
+          {streamingToolCalls.map((tool, index) => (
+            <div key={index} className="tool-call-item">
+              <span className="tool-call-icon">{getToolIcon(tool.name)}</span>
+              <span className="tool-call-name">{getToolDisplayName(tool.name)}</span>
+              <span className="tool-call-detail">{getToolDetail(tool)}</span>
+            </div>
+          ))}
         </div>
       )}
 

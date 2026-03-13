@@ -11,11 +11,10 @@ import type { ProviderGroup, SubCategory } from '../../types/models';
 import MiniMaxOAuth from '../../components/settings/MiniMaxOAuth';
 
 // 设置标签页类型
-type SettingsTab = 'general' | 'engine' | 'ai' | 'appearance' | 'account' | 'about';
+type SettingsTab = 'engine' | 'ai' | 'appearance' | 'account' | 'about';
 
 // 左侧菜单项配置
 const SETTINGS_MENU = [
-  { id: 'general' as const, label: '通用', icon: 'settings' },
   { id: 'appearance' as const, label: '外观', icon: 'palette' },
   { id: 'engine' as const, label: 'AI 引擎', icon: 'cpu' },
   { id: 'ai' as const, label: 'AI 模型', icon: 'brain' },
@@ -95,61 +94,6 @@ const getProviderIcon = (providerId: string): string => {
     doubao: '豆包',
   };
   return icons[providerId] || '🤖';
-};
-
-/**
- * 通用设置面板
- */
-interface GeneralSettingsProps {
-  preferences: {
-    theme: Theme;
-    fontSize: FontSize;
-    locale: Locale;
-    autoSave: boolean;
-  };
-  onUpdatePreferences: (prefs: Partial<{ theme: Theme; fontSize: FontSize; locale: Locale; autoSave: boolean }>) => void;
-}
-
-const GeneralSettings: React.FC<GeneralSettingsProps> = ({
-  preferences,
-  onUpdatePreferences,
-}) => {
-  return (
-    <div className="settings-section">
-      <div className="settings-section-title">通用设置</div>
-      <div className="settings-group">
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">自动保存对话</div>
-            <div className="settings-item-desc">退出应用时自动保存对话记录</div>
-          </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={preferences.autoSave}
-              onChange={(e) => onUpdatePreferences({ autoSave: e.target.checked })}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">语言</div>
-            <div className="settings-item-desc">选择界面显示语言</div>
-          </div>
-          <select
-            className="settings-select"
-            value={preferences.locale}
-            onChange={(e) => onUpdatePreferences({ locale: e.target.value as Locale })}
-          >
-            <option value="zh-CN">简体中文</option>
-            <option value="en-US">English</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 /**
@@ -1140,7 +1084,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const { user } = useUserStore();
   const { preferences, updatePreferences } = useUserStore();
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'engine');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // 切换标签页时也关闭搜索
@@ -1162,8 +1106,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'general':
-        return <GeneralSettings preferences={preferences} onUpdatePreferences={updatePreferences} />;
       case 'appearance':
         return <AppearanceSettings preferences={preferences} onUpdatePreferences={updatePreferences} />;
       case 'engine':
