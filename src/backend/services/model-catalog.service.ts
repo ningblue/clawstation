@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import log from "electron-log";
+import { getOpenClawResourcePath } from "../../main/paths";
 
 const logger = log.scope("ModelCatalogService");
 
@@ -198,28 +199,23 @@ class ModelCatalogService {
   }
 
   /**
-   * 从 OpenClaw 源代码加载静态模型目录
+   * 从 OpenClaw 资源目录加载静态模型目录
    * 当 models.json 不存在时作为回退
    */
   private async loadStaticModelCatalog(): Promise<ModelCatalogEntry[]> {
     logger.info(
-      "Attempting to load static model catalog from OpenClaw source..."
+      "Attempting to load static model catalog from OpenClaw resources..."
     );
 
-    // 尝试从 OpenClaw 的 pi-model-discovery 模块加载
+    // 尝试从 resources/openclaw 目录加载静态模型数据
+    const openclawResourcePath = getOpenClawResourcePath();
     const possiblePaths = [
-      path.join(
-        __dirname,
-        "../../../../lib/openclaw/dist/agents/pi-model-discovery.js"
-      ),
-      path.join(
-        __dirname,
-        "../../../lib/openclaw/dist/agents/pi-model-discovery.js"
-      ),
-      path.join(
-        __dirname,
-        "../../../../lib/openclaw/src/agents/pi-model-discovery.ts"
-      ),
+      // 优先从 resources/openclaw/dist/agents/ 加载
+      path.join(openclawResourcePath, "dist/agents/pi-model-discovery.js"),
+      path.join(openclawResourcePath, "dist/agents/models.json"),
+      // 备用路径
+      path.join(__dirname, "../../../../resources/openclaw/dist/agents/models.json"),
+      path.join(__dirname, "../../../resources/openclaw/dist/agents/models.json"),
     ];
 
     for (const modelPath of possiblePaths) {

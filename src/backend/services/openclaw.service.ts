@@ -18,6 +18,12 @@ import {
   OPENCLAW_PROCESS_NAME,
 } from "../../shared/constants";
 import { ProcessManager } from "../../main/process-manager";
+import {
+  getOpenClawResourcePath,
+  getOpenClawExecutablePath,
+  getLauncherPath,
+  getEmbeddedNodePath,
+} from "../../main/paths";
 
 /**
  * OpenClaw 引擎状态接口
@@ -1237,6 +1243,7 @@ export class OpenClawManager extends EventEmitter {
 
   /**
    * 解析 OpenClaw 路径
+   * 统一使用 resources/openclaw，移除 lib/openclaw 依赖
    */
   private async resolveOpenClawPath(): Promise<string> {
     const possiblePaths: string[] = [];
@@ -1246,69 +1253,27 @@ export class OpenClawManager extends EventEmitter {
       possiblePaths.push(process.env.OPENCLAW_PATH);
     }
 
-    // 2. 生产环境资源目录 - app.asar.unpacked
-    // 优先使用 wrapper.js (设置进程名)
-    if (app.isPackaged) {
-      const appPath = app.getAppPath();
-      const unpackedPath = appPath.replace("app.asar", "app.asar.unpacked");
+    // 2. 统一使用 resources/openclaw 目录
+    // 优先使用 wrapper.js (设置进程名)，然后是 entry.js / index.js
+    const resourcePath = getOpenClawResourcePath();
+    possiblePaths.push(
+      path.join(resourcePath, "wrapper.js"),
+      path.join(resourcePath, "dist/entry.js"),
+      path.join(resourcePath, "dist/index.js")
+    );
 
-      // wrapper.js 优先
-      possiblePaths.push(
-        path.join(process.resourcesPath, "openclaw/wrapper.js"),
-        path.join(unpackedPath, "lib/openclaw/wrapper.js")
-      );
-
-      // lib/openclaw 目录（从 git 提交）- 优先 entry.js
-      possiblePaths.push(
-        path.join(unpackedPath, "lib/openclaw/dist/entry.js"),
-        path.join(unpackedPath, "lib/openclaw/dist/index.js")
-      );
-      // 备用路径 - 优先 entry.js
-      possiblePaths.push(
-        path.join(
-          process.resourcesPath,
-          "app.asar.unpacked/lib/openclaw/dist/entry.js"
-        ),
-        path.join(
-          process.resourcesPath,
-          "app.asar.unpacked/lib/openclaw/dist/index.js"
-        )
-      );
-      // node_modules 备用（如果作为 npm 依赖安装）- 优先 entry.js
-      possiblePaths.push(
-        path.join(unpackedPath, "node_modules/openclaw/dist/entry.js"),
-        path.join(unpackedPath, "node_modules/openclaw/dist/index.js")
-      );
-      possiblePaths.push(
-        path.join(
-          process.resourcesPath,
-          "app.asar.unpacked/node_modules/openclaw/dist/entry.js"
-        ),
-        path.join(
-          process.resourcesPath,
-          "app.asar.unpacked/node_modules/openclaw/dist/index.js"
-        )
-      );
-    }
-
-    // 3. 开发环境 lib 目录 - 优先使用 wrapper.js
+    // 3. 开发环境路径（相对于项目根目录）
     possiblePaths.push(
       path.join(__dirname, "../../../../resources/openclaw/wrapper.js"),
       path.join(__dirname, "../../../resources/openclaw/wrapper.js"),
       path.join(process.cwd(), "resources/openclaw/wrapper.js"),
-      path.join(__dirname, "../../../../lib/openclaw/dist/entry.js"),
-      path.join(__dirname, "../../../lib/openclaw/dist/entry.js"),
-      path.join(__dirname, "../../../../lib/openclaw/dist/index.js"),
-      path.join(__dirname, "../../../lib/openclaw/dist/index.js")
+      path.join(__dirname, "../../../../resources/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../resources/openclaw/dist/entry.js"),
+      path.join(__dirname, "../../../../resources/openclaw/dist/index.js"),
+      path.join(__dirname, "../../../resources/openclaw/dist/index.js")
     );
 
-    // 4. 相对于项目根目录（开发环境）- 优先使用 entry.js
-    possiblePaths.push(
-      path.join(process.cwd(), "lib/openclaw/dist/entry.js"),
-      path.join(process.cwd(), "lib/openclaw/dist/index.js")
-    );
-
-    // 5. node_modules - 优先使用 entry.js
+    // 4. node_modules - 优先使用 entry.js
     possiblePaths.push(
       path.join(__dirname, "../../../node_modules/openclaw/dist/entry.js"),
       path.join(__dirname, "../../../../node_modules/openclaw/dist/entry.js"),
@@ -1316,7 +1281,7 @@ export class OpenClawManager extends EventEmitter {
       path.join(__dirname, "../../../../node_modules/openclaw/dist/index.js")
     );
 
-    // 6. 全局安装 - 优先使用 entry.js
+    // 5. 全局安装 - 优先使用 entry.js
     possiblePaths.push(
       path.join(
         os.homedir(),
@@ -1559,8 +1524,16 @@ export class OpenClawManager extends EventEmitter {
 
   /**
    * 解析 launcher 脚本路径
+   * 使用统一的路径管理
    */
   private resolveLauncherPath(): string | null {
+    // 优先使用 paths.ts 中的统一路径
+    const launcherPath = getLauncherPath();
+    if (launcherPath) {
+      return launcherPath;
+    }
+
+    // 备用：直接检查常见路径
     const possiblePaths: string[] = [];
 
     // 生产环境
@@ -1601,30 +1574,10 @@ export class OpenClawManager extends EventEmitter {
     const arch = process.arch;
 
     // 1. 最高优先级：打包的 Node.js 运行时
-    if (app.isPackaged) {
-      const embeddedNodePaths: string[] = [];
-
-      // resources/node/ 目录（electron-builder extraResources）
-      const resourcesNodePath = path.join(process.resourcesPath, "node");
-
-      if (isWindows) {
-        embeddedNodePaths.push(
-          path.join(resourcesNodePath, "node.exe"),
-          path.join(resourcesNodePath, "bin", "node.exe")
-        );
-      } else {
-        embeddedNodePaths.push(
-          path.join(resourcesNodePath, "bin", "node"),
-          path.join(resourcesNodePath, "node")
-        );
-      }
-
-      for (const testPath of embeddedNodePaths) {
-        if (fs.existsSync(testPath)) {
-          this.log.info(`Using embedded Node.js: ${testPath}`);
-          return testPath;
-        }
-      }
+    const embeddedNode = getEmbeddedNodePath();
+    if (embeddedNode) {
+      this.log.info(`Using embedded Node.js: ${embeddedNode}`);
+      return embeddedNode;
     }
 
     // 2. 环境变量指定的 Node
