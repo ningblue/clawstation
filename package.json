@@ -9,8 +9,10 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "nodemon --exec electron .",
-    "build": "npm run build:openclaw && npm run archive:openclaw && npm run download:node && npm run build:main && npm run build:renderer && electron-builder",
+    "dev": "electron .",
+    "setup:dev": "node scripts/setup.js",
+    "setup:dev:full": "npm run build:openclaw && npm run setup:dev",
+    "build": "npm run setup:dev && npm run build:main && npm run build:renderer && electron-builder",
     "build:openclaw": "node scripts/build-openclaw.js",
     "archive:openclaw": "node scripts/archive-openclaw.js",
     "download:node": "node scripts/download-node.js",

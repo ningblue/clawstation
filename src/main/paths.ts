@@ -8,10 +8,10 @@ import * as path from "path";
  * 统一使用 resources/openclaw，不再区分开发和生产环境
  */
 export function getOpenClawResourcePath(): string {
-  // 统一使用 process.resourcesPath，它在开发和生产环境都可用
-  // 开发环境：指向项目根目录的 resources/
-  // 生产环境：指向 app.asar 同级目录的 resources/
-  return path.join(process.resourcesPath, "openclaw");
+  // 开发环境：使用 process.cwd() 获取项目根目录
+  // 生产环境：使用 process.resourcesPath
+  const basePath = process.resourcesPath || process.cwd();
+  return path.join(basePath, "openclaw");
 }
 
 /**
@@ -51,8 +51,10 @@ export function getOpenClawConfigDir(): string {
  * 获取 scripts 目录路径
  */
 export function getScriptsPath(): string {
-  // 统一使用 process.resourcesPath
-  return path.join(process.resourcesPath, "scripts");
+  // 开发环境：使用 process.cwd() 获取项目根目录
+  // 生产环境：使用 process.resourcesPath
+  const basePath = process.resourcesPath || process.cwd();
+  return path.join(basePath, "scripts");
 }
 
 /**
