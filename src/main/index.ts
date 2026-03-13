@@ -12,7 +12,7 @@ import { exec } from "child_process";
 import log from "electron-log";
 
 // Admin Platform SDK
-import { ClawstationAdminSDK } from "@clawstation/admin-sdk";
+// import { ClawstationAdminSDK } from "@clawstation/admin-sdk";
 
 // 配置日志
 log.transports.file.level = "info";
@@ -47,7 +47,7 @@ export let openclawManager: OpenClawManager | null = null;
 let tray: Tray | null = null;
 
 // Admin Platform SDK
-let adminSDK: ClawstationAdminSDK | null = null;
+// let adminSDK: ClawstationAdminSDK | null = null;
 
 let latestEngineStatus: {
   isRunning: boolean;
@@ -76,7 +76,7 @@ async function createWindow() {
       dialog.showErrorBox(
         "Database Error",
         "Failed to initialize database. The application may not function correctly.\n" +
-          String(dbError)
+          String(dbError),
       );
     }
 
@@ -84,9 +84,9 @@ async function createWindow() {
     setupAudit();
 
     // 初始化 Admin Platform SDK（非阻塞）
-    initializeAdminSDK().catch((err) => {
-      log.error("Failed to initialize Admin SDK:", err);
-    });
+    // initializeAdminSDK().catch((err) => {
+    //   log.error("Failed to initialize Admin SDK:", err);
+    // });
 
     // 注册应用级IPC处理器
     setupIpcHandlers();
@@ -147,7 +147,7 @@ async function createWindow() {
           const logPath = log.transports.file.getFile().path;
           dialog.showErrorBox(
             "AI Engine Startup Error",
-            `Failed to start AI engine.\n\nError: ${err.message}\n\nPlease check the log file for more details:\n${logPath}`
+            `Failed to start AI engine.\n\nError: ${err.message}\n\nPlease check the log file for more details:\n${logPath}`,
           );
         }
       });
@@ -224,7 +224,7 @@ async function createWindow() {
     log.error("Fatal error during window creation:", err);
     dialog.showErrorBox(
       "Startup Error",
-      "A fatal error occurred during startup.\n" + String(err)
+      "A fatal error occurred during startup.\n" + String(err),
     );
   }
 }
@@ -334,7 +334,7 @@ function setupMenu() {
           label: "反馈问题",
           click: async () => {
             await shell.openExternal(
-              "https://github.com/clawstation/clawstation/issues"
+              "https://github.com/clawstation/clawstation/issues",
             );
           },
         },
@@ -421,7 +421,7 @@ function setupIpcHandlers() {
     "show-error-dialog",
     async (_, options: { title: string; message: string }) => {
       await dialog.showErrorBox(options.title, options.message);
-    }
+    },
   );
 
   // 显示确认对话框
@@ -435,7 +435,7 @@ function setupIpcHandlers() {
         buttons?: string[];
         defaultId?: number;
         cancelId?: number;
-      }
+      },
     ) => {
       const result = await dialog.showMessageBox({
         type: "question",
@@ -447,7 +447,7 @@ function setupIpcHandlers() {
         cancelId: options.cancelId ?? 1,
       });
       return result.response;
-    }
+    },
   );
 
   // 窗口控制 IPC 处理
@@ -500,58 +500,58 @@ let isInitializing = false;
 /**
  * 初始化 Admin Platform SDK
  */
-async function initializeAdminSDK(): Promise<void> {
-  try {
-    log.info("[AdminSDK] Initializing...");
+// async function initializeAdminSDK(): Promise<void> {
+//   try {
+//     log.info("[AdminSDK] Initializing...");
 
-    // 创建 SDK 实例（配置从环境变量或配置文件加载）
-    adminSDK = new ClawstationAdminSDK({
-      appVersion: app.getVersion(),
-      autoRegister: true,
-      autoHeartbeat: true,
-      debug: !app.isPackaged, // 开发模式启用调试
-    });
+//     // 创建 SDK 实例（配置从环境变量或配置文件加载）
+//     // adminSDK = new ClawstationAdminSDK({
+//     //   appVersion: app.getVersion(),
+//     //   autoRegister: true,
+//     //   autoHeartbeat: true,
+//     //   debug: !app.isPackaged, // 开发模式启用调试
+//     // });
 
-    // 初始化 SDK
-    await adminSDK.init();
+//     // 初始化 SDK
+//     // await adminSDK.init();
 
-    log.info("[AdminSDK] Initialized successfully");
-    log.info("[AdminSDK] Device ID:", await adminSDK.getDeviceId());
+//     // log.info("[AdminSDK] Initialized successfully");
+//     // log.info("[AdminSDK] Device ID:", await adminSDK.getDeviceId());
 
-    // 开始会话追踪
-    adminSDK.startSession();
+//     // 开始会话追踪
+//     // adminSDK.startSession();
 
-    // 检查更新
-    const updateInfo = await adminSDK.checkUpdate();
-    if (updateInfo && typeof updateInfo === 'object') {
-      const info = updateInfo as {has_update?: boolean; latest_version?: {version: string}};
-      if (info.has_update && info.latest_version) {
-        log.info("[AdminSDK] Update available:", info.latest_version.version);
-        // 可以在这里触发更新提示
-      }
-    }
-  } catch (error) {
-    log.error("[AdminSDK] Initialization failed:", error);
-    // SDK 初始化失败不应影响应用启动
-    adminSDK = null;
-  }
-}
+//     // 检查更新
+//     // const updateInfo = await adminSDK.checkUpdate();
+//     // if (updateInfo && typeof updateInfo === 'object') {
+//     //   const info = updateInfo as {has_update?: boolean; latest_version?: {version: string}};
+//     //   if (info.has_update && info.latest_version) {
+//     //     log.info("[AdminSDK] Update available:", info.latest_version.version);
+//     //     // 可以在这里触发更新提示
+//     //   }
+//     // }
+//   } catch (error) {
+//     log.error("[AdminSDK] Initialization failed:", error);
+//     // SDK 初始化失败不应影响应用启动
+//     // adminSDK = null;
+//   }
+// }
 
-/**
- * 清理 Admin Platform SDK
- */
-async function destroyAdminSDK(): Promise<void> {
-  if (adminSDK) {
-    try {
-      await adminSDK.endSession();
-      adminSDK.destroy();
-      log.info("[AdminSDK] Destroyed");
-    } catch (error) {
-      log.error("[AdminSDK] Error during destroy:", error);
-    }
-    adminSDK = null;
-  }
-}
+// /**
+//  * 清理 Admin Platform SDK
+//  */
+// async function destroyAdminSDK(): Promise<void> {
+//   if (adminSDK) {
+//     try {
+//       await adminSDK.endSession();
+//       adminSDK.destroy();
+//       log.info("[AdminSDK] Destroyed");
+//     } catch (error) {
+//       log.error("[AdminSDK] Error during destroy:", error);
+//     }
+//     adminSDK = null;
+//   }
+// }
 
 /**
  * 广播引擎状态到所有窗口
@@ -677,8 +677,8 @@ function updateTrayMenu() {
   const statusLabel = !isEngineRunning
     ? "⚪ AI引擎已停止"
     : isEngineHealthy
-    ? "🟢 AI引擎运行中"
-    : "🟠 AI引擎异常";
+      ? "🟢 AI引擎运行中"
+      : "🟠 AI引擎异常";
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -806,7 +806,7 @@ app.on("window-all-closed", () => {
  */
 function killProcessOnPort(
   port: number,
-  processNameFilter?: string
+  processNameFilter?: string,
 ): Promise<void> {
   return new Promise((resolve) => {
     if (process.platform === "win32") {
@@ -826,8 +826,8 @@ function killProcessOnPort(
                 const match = line.match(/\s(\d+)$/);
                 return match?.[1] || "";
               })
-              .filter((pid) => pid && pid !== "0" && pid !== "4")
-          )
+              .filter((pid) => pid && pid !== "0" && pid !== "4"),
+          ),
         );
 
         if (pids.length === 0) {
@@ -837,7 +837,7 @@ function killProcessOnPort(
 
         if (processNameFilter) {
           console.log(
-            `[X-Claw] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`
+            `[X-Claw] Windows port cleanup ignores processNameFilter=${processNameFilter}, kill by PID on port only`,
           );
         }
 
@@ -915,8 +915,8 @@ function killPids(pids: string[], port: number, filter?: string): void {
         const filterMsg = filter ? ` (matched: ${filter})` : "";
         console.log(
           `[X-Claw] Killed processes on port ${port}${filterMsg}: ${pids.join(
-            ", "
-          )}`
+            ", ",
+          )}`,
         );
       }
     });
@@ -931,8 +931,9 @@ app.on("before-quit", async (event) => {
   event.preventDefault();
 
   try {
+    console.log("Cleaning up before quit...");
     // 清理 Admin Platform SDK
-    await destroyAdminSDK();
+    // await destroyAdminSDK();
 
     // 使用 ProcessManager 优雅地停止引擎并清理所有相关进程
     if (openclawManager) {
@@ -940,12 +941,27 @@ app.on("before-quit", async (event) => {
     }
 
     // 最后清理所有残留进程（保险措施）
-    const processManager = getProcessManager(OPENCLAW_PROCESS_NAME, OPENCLAW_PORT);
+    const processManager = getProcessManager(
+      OPENCLAW_PROCESS_NAME,
+      OPENCLAW_PORT,
+    );
     await processManager.cleanupAllProcesses();
+    console.log("Cleanup completed.");
   } catch (error) {
     console.error("Error during cleanup:", error);
   } finally {
     // 清理完成后真正退出
     app.exit(0);
   }
+});
+
+// 处理 SIGINT 和 SIGTERM 信号，确保优雅退出
+process.on("SIGINT", () => {
+  console.log("Received SIGINT, quitting...");
+  app.quit();
+});
+
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM, quitting...");
+  app.quit();
 });

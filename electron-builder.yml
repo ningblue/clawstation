@@ -10,15 +10,16 @@ files:
   - dist/**/*
   - package.json
 extraResources:
-  - from: resources/openclaw.zip
-    to: openclaw.zip
+  - from: resources/openclaw.7z
+    to: openclaw.7z
   - from: resources/
     to: resources/
     filter:
       - "**/*"
       - "!openclaw/**" # openclaw单独处理
-      - "!openclaw.zip" # 避免重复复制
+      - "!openclaw.7z" # 避免重复复制
       - "!node/**" # node单独处理，避免重复复制
+      - "!7za.exe" # 排除 7za.exe (Win only, handled below)
   - from: resources/node/${os}-${arch}/node
     to: node
     filter:
@@ -28,7 +29,7 @@ extraResources:
     filter:
       - "clawstation-claw-launcher.js"
       - "claw-launcher/**/*"
-asar: true
+asar: false
 asarUnpack:
   - "**/*.node"
   - "**/better-sqlite3/**"
@@ -46,6 +47,9 @@ win:
   target: nsis
   artifactName: ${productName}-Setup-${version}.${ext}
   icon: resources/icon.png
+  extraResources:
+    - from: resources/7za.exe
+      to: 7za.exe
 linux:
   target: AppImage
   category: Office

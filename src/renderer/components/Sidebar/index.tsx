@@ -3,17 +3,18 @@
  * 左侧边栏：Header + 新建聊天 + 历史记录 + Footer
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  Plus, 
-  MoreHorizontal, 
-  Pencil, 
-  Trash2, 
-  Settings, 
-  LogOut 
-} from 'lucide-react';
-import type { Conversation } from '../../stores';
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import {
+  ChevronLeft,
+  Plus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Settings,
+  LogOut,
+  MessageSquare,
+} from "lucide-react";
+import type { Conversation } from "../../stores";
 
 export interface SidebarProps {
   /** 对话列表 */
@@ -25,7 +26,10 @@ export interface SidebarProps {
   /** 新建对话回调 */
   onNewConversation: () => void;
   /** 重命名对话回调 */
-  onRenameConversation: (conversationId: number, newTitle: string) => Promise<boolean>;
+  onRenameConversation: (
+    conversationId: number,
+    newTitle: string,
+  ) => Promise<boolean>;
   /** 删除对话回调 */
   onDeleteConversation: (conversationId: number) => Promise<boolean>;
   /** 侧边栏是否打开（移动端） */
@@ -75,19 +79,22 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       }
     };
     if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showMenu]);
 
-  const handleStartEdit = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    setIsEditing(true);
-    setEditTitle(conversation.title);
-  }, [conversation.title]);
+  const handleStartEdit = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setShowMenu(false);
+      setIsEditing(true);
+      setEditTitle(conversation.title);
+    },
+    [conversation.title],
+  );
 
   const handleFinishEdit = useCallback(async () => {
     const newTitle = editTitle.trim();
@@ -97,32 +104,38 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     setIsEditing(false);
   }, [editTitle, conversation.title, onRename]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isComposing) {
-      handleFinishEdit();
-    } else if (e.key === 'Escape') {
-      setEditTitle(conversation.title);
-      setIsEditing(false);
-    }
-  }, [handleFinishEdit, conversation.title, isComposing]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !isComposing) {
+        handleFinishEdit();
+      } else if (e.key === "Escape") {
+        setEditTitle(conversation.title);
+        setIsEditing(false);
+      }
+    },
+    [handleFinishEdit, conversation.title, isComposing],
+  );
 
-  const handleDelete = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    if (confirm(`确定要删除会话 "${conversation.title}" 吗？`)) {
-      await onDelete();
-    }
-  }, [conversation.title, onDelete]);
+  const handleDelete = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setShowMenu(false);
+      if (confirm(`确定要删除会话 "${conversation.title}" 吗？`)) {
+        await onDelete();
+      }
+    },
+    [conversation.title, onDelete],
+  );
 
   const toggleMenu = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowMenu(prev => !prev);
+    setShowMenu((prev) => !prev);
   }, []);
 
   return (
     <div
       ref={menuRef}
-      className={`sidebar-history-item ${isActive ? 'active' : ''}`}
+      className={`sidebar-history-item ${isActive ? "active" : ""}`}
       onClick={onSelect}
     >
       {isEditing ? (
@@ -140,7 +153,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         />
       ) : (
         <>
-          <span className="sidebar-history-item-text">{conversation.title}</span>
+          <span className="sidebar-history-item-text">
+            <MessageSquare
+              size={14}
+              style={{ marginRight: 8, flexShrink: 0 }}
+            />
+            {conversation.title}
+          </span>
           <button
             className="conversation-menu-btn"
             onClick={toggleMenu}
@@ -150,11 +169,17 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           </button>
           {showMenu && (
             <div className="conversation-menu-dropdown">
-              <button className="conversation-menu-item" onClick={handleStartEdit}>
+              <button
+                className="conversation-menu-item"
+                onClick={handleStartEdit}
+              >
                 <Pencil size={14} />
                 <span>重命名</span>
               </button>
-              <button className="conversation-menu-item danger" onClick={handleDelete}>
+              <button
+                className="conversation-menu-item danger"
+                onClick={handleDelete}
+              >
                 <Trash2 size={14} />
                 <span>删除</span>
               </button>
@@ -188,15 +213,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // 点击外部关闭用户菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setShowUserMenu(false);
       }
     };
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showUserMenu]);
 
@@ -208,14 +236,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         initial: user.username.charAt(0).toUpperCase(),
       };
     }
-    return { name: 'Demo User', initial: 'D' };
+    return { name: "Demo User", initial: "D" };
   };
 
   const { name, initial } = getUserDisplay();
 
   // 分组对话
   const groupConversations = () => {
-    const groups: { today: Conversation[]; yesterday: Conversation[]; older: Conversation[] } = {
+    const groups: {
+      today: Conversation[];
+      yesterday: Conversation[];
+      older: Conversation[];
+    } = {
       today: [],
       yesterday: [],
       older: [],
@@ -248,21 +280,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div
         className="sidebar-overlay"
         onClick={onClose}
-        style={{ display: isOpen ? 'block' : 'none' }}
+        style={{ display: isOpen ? "block" : "none" }}
       />
 
-      <aside 
+      <aside
         className="sidebar"
-        style={{ 
-          display: isOpen ? 'flex' : 'none',
-          width: '240px',
-          minWidth: '240px'
+        style={{
+          display: isOpen ? "flex" : "none",
+          width: "240px",
+          minWidth: "240px",
         }}
       >
         {/* Header - 仅关闭按钮 */}
         <div className="sidebar-header">
-          <button 
-            className="sidebar-close-btn" 
+          <button
+            className="sidebar-close-btn"
             onClick={(e) => {
               e.stopPropagation();
               onClose?.();
@@ -275,13 +307,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* 新建对话按钮 */}
-        <div 
-          className="sidebar-new-chat" 
+        <div
+          className="sidebar-new-chat"
           onClick={() => onNewConversation?.()}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onNewConversation?.();
             }
@@ -351,7 +383,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer - 用户信息 */}
         <div className="sidebar-footer" ref={userMenuRef}>
           <div className="sidebar-footer-row">
-            <div className="sidebar-user" onClick={() => setShowUserMenu(!showUserMenu)}>
+            <div
+              className="sidebar-user"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
               <div className="sidebar-user-avatar-default">{initial}</div>
               <span className="sidebar-user-name">{name}</span>
             </div>

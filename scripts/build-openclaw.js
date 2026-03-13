@@ -32,6 +32,11 @@ log(`Building OpenClaw from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
   execSync(`${pkgManager} install`, { cwd: OPENCLAW_SRC, stdio: "inherit" });
   execSync(`${pkgManager} run build`, { cwd: OPENCLAW_SRC, stdio: "inherit" });
+  log(`Building OpenClaw UI...`);
+  execSync(`${pkgManager} run ui:build`, {
+    cwd: OPENCLAW_SRC,
+    stdio: "inherit",
+  });
 } catch (e) {
   error("Failed to build OpenClaw");
   process.exit(1);
@@ -175,6 +180,162 @@ try {
   log(
     "Warning: Failed to install production dependencies. Continuing anyway...",
   );
+
+  // 即使主 install 失败，也要确保 chalk 存在
+  const chalkPath = path.join(RESOURCES_DIR, "node_modules", "chalk");
+  if (!fs.existsSync(chalkPath)) {
+    log("Chalk missing (after failure), attempting to install explicitly...");
+    try {
+      // 使用 --ignore-scripts 防止触发任何可能导致失败的钩子
+      // 使用 --no-package-lock 避免读取或更新锁文件
+      execSync(
+        "npm install chalk@5.3.0 --no-save --legacy-peer-deps --ignore-scripts --no-package-lock",
+        {
+          cwd: RESOURCES_DIR,
+          stdio: "inherit",
+        },
+      );
+    } catch (err) {
+      error("Failed to install chalk: " + err.message);
+      // 如果网络安装失败，尝试从项目根目录 node_modules 复制（如果存在）
+      // 这里的假设是主项目可能有 chalk，或者在 lib/openclaw 中有
+      // 但 openclaw 是 pnpm workspace，结构复杂。
+      // 让我们尝试手动创建一个极简的 chalk 模块，以防万一
+      log("Creating fallback chalk module...");
+      const chalkDir = path.join(RESOURCES_DIR, "node_modules", "chalk");
+      fs.mkdirSync(chalkDir, { recursive: true });
+
+      const chalkPkgJson = {
+        name: "chalk",
+        version: "5.3.0",
+        main: "./source/index.js",
+        exports: "./source/index.js",
+        type: "module",
+      };
+      fs.writeFileSync(
+        path.join(chalkDir, "package.json"),
+        JSON.stringify(chalkPkgJson, null, 2),
+      );
+
+      const chalkSourceDir = path.join(chalkDir, "source");
+      fs.mkdirSync(chalkSourceDir, { recursive: true });
+
+      // 创建一个极其简化的 chalk mock，只支持基本颜色，或者只是透传
+      // OpenClaw 可能使用了 import { chalk } from 'chalk' 或者 import chalk from 'chalk'
+      // Chalk 5 是纯 ESM
+      const chalkIndexJs = `
+const chalk = new Proxy((str) => str, {
+    get: (target, prop) => {
+        if (['rgb', 'hex', 'ansi256', 'bgRgb', 'bgHex', 'bgAnsi256'].includes(prop)) {
+            return () => chalk;
+        }
+        return chalk;
+    },
+    apply: (target, thisArg, args) => args[0]
+});
+export default chalk;
+export const red = chalk;
+export const green = chalk;
+export const yellow = chalk;
+export const blue = chalk;
+export const magenta = chalk;
+export const cyan = chalk;
+export const white = chalk;
+export const gray = chalk;
+export const grey = chalk;
+export const black = chalk;
+export const redBright = chalk;
+export const greenBright = chalk;
+export const yellowBright = chalk;
+export const blueBright = chalk;
+export const magentaBright = chalk;
+export const cyanBright = chalk;
+export const whiteBright = chalk;
+export const bold = chalk;
+export const dim = chalk;
+export const italic = chalk;
+export const underline = chalk;
+export const inverse = chalk;
+export const hidden = chalk;
+export const strikethrough = chalk;
+export const visible = chalk;
+`;
+      fs.writeFileSync(path.join(chalkSourceDir, "index.js"), chalkIndexJs);
+      log("Fallback chalk module created.");
+    }
+  }
+
+  // 确保 tslog 已安装 (OpenClaw 运行时依赖)
+  const tslogPath = path.join(RESOURCES_DIR, "node_modules", "tslog");
+  if (!fs.existsSync(tslogPath)) {
+    log("tslog missing, attempting to install explicitly...");
+    try {
+      execSync(
+        "npm install tslog@4.9.2 --no-save --legacy-peer-deps --ignore-scripts --no-package-lock",
+        {
+          cwd: RESOURCES_DIR,
+          stdio: "inherit",
+        },
+      );
+    } catch (err) {
+      error("Failed to install tslog: " + err.message);
+      // 如果网络安装失败，手动创建 fallback (可选)
+      // tslog 比较复杂，手动 mock 比较难，尽量确保 npm install 成功
+      log("Creating fallback tslog module...");
+      const tslogDir = path.join(RESOURCES_DIR, "node_modules", "tslog");
+      fs.mkdirSync(tslogDir, { recursive: true });
+      
+      const tslogPkgJson = {
+          name: "tslog",
+          version: "4.9.2",
+          main: "./dist/index.js",
+          exports: {
+            ".": {
+              "import": "./dist/index.mjs",
+              "require": "./dist/index.js"
+            }
+          },
+          type: "commonjs"
+      };
+      fs.writeFileSync(path.join(tslogDir, "package.json"), JSON.stringify(tslogPkgJson, null, 2));
+      
+      const tslogDistDir = path.join(tslogDir, "dist");
+      fs.mkdirSync(tslogDistDir, { recursive: true });
+      
+      // Mock implementation
+      const tslogMock = `
+      export class Logger {
+          constructor(options) {}
+          silly(...args) { console.debug('[silly]', ...args); }
+          trace(...args) { console.trace('[trace]', ...args); }
+          debug(...args) { console.debug('[debug]', ...args); }
+          info(...args) { console.info('[info]', ...args); }
+          warn(...args) { console.warn('[warn]', ...args); }
+          error(...args) { console.error('[error]', ...args); }
+          fatal(...args) { console.error('[fatal]', ...args); }
+          attachTransport() {}
+      }
+      `;
+      fs.writeFileSync(path.join(tslogDistDir, "index.mjs"), tslogMock);
+      
+      const tslogCommonJs = `
+      class Logger {
+          constructor(options) {}
+          silly(...args) { console.debug('[silly]', ...args); }
+          trace(...args) { console.trace('[trace]', ...args); }
+          debug(...args) { console.debug('[debug]', ...args); }
+          info(...args) { console.info('[info]', ...args); }
+          warn(...args) { console.warn('[warn]', ...args); }
+          error(...args) { console.error('[error]', ...args); }
+          fatal(...args) { console.error('[fatal]', ...args); }
+          attachTransport() {}
+      }
+      module.exports = { Logger };
+      `;
+      fs.writeFileSync(path.join(tslogDistDir, "index.js"), tslogCommonJs);
+      log("Fallback tslog module created.");
+    }
+  }
 }
 
 // 6. Create Wrapper
