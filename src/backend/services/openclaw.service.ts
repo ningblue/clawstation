@@ -219,6 +219,13 @@ export class OpenClawManager extends EventEmitter {
       this.log.info(
         `OpenClaw started successfully on port ${this.config.port}`
       );
+
+      // 延迟启动浏览器预热（静默执行，不影响用户体验）
+      setTimeout(() => {
+        this.warmupBrowser().catch(() => {
+          // 静默失败，不提示用户
+        });
+      }, 5000); // 延迟5秒，确保OpenClaw完全就绪
     } catch (error: any) {
       // 检查是否是跳过启动的特殊错误
       if (error?.message === "SKIP_INTERNAL_OPENCLAW") {
@@ -316,6 +323,62 @@ export class OpenClawManager extends EventEmitter {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await this.start();
     this.log.info("OpenClaw engine restarted successfully");
+  }
+
+  /**
+   * 预热浏览器
+   * 在后台静默启动浏览器，避免首次使用时冷启动超时
+   * 完全静默执行，失败不影响用户体验
+   */
+  private async warmupBrowser(): Promise<void> {
+    // 延迟3秒确保OpenClaw完全就绪
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    try {
+      // 确保有token
+      if (!this.gatewayToken) {
+        await this.loadTokenFromConfig();
+      }
+
+      this.log.info("Starting browser warmup...");
+
+      // 调用OpenClaw的browser start API
+      const response = await fetch(
+        `http://${this.config.bindAddress}:${this.config.port}/browser/start`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(this.gatewayToken
+              ? { Authorization: `Bearer ${this.gatewayToken}` }
+              : {}),
+          },
+          body: JSON.stringify({
+            profile: "openclaw",
+            headless: false, // 非headless模式，后续可以复用窗口
+          }),
+          signal: AbortSignal.timeout(60000), // 60秒超时，给足够启动时间
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        this.log.info(
+          `Browser warmed up successfully: ${result.pid ? "PID " + result.pid : "already running"}`
+        );
+      } else {
+        // 如果返回错误，记录但不提示用户（可能是浏览器已经在运行）
+        const errorText = await response.text().catch(() => "unknown error");
+        this.log.debug(`Browser warmup returned ${response.status}: ${errorText}`);
+      }
+    } catch (error: any) {
+      // 静默失败，不提示用户
+      // 常见原因：
+      // - 浏览器未安装（会使用fallback）
+      // - 端口冲突
+      // - 超时（ Chrome启动太慢）
+      this.log.debug("Browser warmup failed (non-critical):", error.message || error);
+    }
   }
 
   /**
