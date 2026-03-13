@@ -2,20 +2,16 @@
 // 统一资源路径管理 - 统一使用 resources/openclaw，移除 lib/openclaw 依赖
 
 import * as path from "path";
-import { app } from "electron";
 
 /**
  * 获取 resources/openclaw 的绝对路径
  * 统一使用 resources/openclaw，不再区分开发和生产环境
  */
 export function getOpenClawResourcePath(): string {
-  // 优先使用 process.resourcesPath（生产环境）
-  if (process.resourcesPath) {
-    return path.join(process.resourcesPath, "openclaw");
-  }
-
-  // 开发环境回退
-  return path.join(__dirname, "../../../resources/openclaw");
+  // 统一使用 process.resourcesPath，它在开发和生产环境都可用
+  // 开发环境：指向项目根目录的 resources/
+  // 生产环境：指向 app.asar 同级目录的 resources/
+  return path.join(process.resourcesPath, "openclaw");
 }
 
 /**
@@ -55,11 +51,8 @@ export function getOpenClawConfigDir(): string {
  * 获取 scripts 目录路径
  */
 export function getScriptsPath(): string {
-  if (process.resourcesPath) {
-    return path.join(process.resourcesPath, "scripts");
-  }
-
-  return path.join(__dirname, "../../../scripts");
+  // 统一使用 process.resourcesPath
+  return path.join(process.resourcesPath, "scripts");
 }
 
 /**
