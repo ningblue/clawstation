@@ -21,7 +21,7 @@ const CONFIG = {
     }
   },
   node: {
-    version: '22.14.0',
+    version: '22.16.0',
     platforms: {
       win32: { arch: 'x64', ext: 'zip' },
       darwin: { arch: 'arm64', ext: 'tar.gz' },
@@ -153,8 +153,9 @@ async function setupNode() {
   const config = CONFIG.node.platforms[platform];
   const nodeDir = path.join(RESOURCES_DIR, 'node');
 
-  // 检查是否已存在
-  const platformNodeDir = path.join(nodeDir, `${platform}-${config.arch}`);
+  // 检查是否已存在（使用 electron-builder 期望的目录名）
+  const platformKey = platform === 'darwin' ? 'mac' : platform;
+  const platformNodeDir = path.join(nodeDir, `${platformKey}-${config.arch}`);
   if (fs.existsSync(platformNodeDir)) {
     log('Node.js already exists');
     return;

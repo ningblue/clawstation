@@ -10,10 +10,16 @@ files:
   - dist/**/*
   - package.json
 extraResources:
-  - from: resources/openclaw.7z
-    to: openclaw.7z
-  - from: resources/node/${os}-${arch}/node
-    to: node
+  # OpenClaw - 架构特定版本
+  - from: resources/openclaw-arm64.7z
+    to: openclaw-arm64.7z
+  - from: resources/openclaw-x64.7z
+    to: openclaw-x64.7z
+  # Node.js 运行时 - 架构特定
+  - from: resources/node/${os}-${arch}/bin
+    to: node/bin
+    filter:
+      - "node"
   - from: resources/icon.icns
     to: icon.icns
   - from: scripts/
