@@ -1,21 +1,25 @@
 /**
  * macOS 平台打包后处理
- * - 解压 openclaw.7z
+ * - 解压对应架构的 openclaw
  */
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { resolveArch } = require('./common');
 
 /**
  * 解压 openclaw.7z 到应用包
+ * @param {string} appOutDir - 应用输出目录
+ * @param {string} appName - 应用名称
+ * @param {string} targetArch - 目标架构
  */
-function extractOpenClaw(appOutDir, appName) {
+function extractOpenClaw(appOutDir, appName, targetArch) {
   const resourcesPath = path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources');
-  const archivePath = path.join(resourcesPath, 'openclaw.7z');
+  const archivePath = path.join(resourcesPath, `openclaw-${targetArch}.7z`);
   const extractPath = path.join(resourcesPath, 'openclaw');
 
   if (!fs.existsSync(archivePath)) {
-    console.warn('⚠️  [macOS] openclaw.7z not found:', archivePath);
+    console.warn('⚠️  [macOS] openclaw archive not found:', archivePath);
     return false;
   }
 
@@ -31,7 +35,7 @@ function extractOpenClaw(appOutDir, appName) {
   }
 
   // 解压 7z 文件
-  console.log('📦 [macOS] Extracting openclaw.7z...');
+  console.log(`📦 [macOS] Extracting openclaw-${targetArch}.7z...`);
   try {
     // 尝试使用 7z 命令
     execSync(`7z x "${archivePath}" -o"${extractPath}" -y`, { stdio: 'inherit' });
@@ -73,16 +77,17 @@ function extractOpenClaw(appOutDir, appName) {
 function processMac(context) {
   const appOutDir = context?.appOutDir;
   const appName = context?.packager?.appInfo?.productFilename;
+  const targetArch = resolveArch(context?.arch);
 
   if (!appOutDir || !appName) {
     console.warn('⚠️  [macOS] Missing appOutDir or appName');
     return;
   }
 
-  console.log('\n🍎 Processing macOS package...\n');
+  console.log(`\n🍎 Processing macOS package (${targetArch})...\n`);
 
-  // 解压 openclaw.zip
-  extractOpenClaw(appOutDir, appName);
+  // 解压对应架构的 openclaw
+  extractOpenClaw(appOutDir, appName, targetArch);
 
   console.log('✅ [macOS] afterPack completed\n');
 }

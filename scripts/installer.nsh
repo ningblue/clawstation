@@ -22,11 +22,25 @@
   ; 创建目标目录
   CreateDirectory "$INSTDIR\resources\openclaw"
   
-  ; 检查 7z 文件是否存在
-  IfFileExists "$INSTDIR\resources\openclaw.7z" extract_7z end_zip
-  
+  ; Windows 目前只支持 x64 架构，使用 openclaw-x64.7z
+  ; 如需支持其他架构，修改此处逻辑
+  IfFileExists "$INSTDIR\resources\openclaw-x64.7z" extract_7z end_zip
+  ; 兼容旧版本（如果存在旧文件名）
+  IfFileExists "$INSTDIR\resources\openclaw.7z" extract_7z_old end_zip
+
 extract_7z:
-    DetailPrint "Extracting openclaw.7z..."
+    DetailPrint "Extracting openclaw-x64.7z..."
+    nsExec::ExecToLog '"$INSTDIR\resources\7za.exe" x "$INSTDIR\resources\openclaw-x64.7z" -o"$INSTDIR\resources\openclaw" -y -aoa'
+    Pop $0
+    Goto check_extract_result
+
+extract_7z_old:
+    DetailPrint "Extracting openclaw.7z (legacy)..."
+    nsExec::ExecToLog '"$INSTDIR\resources\7za.exe" x "$INSTDIR\resources\openclaw.7z" -o"$INSTDIR\resources\openclaw" -y -aoa'
+    Pop $0
+    Goto check_extract_result
+
+check_extract_result:
     
     ; 使用预置在 resources 下的 7za.exe (静态资源)
     ; 避免使用 InitPluginsDir 和 File 指令动态释放 exe，防止安装器崩溃或被杀软拦截
@@ -59,7 +73,8 @@ fail_extract:
     Goto end_zip
     
 success_extract:
-    ; 删除 7z 文件
+    ; 删除 7z 文件（新旧文件名都删除）
+    Delete "$INSTDIR\resources\openclaw-x64.7z"
     Delete "$INSTDIR\resources\openclaw.7z"
     ; 删除 7za.exe (如果不想保留)
     Delete "$INSTDIR\resources\7za.exe"

@@ -54,7 +54,6 @@ export function useChatStore(userId: number | null) {
   const [streamingStates, setStreamingStates] = useState<Record<number, {
     isStreaming: boolean;
     content: string;
-    toolCalls: Array<{ name: string; arguments: Record<string, unknown> }>;
   }>>({});
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const activeConversationRef = useRef<number | null>(null);
@@ -410,7 +409,7 @@ export function useChatStore(userId: number | null) {
       // 开始流式响应 - 按会话隔离
       setStreamingStates(prev => ({
         ...prev,
-        [targetConversationId]: { isStreaming: true, content: '', toolCalls: [] }
+        [targetConversationId]: { isStreaming: true, content: '' }
       }));
       setIsTyping(true);
 
@@ -424,30 +423,18 @@ export function useChatStore(userId: number | null) {
             ...prev,
             [targetConversationId]: {
               isStreaming: true,
-              toolCalls: prev[targetConversationId]?.toolCalls || [],
               content: (prev[targetConversationId]?.content || '') + chunk
             }
           }));
         },
-        (tool) => {
-          // 接收到工具调用 - 只更新当前会话的状态
-          setStreamingStates(prev => ({
-            ...prev,
-            [targetConversationId]: {
-              isStreaming: true,
-              content: prev[targetConversationId]?.content || '',
-              toolCalls: [...(prev[targetConversationId]?.toolCalls || []), tool]
-            }
-          }));
-        },
+        undefined, // onToolCall - 主分支不使用
         async (fullContent) => {
           // 流式响应完成
           setStreamingStates(prev => ({
             ...prev,
             [targetConversationId]: {
               isStreaming: false,
-              content: prev[targetConversationId]?.content || '',
-              toolCalls: prev[targetConversationId]?.toolCalls || []
+              content: prev[targetConversationId]?.content || ''
             }
           }));
           setIsTyping(false);
@@ -474,8 +461,7 @@ export function useChatStore(userId: number | null) {
             ...prev,
             [targetConversationId]: {
               isStreaming: false,
-              content: prev[targetConversationId]?.content || '',
-              toolCalls: prev[targetConversationId]?.toolCalls || []
+              content: prev[targetConversationId]?.content || ''
             }
           }));
           setIsTyping(false);
@@ -498,7 +484,7 @@ export function useChatStore(userId: number | null) {
       console.error('Failed to send message:', err);
       setStreamingStates(prev => ({
         ...prev,
-        [targetConversationId]: { isStreaming: false, content: '', toolCalls: [] }
+        [targetConversationId]: { isStreaming: false, content: '' }
       }));
       setIsTyping(false);
       cancelStreamRef.current = null;
@@ -522,8 +508,7 @@ export function useChatStore(userId: number | null) {
         ...prev,
         [activeConvId]: {
           isStreaming: false,
-          content: prev[activeConvId]?.content || '',
-          toolCalls: prev[activeConvId]?.toolCalls || []
+          content: prev[activeConvId]?.content || ''
         }
       }));
       setIsTyping(false);
@@ -608,7 +593,6 @@ export function useChatStore(userId: number | null) {
   const currentStreamingState = currentConversationId ? streamingStates[currentConversationId] : undefined;
   const isStreaming = currentStreamingState?.isStreaming || false;
   const streamingContent = currentStreamingState?.content || '';
-  const streamingToolCalls = currentStreamingState?.toolCalls || [];
 
   return {
     // 状态
@@ -624,7 +608,6 @@ export function useChatStore(userId: number | null) {
     // 流式响应状态 - 当前会话
     isStreaming,
     streamingContent,
-    streamingToolCalls,
 
     // 操作
     setCurrentConversationId,

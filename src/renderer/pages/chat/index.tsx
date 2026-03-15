@@ -3,10 +3,10 @@
  * 对话主页面，整合所有聊天相关组件
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Sidebar } from '../../components/Sidebar';
 import { MessageList } from '../../components/MessageList';
-import { ChatInput } from '../../components/ChatInput';
+import { ChatInput, type ChatInputRef } from '../../components/ChatInput';
 import { WindowControls } from '../../components/WindowControls';
 import { FeedbackButton, FeedbackModal } from '../../components/Feedback';
 import { useChatStore, useUserStore } from '../../stores';
@@ -29,6 +29,7 @@ export const ChatPage: React.FC = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackScreenshot, setFeedbackScreenshot] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true); // 侧边栏状态
+  const chatInputRef = useRef<ChatInputRef>(null); // ChatInput ref
 
   const {
     conversations,
@@ -40,7 +41,6 @@ export const ChatPage: React.FC = () => {
     error,
     isStreaming,
     streamingContent,
-    streamingToolCalls,
     createConversation,
     selectConversation,
     renameConversation,
@@ -78,6 +78,15 @@ export const ChatPage: React.FC = () => {
   const handleSendMessage = useCallback(async (content: string) => {
     await sendMessage(content);
   }, [sendMessage]);
+
+  // 处理功能卡片点击
+  const handleFeatureClick = useCallback((prompt: string) => {
+    console.log('ChatPage handleFeatureClick:', prompt.substring(0, 50));
+    // 设置输入框文本
+    if (chatInputRef.current) {
+      chatInputRef.current.setText(prompt);
+    }
+  }, []);
 
   // 处理打开设置
   const handleOpenSettings = useCallback(() => {
@@ -192,13 +201,14 @@ export const ChatPage: React.FC = () => {
             isTyping={isTyping}
             isStreaming={isStreaming}
             streamingContent={streamingContent}
-            streamingToolCalls={streamingToolCalls}
             showEmptyState={currentConversationId === null && messages.length === 0}
+            onFeatureClick={handleFeatureClick}
             onDeleteMessage={deleteMessage}
             onUpdateMessage={updateMessageContent}
             onRegenerateMessage={regenerateMessage}
           />
           <ChatInput
+            ref={chatInputRef}
             onSend={handleSendMessage}
             disabled={loading || isTyping}
             isStreaming={isStreaming}
