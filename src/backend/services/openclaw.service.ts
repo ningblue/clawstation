@@ -1660,7 +1660,7 @@ export class OpenClawManager extends EventEmitter {
     this.childProcess.stdout?.on("data", (data: Buffer) => {
       const output = data.toString().trim();
       if (output) {
-        this.log.info("[OpenClaw]", output);
+        // 不再打印 [OpenClaw] 响应内容到日志，避免占用空间
         this.emit(OpenClawProcessEvent.OUTPUT, output);
 
         // 检测 OpenClaw 启动成功的标志
