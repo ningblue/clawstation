@@ -92,7 +92,7 @@ export interface ElectronAPI {
       name: string;
       arguments: Record<string, unknown>;
     }) => void,
-    onDone?: (fullContent: string) => void,
+    onDone?: (fullContent: string, toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }>) => void,
     onError?: (error: string) => void
   ) => () => void;
   startOpenClaw: () => Promise<{
@@ -311,6 +311,10 @@ export interface ElectronAPI {
   // 移除监听器
   removeNewConversationListener: (callback: () => void) => void;
   removeToggleSearchListener: (callback: () => void) => void;
+
+  // Tool 事件监听（来自 OpenClaw WebSocket）
+  onToolEvent: (callback: (event: any, data: any) => void) => void;
+  removeToolEventListener: (callback: (event: any, data: any) => void) => void;
 
   // 窗口控制 API
   windowMinimize: () => Promise<void>;

@@ -11,6 +11,9 @@ import {
 import { exec } from "child_process";
 import log from "electron-log";
 
+// 创建 logger 实例
+const logger = log.scope("Main");
+
 // Admin Platform SDK
 // import { ClawstationAdminSDK } from "@clawstation/admin-sdk";
 
@@ -41,10 +44,12 @@ import { initializeDatabase } from "../data/database";
 import { setupSecurity } from "./security";
 import { setupAudit } from "./audit";
 import { initializeApiHandlers } from "../api/handlers";
+import { OpenClawWebSocketClient } from "./openclaw-ws-client";
 
 export let mainWindow: BrowserWindow | null = null;
 export let openclawManager: OpenClawManager | null = null;
 let tray: Tray | null = null;
+let wsClient: OpenClawWebSocketClient | null = null;
 
 // Admin Platform SDK
 // let adminSDK: ClawstationAdminSDK | null = null;
@@ -155,8 +160,13 @@ async function createWindow() {
     // 加载应用主页面
     const entryUrl = path.join(__dirname, "../renderer/index.html");
     console.log("Loading entry URL:", entryUrl);
-    mainWindow.loadFile(entryUrl).catch((e) => {
-      console.error("Failed to load entry URL:", e);
+
+    // 清除缓存确保样式更新生效
+    mainWindow.webContents.session.clearCache().then(() => {
+      console.log("Cache cleared, loading page...");
+      mainWindow?.loadFile(entryUrl).catch((e) => {
+        console.error("Failed to load entry URL:", e);
+      });
     });
 
     // 窗口显示后再打开开发者工具
@@ -599,6 +609,85 @@ function attachOpenClawEventHandlers() {
   openclawManager.on("error", syncStatus);
   openclawManager.on("health_check_failed", syncStatus);
   openclawManager.on("restarting", syncStatus);
+
+  // OpenClaw 启动成功后初始化 WebSocket 连接
+  openclawManager.on("started", async () => {
+    logger.info("OpenClaw started event received, waiting 2s before connecting WebSocket...");
+    // 等待 2 秒确保 OpenClaw 完全准备好接受 WebSocket 连接
+    setTimeout(async () => {
+      await initializeWebSocketClient();
+    }, 2000);
+  });
+
+  // OpenClaw 停止时断开 WebSocket
+  openclawManager.on("stopped", () => {
+    disconnectWebSocketClient();
+  });
+}
+
+/**
+ * 初始化 WebSocket 客户端
+ */
+async function initializeWebSocketClient(): Promise<void> {
+  if (!openclawManager || wsClient) {
+    logger.warn(`WebSocket init skipped: openclawManager=${!!openclawManager}, wsClient=${!!wsClient}`);
+    return;
+  }
+
+  try {
+    const config = openclawManager.getConfig();
+    const token = openclawManager.getGatewayToken?.() || "";
+
+    logger.info(`WebSocket config: host=${config.bindAddress}, port=${config.port}, token=${token ? 'exists(' + token.substring(0, 10) + '...)' : 'EMPTY'}`);
+
+    if (!token) {
+      logger.warn("Gateway token not available, skipping WebSocket connection");
+      return;
+    }
+
+    logger.info("Initializing OpenClaw WebSocket client...");
+
+    wsClient = new OpenClawWebSocketClient({
+      host: config.bindAddress,
+      port: config.port,
+      token,
+      reconnectInterval: 5000,
+      maxReconnectAttempts: 10,
+    });
+
+    wsClient.setMainWindow(mainWindow);
+
+    wsClient.on("connected", ({ connId }) => {
+      logger.info(`WebSocket connected: ${connId}`);
+    });
+
+    wsClient.on("disconnected", ({ code, reason }) => {
+      logger.warn(`WebSocket disconnected: ${code} ${reason}`);
+    });
+
+    wsClient.on("error", (error) => {
+      logger.error("WebSocket error:", error.message);
+    });
+
+    wsClient.on("tool-event", (event) => {
+      logger.debug(`Tool event: ${event.data?.name} [${event.data?.phase}]`);
+    });
+
+    await wsClient.connect();
+  } catch (error) {
+    logger.error("Failed to initialize WebSocket client:", error);
+  }
+}
+
+/**
+ * 断开 WebSocket 连接
+ */
+function disconnectWebSocketClient(): void {
+  if (wsClient) {
+    wsClient.disconnect();
+    wsClient = null;
+    logger.info("WebSocket client disconnected");
+  }
 }
 
 /**
@@ -934,6 +1023,9 @@ app.on("before-quit", async (event) => {
     console.log("Cleaning up before quit...");
     // 清理 Admin Platform SDK
     // await destroyAdminSDK();
+
+    // 断开 WebSocket 连接
+    disconnectWebSocketClient();
 
     // 使用 ProcessManager 优雅地停止引擎并清理所有相关进程
     if (openclawManager) {

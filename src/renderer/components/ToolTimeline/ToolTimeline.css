@@ -1,0 +1,437 @@
+/**
+ * ToolTimeline 样式
+ */
+
+.tool-timeline-container {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 头部 */
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.timeline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.timeline-count {
+  font-size: 12px;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.timeline-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.control-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.control-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* 内容区 */
+.timeline-content {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.timeline-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.timeline-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* 工具卡片 */
+.tool-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  position: relative;
+}
+
+.tool-card:last-child {
+  padding-bottom: 0;
+}
+
+/* 时间线连接线 */
+.timeline-connector {
+  position: absolute;
+  left: 15px;
+  top: 40px;
+  bottom: -12px;
+  width: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+/* 状态图标 */
+.tool-status {
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.tool-status-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.tool-status-icon.running {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.tool-status-icon.success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.tool-status-icon.error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tool-status-icon.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #2563eb;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 工具内容 */
+.tool-content {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.tool-content:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tool-card.expanded .tool-content {
+  border-color: #94a3b8;
+}
+
+/* 工具头部 */
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-icon {
+  font-size: 16px;
+}
+
+.tool-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.expand-icon {
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* 参数预览 */
+.tool-preview {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.args-preview {
+  font-size: 12px;
+  color: #475569;
+}
+
+.args-key {
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.args-value {
+  color: #1e293b;
+  font-family: monospace;
+}
+
+.args-more {
+  margin-left: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.args-empty {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* 详情区 */
+.tool-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.detail-section {
+  margin-bottom: 12px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.detail-content {
+  font-size: 12px;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.detail-content.args {
+  font-family: monospace;
+  color: #475569;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 结果展示 */
+.result-view {
+  font-size: 12px;
+}
+
+.result-view.empty {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.result-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.result-content {
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  color: #475569;
+}
+
+.result-content.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.result-truncated {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* 状态标签 */
+.tool-status-label {
+  margin-top: 8px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 10px;
+}
+
+.status-badge.running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* 暗色主题 */
+@media (prefers-color-scheme: dark) {
+  .tool-timeline-container {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .timeline-header {
+    border-color: #334155;
+  }
+
+  .timeline-title {
+    color: #f1f5f9;
+  }
+
+  .timeline-count {
+    color: #94a3b8;
+    background: #334155;
+  }
+
+  .control-btn {
+    color: #cbd5e1;
+    background: #334155;
+    border-color: #475569;
+  }
+
+  .control-btn:hover {
+    background: #475569;
+    border-color: #64748b;
+  }
+
+  .tool-content {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .tool-content:hover {
+    border-color: #475569;
+  }
+
+  .tool-card.expanded .tool-content {
+    border-color: #64748b;
+  }
+
+  .tool-name {
+    color: #f1f5f9;
+  }
+
+  .args-preview,
+  .detail-content.args,
+  .result-content {
+    color: #cbd5e1;
+  }
+
+  .detail-content,
+  .result-content {
+    background: #1e293b;
+  }
+
+  .args-key {
+    color: #94a3b8;
+  }
+
+  .args-value {
+    color: #f1f5f9;
+  }
+
+  .timeline-connector {
+    background: #334155;
+  }
+
+  .tool-preview {
+    border-color: #334155;
+  }
+
+  .tool-details {
+    border-color: #334155;
+  }
+
+  .detail-label,
+  .result-label {
+    color: #94a3b8;
+  }
+
+  .result-content.error {
+    background: #450a0a;
+    color: #fecaca;
+  }
+}

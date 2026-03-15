@@ -3,10 +3,10 @@
  * 对话主页面，整合所有聊天相关组件
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Sidebar } from '../../components/Sidebar';
-import { MessageList } from '../../components/MessageList';
-import { ChatInput } from '../../components/ChatInput';
+import { MessageList, EmptyState } from '../../components/MessageList';
+import { ChatInput, type ChatInputRef } from '../../components/ChatInput';
 import { WindowControls } from '../../components/WindowControls';
 import { FeedbackButton, FeedbackModal } from '../../components/Feedback';
 import { useChatStore, useUserStore } from '../../stores';
@@ -29,6 +29,7 @@ export const ChatPage: React.FC = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackScreenshot, setFeedbackScreenshot] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true); // 侧边栏状态
+  const chatInputRef = useRef<ChatInputRef>(null); // ChatInput ref
 
   const {
     conversations,
@@ -41,6 +42,7 @@ export const ChatPage: React.FC = () => {
     isStreaming,
     streamingContent,
     streamingToolCalls,
+    toolEvents,
     createConversation,
     selectConversation,
     renameConversation,
@@ -187,18 +189,32 @@ export const ChatPage: React.FC = () => {
 
         {/* 主内容区 */}
         <div className="chat-main">
+          {currentConversationId === null && messages.length === 0 && (
+            <EmptyState onFeatureClick={(prompt) => {
+              console.log('ChatPage onFeatureClick received:', prompt.substring(0, 50));
+              console.log('chatInputRef.current exists:', !!chatInputRef.current);
+              if (chatInputRef.current) {
+                chatInputRef.current.setText(prompt);
+                console.log('chatInputRef.current.setText called');
+              } else {
+                console.warn('chatInputRef.current is null!');
+              }
+            }} />
+          )}
           <MessageList
             messages={displayMessages}
             isTyping={isTyping}
             isStreaming={isStreaming}
             streamingContent={streamingContent}
             streamingToolCalls={streamingToolCalls}
+            toolEvents={toolEvents}
             showEmptyState={currentConversationId === null && messages.length === 0}
             onDeleteMessage={deleteMessage}
             onUpdateMessage={updateMessageContent}
             onRegenerateMessage={regenerateMessage}
           />
           <ChatInput
+            ref={chatInputRef}
             onSend={handleSendMessage}
             disabled={loading || isTyping}
             isStreaming={isStreaming}

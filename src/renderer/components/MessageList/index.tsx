@@ -8,6 +8,8 @@ import type { Message } from '../../stores';
 import { MarkdownRenderer } from '../MarkdownRenderer';
 import { ToolCard, type ToolCall, type ToolResult } from '../ToolCard';
 import { Thinking, parseThinkingFromContent } from '../Thinking';
+import { ToolTimeline } from '../ToolTimeline';
+import type { ToolEvent } from '../../types/tool-event';
 
 // 工具名称映射为用户可读的描述
 const getToolDisplayName = (toolName: string): string => {
@@ -83,6 +85,8 @@ export interface MessageListProps {
   streamingContent?: string;
   /** 流式响应中的工具调用 */
   streamingToolCalls?: Array<{ name: string; arguments: Record<string, unknown> }>;
+  /** 工具事件列表（来自 WebSocket） */
+  toolEvents?: ToolEvent[];
   /** 删除消息回调 */
   onDeleteMessage?: (messageId: number) => void;
   /** 更新消息回调 */
@@ -363,29 +367,55 @@ const TypingIndicator: React.FC = () => {
 /**
  * 空状态组件 - 参考 QClaw 设计
  */
-const EmptyState: React.FC = () => {
+interface EmptyStateProps {
+  onFeatureClick?: (prompt: string) => void;
+}
+
+// 导出 EmptyState 组件
+export const EmptyState: React.FC<EmptyStateProps> = ({ onFeatureClick }) => {
   const features = [
     {
-      title: '每日天气定时提醒',
-      desc: '自动推送天气状况，给出穿衣 & 出行建议',
+      title: '文档转换',
+      desc: 'Markdown 转精美 PDF，支持目录',
+      prompt: '帮我把【上传的 Markdown 文件】转换成排版精美的 PDF 文档，要求：自定义封面页（标题 + 作者 + 日期）、自动生成目录、代码块带语法高亮、表格有交替行底色、页脚显示页码。',
     },
     {
-      title: '远程操控电脑文件',
-      desc: '不带电脑，手机随时编辑，管理本地文件',
+      title: 'Excel 分析',
+      desc: '上传 Excel，生成图表分析报告',
+      prompt: '请分析【上传你的 Excel 文件】，生成包含数据洞察和可视化图表的专业 Excel 分析报告。要求：\n1. 数据概况和基本统计\n2. 关键指标分析\n3. 趋势分析\n4. 发现的问题和建议\n5. 生成可视化图表',
     },
     {
-      title: '手机远程办公',
-      desc: '不带电脑，手机随时查阅、处理在线任务',
+      title: '项目管理表',
+      desc: '创建优雅的项目管理表',
+      prompt: '创建一个项目管理表，用于跟踪项目全生命周期的任务，具有优雅且简约的视觉风格。要求包含：\n1. 任务名称\n2. 负责人\n3. 开始/截止日期\n4. 优先级\n5. 状态（待处理/进行中/已完成）\n6. 进度百分比\n7. 备注',
     },
     {
-      title: '社媒自动运营涨粉',
-      desc: '不用团队自动互动发帖，轻松涨粉',
+      title: '简历优化',
+      desc: '优化简历，增加量化成果',
+      prompt: '帮我优化【这份简历】，让它更有吸引力：\n1. 优化表述方式，更专业更有亮点\n2. 增加一些量化成果\n3. 调整简历结构\n\n请直接给出优化后的完整简历内容。',
     },
     {
-      title: 'GitHub项目自动开发',
-      desc: '你出创意，我来实现，自动建库冲千星',
+      title: '合同审核',
+      desc: '检查合同风险，给出修改建议',
+      prompt: '帮我审核【这份合同】，检查潜在风险点：\n1. 付款条款是否合理\n2. 违约责任是否对等\n3. 关键条款是否有遗漏\n4. 知识产权归属是否清晰\n5. 争议解决机制是否完善\n\n请逐条列出发现的问题，并给出具体的修改建议。',
+    },
+    {
+      title: '会议纪要',
+      desc: '整理结构化纪要，列待办事项',
+      prompt: '帮我把【这段会议记录】整理成结构化的会议纪要，包含：\n1. 会议主题\n2. 会议时间\n3. 参与人员\n4. 讨论要点\n5. 决策事项\n6. 待办事项（包含负责人和截止时间）\n\n请用清晰的Markdown格式输出。',
     },
   ];
+
+  const handleFeatureClick = (prompt: string) => {
+    console.log('EmptyState handleFeatureClick called:', prompt.substring(0, 50));
+    console.log('onFeatureClick prop exists:', !!onFeatureClick);
+    if (onFeatureClick) {
+      onFeatureClick(prompt);
+      console.log('onFeatureClick executed');
+    } else {
+      console.warn('onFeatureClick is undefined!');
+    }
+  };
 
   return (
     <div className="empty-state">
@@ -399,7 +429,7 @@ const EmptyState: React.FC = () => {
 
       <div className="empty-state-features">
         {features.map((feature, index) => (
-          <div key={index} className="feature-card">
+          <div key={index} className="feature-card" onClick={() => handleFeatureClick(feature.prompt)} style={{ cursor: 'pointer' }}>
             <h3 className="feature-card-title">{feature.title}</h3>
             <p className="feature-card-desc">{feature.desc}</p>
           </div>
@@ -419,6 +449,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   isStreaming = false,
   streamingContent = '',
   streamingToolCalls = [],
+  toolEvents = [],
   onDeleteMessage,
   onUpdateMessage,
   onRegenerateMessage,
@@ -432,13 +463,9 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages, isTyping]);
 
-  // 如果显示空状态
+  // 如果显示空状态，返回 null（EmptyState 在 ChatPage 中渲染）
   if (showEmptyState && messages.length === 0) {
-    return (
-      <div className="messages-container" ref={containerRef}>
-        <EmptyState />
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -475,6 +502,24 @@ export const MessageList: React.FC<MessageListProps> = ({
               {streamingContent ? (
                 <>
                   <MarkdownRenderer content={streamingContent} />
+                  {/* 流式响应中实时显示工具调用 */}
+                  {streamingToolCalls.length > 0 && (
+                    <div className="streaming-tools">
+                      {streamingToolCalls.map((tool, index) => (
+                        <div key={index} className="streaming-tool-item">
+                          <span className="tool-icon">{getToolIcon(tool.name)}</span>
+                          <span className="tool-name">{getToolDisplayName(tool.name)}</span>
+                          <span className="tool-detail">{getToolDetail(tool)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* 工具时间线 - 显示详细的工具执行过程 */}
+                  <ToolTimeline
+                    events={toolEvents}
+                    maxHeight={300}
+                    defaultExpanded={false}
+                  />
                   <span className="streaming-cursor">▋</span>
                 </>
               ) : (
@@ -486,19 +531,6 @@ export const MessageList: React.FC<MessageListProps> = ({
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 正在执行的工具调用 - 展示进度 */}
-      {isStreaming && streamingToolCalls.length > 0 && (
-        <div className="tool-calls-progress">
-          {streamingToolCalls.map((tool, index) => (
-            <div key={index} className="tool-call-item">
-              <span className="tool-call-icon">{getToolIcon(tool.name)}</span>
-              <span className="tool-call-name">{getToolDisplayName(tool.name)}</span>
-              <span className="tool-call-detail">{getToolDetail(tool)}</span>
-            </div>
-          ))}
         </div>
       )}
 

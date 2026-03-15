@@ -75,7 +75,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       name: string;
       arguments: Record<string, unknown>;
     }) => void,
-    onDone?: (fullContent: string) => void,
+    onDone?: (fullContent: string, toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }>) => void,
     onError?: (error: string) => void
   ) => {
     const webContentsId = ipcRenderer.send(
@@ -90,7 +90,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       } else if (data.type === "tool_call" && onToolCall) {
         onToolCall(data.tool);
       } else if (data.type === "done" && onDone) {
-        onDone(data.content);
+        onDone(data.content, data.toolCalls);
         cleanup();
       } else if (data.type === "error" && onError) {
         onError(data.error);
@@ -252,6 +252,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("reminder:navigate-to-session", callback),
   removeReminderNavigateToSessionListener: (callback: (event: any, data: any) => void) =>
     ipcRenderer.removeListener("reminder:navigate-to-session", callback),
+
+  // Tool 事件监听（来自 OpenClaw WebSocket）
+  onToolEvent: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.on("openclaw:tool-event", callback),
+  removeToolEventListener: (callback: (event: any, data: any) => void) =>
+    ipcRenderer.removeListener("openclaw:tool-event", callback),
 });
 
 // 定义API接口以便在渲染进程中使用类型提示
@@ -654,6 +660,10 @@ declare global {
       removeReminderTriggeredListener: (callback: (event: any, data: any) => void) => void;
       onReminderNavigateToSession: (callback: (event: any, data: any) => void) => void;
       removeReminderNavigateToSessionListener: (callback: (event: any, data: any) => void) => void;
+
+      // Tool 事件监听（来自 OpenClaw WebSocket）
+      onToolEvent: (callback: (event: any, data: any) => void) => void;
+      removeToolEventListener: (callback: (event: any, data: any) => void) => void;
     };
   }
 }

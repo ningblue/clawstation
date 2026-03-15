@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { ToolEvent, AgentEventPayload } from '../types/tool-event';
+import { convertToToolEvent } from '../types/tool-event';
 
 // 消息角色类型
 export type MessageRole = 'user' | 'assistant' | 'system';
@@ -58,6 +60,10 @@ export function useChatStore(userId: number | null) {
   }>>({});
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const activeConversationRef = useRef<number | null>(null);
+
+  // Tool 事件状态 - 按会话ID隔离
+  const [toolEvents, setToolEvents] = useState<Record<number, ToolEvent[]>>({});
+  const currentRunIdRef = useRef<string | null>(null);
 
   /**
    * 检查引擎状态
@@ -440,22 +446,34 @@ export function useChatStore(userId: number | null) {
             }
           }));
         },
-        async (fullContent) => {
-          // 流式响应完成
+        async (fullContent: string, toolCallsFromStream?: Array<{ name: string; arguments: Record<string, unknown> }>) => {
+          // 流式响应完成 - 使用从主进程传来的toolCalls，避免React闭包问题
+          const finalToolCalls = toolCallsFromStream || streamingStates[targetConversationId]?.toolCalls || [];
+
           setStreamingStates(prev => ({
             ...prev,
             [targetConversationId]: {
               isStreaming: false,
               content: prev[targetConversationId]?.content || '',
-              toolCalls: prev[targetConversationId]?.toolCalls || []
+              toolCalls: finalToolCalls
             }
           }));
           setIsTyping(false);
           cancelStreamRef.current = null;
           activeConversationRef.current = null;
 
-          // 保存完整的AI回复到数据库
-          await addMessage('assistant', fullContent, targetConversationId);
+          // 构建包含工具调用的完整消息内容
+          let messageContent = fullContent;
+          if (finalToolCalls.length > 0) {
+            // 将工具调用格式化为可展示的JSON代码块
+            const toolCallsJson = finalToolCalls.map((tool: { name: string; arguments: Record<string, unknown> }, index: number) =>
+              `\`\`\`json\n{"type": "tool_use", "id": "${tool.name}:${index}", "name": "${tool.name}", "arguments": ${JSON.stringify(tool.arguments)}}\n\`\`\``
+            ).join('\n\n');
+            messageContent = `${fullContent}\n\n${toolCallsJson}`;
+          }
+
+          // 保存完整的AI回复到数据库（包含工具调用）
+          await addMessage('assistant', messageContent, targetConversationId);
 
           // 延迟清空流式内容（让用户看到完成状态）
           setTimeout(() => {
@@ -470,22 +488,32 @@ export function useChatStore(userId: number | null) {
           // 发生错误
           console.error('Stream error:', error);
           const currentContent = streamingStates[targetConversationId]?.content || '';
+          const finalToolCalls = streamingStates[targetConversationId]?.toolCalls || [];
           setStreamingStates(prev => ({
             ...prev,
             [targetConversationId]: {
               isStreaming: false,
               content: prev[targetConversationId]?.content || '',
-              toolCalls: prev[targetConversationId]?.toolCalls || []
+              toolCalls: finalToolCalls
             }
           }));
           setIsTyping(false);
           cancelStreamRef.current = null;
           activeConversationRef.current = null;
 
-          // 添加错误消息（只如果有内容才添加）
-          const errorContent = currentContent.trim()
+          // 添加错误消息（只如果有内容才添加），同时包含工具调用记录
+          let errorContent = currentContent.trim()
             ? currentContent + '\n\n[生成中断: ' + (error || '未知错误') + ']'
             : `抱歉，AI引擎返回错误: ${error || '未知错误'}`;
+
+          // 将工具调用嵌入到错误消息中
+          if (finalToolCalls.length > 0) {
+            const toolCallsJson = finalToolCalls.map((tool, index) =>
+              `\`\`\`json\n{"type": "tool_use", "id": "${tool.name}:${index}", "name": "${tool.name}", "arguments": ${JSON.stringify(tool.arguments)}}\n\`\`\``
+            ).join('\n\n');
+            errorContent = `${errorContent}\n\n${toolCallsJson}`;
+          }
+
           await addMessage('assistant', errorContent, targetConversationId);
         }
       );
@@ -592,6 +620,54 @@ export function useChatStore(userId: number | null) {
     };
   }, [currentConversationId]);
 
+  // 监听 Tool 事件（来自 OpenClaw WebSocket）
+  useEffect(() => {
+    const handleToolEvent = (_event: any, payload: AgentEventPayload) => {
+      console.log('[ChatStore] Received tool event:', payload.stream, payload.data);
+
+      if (payload.stream !== 'tool') return;
+
+      const toolEvent = convertToToolEvent(payload);
+      const conversationId = currentConversationId;
+
+      if (!conversationId) return;
+
+      // 更新当前 runId
+      if (toolEvent.phase === 'start') {
+        currentRunIdRef.current = toolEvent.runId;
+      }
+
+      setToolEvents(prev => {
+        const existing = prev[conversationId] || [];
+
+        // 查找是否已存在相同 id 的事件
+        const index = existing.findIndex(e => e.id === toolEvent.id);
+
+        let updated: ToolEvent[];
+        if (index >= 0) {
+          // 更新现有事件
+          updated = [...existing];
+          updated[index] = toolEvent;
+        } else {
+          // 添加新事件
+          updated = [...existing, toolEvent];
+        }
+
+        return {
+          ...prev,
+          [conversationId]: updated,
+        };
+      });
+    };
+
+    // 注册监听器
+    window.electronAPI?.onToolEvent?.(handleToolEvent);
+
+    return () => {
+      window.electronAPI?.removeToolEventListener?.(handleToolEvent);
+    };
+  }, [currentConversationId]);
+
   // 清理定时器
   useEffect(() => {
     return () => {
@@ -610,6 +686,9 @@ export function useChatStore(userId: number | null) {
   const streamingContent = currentStreamingState?.content || '';
   const streamingToolCalls = currentStreamingState?.toolCalls || [];
 
+  // 获取当前会话的工具事件
+  const currentToolEvents = currentConversationId ? toolEvents[currentConversationId] || [] : [];
+
   return {
     // 状态
     conversations,
@@ -625,6 +704,10 @@ export function useChatStore(userId: number | null) {
     isStreaming,
     streamingContent,
     streamingToolCalls,
+
+    // 工具事件 - 当前会话
+    toolEvents: currentToolEvents,
+    allToolEvents: toolEvents,
 
     // 操作
     setCurrentConversationId,

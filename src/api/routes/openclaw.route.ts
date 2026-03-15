@@ -541,6 +541,7 @@ export function setupOpenClawRoutes(openclawManager: OpenClawManager): void {
             event.sender.send("openclaw:stream:chunk", {
               type: "done",
               content: fullContent,
+              toolCalls: toolCalls,
             });
           }
         } catch (streamError) {
