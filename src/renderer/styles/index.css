@@ -1133,6 +1133,7 @@
       overflow: hidden;
       transition: border-color 0.2s;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      max-height: 280px;
     }
 
     .input-container:focus-within {
@@ -1147,7 +1148,7 @@
       font-family: inherit;
       font-size: 14px;
       line-height: 1.6;
-      max-height: 200px;
+      max-height: 200px !important;
       min-height: 56px;
       background-color: transparent;
       outline: none;
@@ -2033,11 +2034,13 @@
     .feature-card {
       flex: 1;
       min-width: 0;
-      padding: 20px 16px;
+      padding: 16px 12px;
       border-radius: 12px;
       cursor: pointer;
       transition: background 0.2s;
       text-align: left;
+      max-height: 80px;
+      overflow: hidden;
     }
 
     .feature-card:nth-child(1) {
@@ -2087,10 +2090,10 @@
       margin-bottom: 6px;
     }
 
-    .feature-card-desc {
-      font-size: 12px;
+    .empty-state .feature-card-desc {
+      font-size: 11px;
       color: #999;
-      line-height: 1.5;
+      line-height: 1.4;
     }
 
     /* 暗黑主题 */

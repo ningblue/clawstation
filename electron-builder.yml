@@ -12,18 +12,10 @@ files:
 extraResources:
   - from: resources/openclaw.7z
     to: openclaw.7z
-  - from: resources/
-    to: resources/
-    filter:
-      - "**/*"
-      - "!openclaw/**" # openclaw单独处理
-      - "!openclaw.7z" # 避免重复复制
-      - "!node/**" # node单独处理，避免重复复制
-      - "!7za.exe" # 排除 7za.exe (Win only, handled below)
   - from: resources/node/${os}-${arch}/node
     to: node
-    filter:
-      - "**/*"
+  - from: resources/icon.icns
+    to: icon.icns
   - from: scripts/
     to: scripts/
     filter:

@@ -1,21 +1,21 @@
 /**
  * macOS 平台打包后处理
- * - 解压 openclaw.zip
+ * - 解压 openclaw.7z
  */
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 /**
- * 解压 openclaw.zip 到应用包
+ * 解压 openclaw.7z 到应用包
  */
 function extractOpenClaw(appOutDir, appName) {
   const resourcesPath = path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources');
-  const zipPath = path.join(resourcesPath, 'openclaw.zip');
+  const archivePath = path.join(resourcesPath, 'openclaw.7z');
   const extractPath = path.join(resourcesPath, 'openclaw');
 
-  if (!fs.existsSync(zipPath)) {
-    console.warn('⚠️  [macOS] openclaw.zip not found:', zipPath);
+  if (!fs.existsSync(archivePath)) {
+    console.warn('⚠️  [macOS] openclaw.7z not found:', archivePath);
     return false;
   }
 
@@ -25,17 +25,43 @@ function extractOpenClaw(appOutDir, appName) {
     fs.rmSync(extractPath, { recursive: true, force: true });
   }
 
-  // 解压 zip 文件
-  console.log('📦 [macOS] Extracting openclaw.zip...');
-  try {
-    execSync(`unzip -q "${zipPath}" -d "${extractPath}"`, { stdio: 'inherit' });
-  } catch (error) {
-    console.error('⚠️  [macOS] Failed to extract openclaw:', error.message);
-    return false;
+  // 确保目标目录存在
+  if (!fs.existsSync(extractPath)) {
+    fs.mkdirSync(extractPath, { recursive: true });
   }
 
-  // 删除 zip 文件（节省空间）
-  fs.unlinkSync(zipPath);
+  // 解压 7z 文件
+  console.log('📦 [macOS] Extracting openclaw.7z...');
+  try {
+    // 尝试使用 7z 命令
+    execSync(`7z x "${archivePath}" -o"${extractPath}" -y`, { stdio: 'inherit' });
+  } catch (error) {
+    // 备用：尝试使用系统 unzip（如果用户安装了 p7zip）
+    console.log('📦 [macOS] 7z not found, trying p7zip-unzip...');
+    try {
+      execSync(`7za x "${archivePath}" -o"${extractPath}" -y`, { stdio: 'inherit' });
+    } catch (error2) {
+      console.error('⚠️  [macOS] Failed to extract openclaw:', error2.message);
+      return false;
+    }
+  }
+
+  // 删除 7z 文件（节省空间）
+  fs.unlinkSync(archivePath);
+
+  // 处理嵌套目录问题（7z 可能解压出 openclaw/openclaw/）
+  const nestedPath = path.join(extractPath, 'openclaw');
+  if (fs.existsSync(nestedPath) && fs.statSync(nestedPath).isDirectory()) {
+    console.log('📦 [macOS] Fixing nested directory structure...');
+    // 将嵌套目录的内容移动到外层
+    const files = fs.readdirSync(nestedPath);
+    for (const file of files) {
+      const src = path.join(nestedPath, file);
+      const dest = path.join(extractPath, file);
+      fs.renameSync(src, dest);
+    }
+    fs.rmdirSync(nestedPath);
+  }
 
   console.log('✅ [macOS] openclaw extracted successfully');
   return true;

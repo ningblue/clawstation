@@ -3,7 +3,7 @@
  * 聊天输入区域，包含文本输入框、发送按钮、模型选择器和智能提示
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { InlineModelPicker } from './InlineModelPicker';
 
 export interface ChatInputProps {
@@ -19,6 +19,14 @@ export interface ChatInputProps {
   onCancel?: () => void;
   /** 引擎是否正在重启（模型切换中） */
   engineRestarting?: boolean;
+  /** 模型名称 */
+  modelName?: string;
+}
+
+/** Ref 接口 */
+export interface ChatInputRef {
+  /** 设置输入框文本 */
+  setText: (text: string) => void;
 }
 
 // 智能提示配置
@@ -60,17 +68,35 @@ const SmartPrompts: React.FC<SmartPromptsProps> = ({ onSelect, disabled }) => {
 /**
  * ChatInput 组件
  */
-export const ChatInput: React.FC<ChatInputProps> = ({
+export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   onSend,
   disabled = false,
   placeholder = '输入消息... (按 Enter 发送, Shift+Enter 换行)',
   isStreaming = false,
   onCancel,
   engineRestarting = false,
-}) => {
+  modelName,
+}, ref) => {
   const [inputValue, setInputValue] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    setText: (newText: string) => {
+      console.log('[ChatInput] setText called:', newText.substring(0, 50));
+      setInputValue(newText);
+      textareaRef.current?.focus();
+      // 延迟调整高度
+      setTimeout(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+          textarea.style.height = 'auto';
+          textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+        }
+      }, 0);
+    }
+  }));
 
   const effectivePlaceholder = engineRestarting ? '正在切换模型...' : placeholder;
   const effectiveDisabled = disabled || isStreaming || engineRestarting;
@@ -177,6 +203,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export default ChatInput;

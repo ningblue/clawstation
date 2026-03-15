@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChatItem, Message } from './ChatItem';
-import { ChatInput } from './ChatInput';
+import { ChatInput } from '../ChatInput';
 import { ConversationSidebar } from './ConversationSidebar';
 
 export interface Conversation {

@@ -4,6 +4,27 @@
 
 Clawstation 是一个 Electron 桌面应用，提供 AI 助手功能。包含主进程、渲染进程和 AI 引擎 (OpenClaw/clawstation-engine)。
 
+## ⚠️ 构建前必读（避免踩坑）
+
+### 原生模块架构问题（M1/M2/M3 Mac 必看）
+**错误**: `dlopen error: have 'x86_64', need 'arm64'`
+**触发场景**: 执行 `npm run build` 后启动应用时
+**原因**: better-sqlite3 被编译成了 x86_64 架构，但当前是 ARM64
+**解决**（必须按顺序）:
+```bash
+# 1. 重新编译原生模块为 ARM64
+npx electron-rebuild -f -w better-sqlite3
+
+# 2. 然后才能构建
+npm run build
+
+# 3. 启动
+./scripts/clawstation-service.sh restart
+```
+**记忆口诀**: 每次完整构建 (`npm run build`) 后，必须先 `rebuild:native` 再启动！
+
+---
+
 ## 常用命令
 
 ### 服务管理（优先使用）
@@ -40,7 +61,7 @@ npm run build              # 完整构建
 npm run build:main         # 仅主进程
 npm run build:renderer     # 仅渲染进程
 
-# 原生模块
+# 原生模块 - ⚠️ ARM64 Mac 构建后必须执行！
 npm run rebuild:native     # 重新编译 better-sqlite3 等原生模块
 ```
 
@@ -104,11 +125,21 @@ clawstation/
 │   ├── backend/                  # 后端服务
 │   ├── api/                      # API 路由
 │   └── shared/                   # 共享代码
-├── lib/openclaw/                 # OpenClaw 源代码（问题排查优先看这里）
 ├── resources/openclaw/           # OpenClaw 编译产物
 ├── dist/                         # 构建输出
 └── logs/                         # 应用日志
 ```
+
+## 依赖项目源码路径（研究用）
+
+⚠️ **重要**：OpenClaw 和 LobeHub 源码已移至独立仓库，研究时请直接读取以下路径：
+
+```
+../openclaw    # OpenClaw 引擎源码（最新）
+../lobehub     # LobeHub 前端源码（最新）
+```
+
+**lib/ 目录下的副本已废弃**，不再维护，避免使用！
 
 ## 配置文件
 
