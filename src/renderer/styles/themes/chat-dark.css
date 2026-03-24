@@ -1,0 +1,398 @@
+/**
+ * 聊天页面暗黑模式样式
+ * Chat Page Dark Theme Styles
+ */
+
+/* ========================================
+   消息布局
+   ======================================== */
+body.dark-theme .message-bubble-user {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ffffff;
+}
+
+body.dark-theme .assistant-name {
+  color: var(--text-secondary);
+}
+
+body.dark-theme .model-badge {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+body.dark-theme .message-content {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .message.user .message-content {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+body.dark-theme .message-time {
+  color: var(--text-tertiary);
+}
+
+/* ========================================
+   消息文本内容
+   ======================================== */
+body.dark-theme .message-text p,
+body.dark-theme .message-text li {
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-text h1,
+body.dark-theme .message-text h2,
+body.dark-theme .message-text h3,
+body.dark-theme .message-text h4 {
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-text blockquote {
+  border-left-color: var(--primary-color);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--text-secondary);
+}
+
+body.dark-theme .message-text a {
+  color: var(--primary-hover);
+}
+
+body.dark-theme .message-text code {
+  background: var(--bg-tertiary);
+  color: var(--primary-hover);
+}
+
+body.dark-theme .message.user .message-text code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* 表格 */
+body.dark-theme .message-text th,
+body.dark-theme .message-text td {
+  border-color: var(--border-default);
+}
+
+body.dark-theme .message-text th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* ========================================
+   代码块
+   ======================================== */
+body.dark-theme .code-block,
+body.dark-theme .code-block-wrapper {
+  background-color: #1e1e1e;
+}
+
+body.dark-theme .code-block-header {
+  background-color: #2d2d2d;
+  border-bottom-color: #3d3d3d;
+}
+
+body.dark-theme .code-language {
+  color: var(--text-tertiary);
+}
+
+body.dark-theme .code-copy-btn {
+  background-color: #3d3d3d;
+  color: var(--text-secondary);
+}
+
+body.dark-theme .code-copy-btn:hover {
+  background-color: #4d4d4d;
+  color: white;
+}
+
+body.dark-theme .code-copy-btn.copied {
+  background-color: #065f46;
+  color: #d1fae5;
+}
+
+body.dark-theme .code-block pre,
+body.dark-theme .code-block pre code {
+  color: #d4d4d4;
+}
+
+/* 行内代码 */
+body.dark-theme .message-content code,
+body.dark-theme .message-text code:not(pre code) {
+  background-color: var(--bg-tertiary);
+  color: #f87171;
+}
+
+body.dark-theme .inline-code {
+  background-color: var(--bg-tertiary) !important;
+  color: #f87171 !important;
+  border-color: var(--border-default) !important;
+}
+
+body.dark-theme .message.user .inline-code {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ========================================
+   代码高亮
+   ======================================== */
+body.dark-theme .hljs {
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+body.dark-theme .hljs-keyword { color: #c586c0; }
+body.dark-theme .hljs-string { color: #ce9178; }
+body.dark-theme .hljs-number { color: #b5cea8; }
+body.dark-theme .hljs-function { color: #dcdcaa; }
+body.dark-theme .hljs-title { color: #4ec9b0; }
+body.dark-theme .hljs-params { color: #9cdcfe; }
+body.dark-theme .hljs-comment { color: #6a9955; font-style: italic; }
+body.dark-theme .hljs-built_in { color: #4fc1ff; }
+body.dark-theme .hljs-literal { color: #569cd6; }
+body.dark-theme .hljs-attr,
+body.dark-theme .hljs-variable { color: #9cdcfe; }
+body.dark-theme .hljs-type { color: #4ec9b0; }
+
+/* ========================================
+   Markdown 内容
+   ======================================== */
+body.dark-theme .markdown-content {
+  color: var(--text-primary);
+}
+
+body.dark-theme .markdown-content h1,
+body.dark-theme .markdown-content h2,
+body.dark-theme .markdown-content h3,
+body.dark-theme .markdown-content h4,
+body.dark-theme .markdown-content h5,
+body.dark-theme .markdown-content h6 {
+  color: var(--text-primary);
+}
+
+body.dark-theme .markdown-content blockquote {
+  border-left-color: var(--border-default);
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+body.dark-theme .markdown-content table {
+  border-color: var(--border-default);
+}
+
+body.dark-theme .markdown-content th,
+body.dark-theme .markdown-content td {
+  border-color: var(--border-default);
+}
+
+body.dark-theme .markdown-content th {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+body.dark-theme .markdown-content a {
+  color: var(--primary-hover);
+}
+
+body.dark-theme .markdown-content hr {
+  border-color: var(--border-default);
+}
+
+/* 用户消息中的 Markdown */
+body.dark-theme .message.user .markdown-content p,
+body.dark-theme .message.user .markdown-content ul,
+body.dark-theme .message.user .markdown-content ol,
+body.dark-theme .message.user .markdown-content li {
+  color: white;
+}
+
+body.dark-theme .message.user .markdown-content blockquote {
+  border-left-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.dark-theme .message.user .markdown-content a {
+  color: #93c5fd;
+}
+
+/* ========================================
+   思考过程
+   ======================================== */
+body.dark-theme .thinking-block {
+  border-color: var(--border-default);
+  background-color: var(--bg-tertiary);
+}
+
+body.dark-theme .thinking-header {
+  background-color: var(--bg-hover);
+}
+
+body.dark-theme .thinking-title {
+  color: var(--text-primary);
+}
+
+body.dark-theme .thinking-icon,
+body.dark-theme .thinking-toggle {
+  color: var(--text-secondary);
+}
+
+body.dark-theme .thinking-time {
+  color: var(--text-tertiary);
+}
+
+body.dark-theme .thinking-content {
+  color: var(--text-secondary);
+  border-top-color: var(--border-default);
+}
+
+/* ========================================
+   输入区域
+   ======================================== */
+body.dark-theme .chat-input-wrapper {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .chat-input-toolbar {
+  border-bottom-color: var(--border-default);
+}
+
+body.dark-theme .toolbar-btn {
+  color: var(--text-secondary);
+}
+
+body.dark-theme .toolbar-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+body.dark-theme .toolbar-divider {
+  background-color: var(--border-default);
+}
+
+/* ========================================
+   消息操作菜单
+   ======================================== */
+body.dark-theme .message-actions {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .message-action-btn {
+  color: var(--text-secondary);
+}
+
+body.dark-theme .message-action-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-action-btn.danger:hover {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+}
+
+body.dark-theme .message-menu-btn {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+body.dark-theme .message-menu-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-menu {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .message-menu .menu-item {
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-menu .menu-item:hover {
+  background-color: var(--bg-hover);
+}
+
+body.dark-theme .message-menu .menu-item.delete {
+  color: var(--error-text);
+}
+
+body.dark-theme .message-menu .menu-item.delete:hover {
+  background-color: var(--error-bg);
+}
+
+/* 消息编辑 */
+body.dark-theme .message-edit-input {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-edit-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+body.dark-theme .message-edit-actions .btn-cancel {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+body.dark-theme .message-edit-actions .btn-cancel:hover {
+  background-color: var(--bg-hover);
+}
+
+/* ========================================
+   图片相关
+   ======================================== */
+body.dark-theme .message-image-loading {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+body.dark-theme .message-image-error {
+  background-color: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-text);
+}
+
+body.dark-theme .message-image {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   输入指示器
+   ======================================== */
+body.dark-theme .typing-indicator {
+  background-color: var(--bg-tertiary);
+}
+
+body.dark-theme .typing-dot {
+  background-color: var(--text-tertiary);
+}
+
+/* ========================================
+   头像
+   ======================================== */
+body.dark-theme .avatar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .user-avatar {
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+}
+
+body.dark-theme .assistant-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}

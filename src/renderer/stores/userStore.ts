@@ -82,9 +82,13 @@ export function useUserStore() {
    * 应用主题到界面
    */
   const applyTheme = useCallback((theme: Theme) => {
+    // Tailwind dark: 使用 .dark 类
+    // 自定义 CSS 使用 body.dark-theme 类
     if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
       document.body.classList.add('dark-theme');
     } else {
+      document.documentElement.classList.remove('dark');
       document.body.classList.remove('dark-theme');
     }
   }, []);
@@ -133,7 +137,16 @@ export function useUserStore() {
       }
 
       // 合并后端偏好设置
-      const mergedPrefs = { ...DEFAULT_PREFERENCES, ...userData.preferences };
+      let backendPrefs = userData.preferences;
+      if (typeof backendPrefs === 'string') {
+        try {
+          backendPrefs = JSON.parse(backendPrefs);
+        } catch (e) {
+          console.error('Failed to parse user preferences:', e);
+          backendPrefs = {};
+        }
+      }
+      const mergedPrefs = { ...DEFAULT_PREFERENCES, ...backendPrefs };
       setUser({ ...userData, preferences: mergedPrefs });
       setPreferences(mergedPrefs);
       applySettings(mergedPrefs);

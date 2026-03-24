@@ -249,6 +249,22 @@ export const App: React.FC = () => {
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  useEffect(() => {
+    const STORAGE_KEY = 'clawstation_user_prefs';
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const prefs = JSON.parse(stored);
+        if (prefs.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.body.classList.add('dark-theme');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load theme preference:', err);
+    }
+  }, []);
+
   // 显示 toast
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substring(7);

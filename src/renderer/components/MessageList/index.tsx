@@ -414,20 +414,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onFeatureClick }) => {
   };
 
   return (
-    <div className="empty-state">
+    <div className="empty-state dark:bg-[#0f0f0f]">
       <div className="empty-state-center">
         <div className="empty-state-logo">
           <div className="empty-state-icon">X</div>
         </div>
         <h1 className="empty-state-title">XClaw</h1>
-        <p className="empty-state-subtitle">7x24小时，随时随地召唤的全能电脑 AI 助手</p>
+        <p className="empty-state-subtitle dark:text-gray-400">7x24小时，随时随地召唤的全能电脑 AI 助手</p>
       </div>
 
       <div className="empty-state-features">
         {features.map((feature, index) => (
-          <div key={index} className="feature-card" onClick={() => handleFeatureClick(feature.prompt)} style={{ cursor: 'pointer' }}>
-            <h3 className="feature-card-title">{feature.title}</h3>
-            <p className="feature-card-desc">{feature.desc}</p>
+          <div key={index} className="feature-card dark:bg-[#1a1a1a] dark:border-gray-700" onClick={() => handleFeatureClick(feature.prompt)} style={{ cursor: 'pointer' }}>
+            <h3 className="feature-card-title dark:text-white">{feature.title}</h3>
+            <p className="feature-card-desc dark:text-gray-400">{feature.desc}</p>
           </div>
         ))}
       </div>
@@ -461,7 +461,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   // 如果显示空状态
   if (showEmptyState && messages.length === 0) {
     return (
-      <div className="messages-container" ref={containerRef}>
+      <div className="messages-container dark:bg-[#0f0f0f]" ref={containerRef}>
         <EmptyState onFeatureClick={onFeatureClick} />
       </div>
     );
@@ -469,7 +469,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div
-      className="messages-container"
+      className="messages-container dark:!bg-gray-950"
       ref={containerRef}
       style={{
         display: 'flex',

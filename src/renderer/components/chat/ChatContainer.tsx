@@ -232,7 +232,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       />
 
       {/* 主聊天区域 */}
-      <div className="chat-main">
+      <div className="chat-main dark:bg-[#0f0f0f]">
         {/* 顶部工具栏 */}
         <div className="chat-header">
           <div className="header-left">
