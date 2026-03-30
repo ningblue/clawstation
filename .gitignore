@@ -38,6 +38,8 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+*.pyc
+__pycache__/
 
 # OpenClaw data (sensitive)
 .clawstation/
@@ -54,6 +56,9 @@ lib/
 
 # Claude Code local settings
 .claude/
+.cache/
+.history/
+.qoder/
 
 # Development files
 clawstation (binary)
@@ -62,3 +67,36 @@ clawstation (binary)
 *.app
 resources/node/
 resources/openclaw.zip
+
+# Local research / benchmarking files
+config/
+MODEL_SERVICE.md
+docs/README.md
+docs/RECOMMENDED_PARAMS.md
+docs/model-comparison-report.md
+docs/model-config-examples.json
+docs/model-service-quick-start.md
+docs/recommended-params-analysis.md
+docs/lobehub-deep-analysis.md
+scripts/benchmark_model.py
+scripts/compare_models.py
+scripts/isolated-test.sh
+scripts/quick_compare.py
+scripts/test_model.py
+scripts/test_recommended_params.py
+
+# Local unpacked / packaged dependencies
+qclaw_unpacked_app/
+workbuddy_app/
+resources/openclaw/
+resources/openclaw-arm64.7z
+resources/openclaw-x64.7z
+
+# Local design assets
+logo_*.png
+logo_raw.png
+logo_icons/
+docs/img/Snipaste_*.png
+
+# Local agent specs
+.trae/specs/optimize-dark-theme-colors/

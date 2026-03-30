@@ -130,16 +130,16 @@ clawstation/
 └── logs/                         # 应用日志
 ```
 
-## 依赖项目源码路径（研究用）
+## 依赖项目源码（可选，本地研究用）
 
-⚠️ **重要**：OpenClaw 和 LobeHub 源码已移至独立仓库，研究时请直接读取以下路径：
+⚠️ **重要**：OpenClaw 和 LobeHub 源码位于独立仓库。需要对照研究时，建议将它们放在当前项目同级目录，例如：
 
 ```
-../openclaw    # OpenClaw 引擎源码（最新）
-../lobehub     # LobeHub 前端源码（最新）
+../openclaw    # OpenClaw 引擎源码
+../lobehub     # LobeHub 前端源码
 ```
 
-**lib/ 目录下的副本已废弃**，不再维护，避免使用！
+**lib/ 目录下的副本已废弃**，不再维护，避免使用。
 
 ## 配置文件
 

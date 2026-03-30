@@ -13,10 +13,19 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 项目目录
-PROJECT_DIR="$(cd "$(dirname "$0")"/.. && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE_PATH" ]; do
+    SOURCE_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+    SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+    [[ "$SOURCE_PATH" != /* ]] && SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PID_FILE="$PROJECT_DIR/.clawstation.pid"
 LOG_DIR="$PROJECT_DIR/logs"
 MAIN_LOG="$HOME/Library/Logs/XClaw/main.log"
+ELECTRON_BIN_PATTERN="$PROJECT_DIR/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"
+ELECTRON_APP_PATTERN="$PROJECT_DIR/node_modules/electron/dist/Electron.app"
 
 # 确保日志目录存在
 mkdir -p "$LOG_DIR"
@@ -66,7 +75,7 @@ check_status() {
         fi
     else
         # 尝试查找 Electron 进程
-        electron_pid=$(pgrep -f "$PROJECT_DIR/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" | head -1)
+        electron_pid=$(pgrep -f "$ELECTRON_BIN_PATTERN" | head -1)
         if [ -n "$electron_pid" ]; then
             echo -e "${GREEN}✓ XClaw 应用正在运行 (PID: $electron_pid)${NC}"
             echo "$electron_pid" > "$PID_FILE"
@@ -183,7 +192,7 @@ stop_service() {
     fi
 
     # 查找并停止其他 Electron 进程（项目相关）
-    local electron_pids=$(pgrep -f "$PROJECT_DIR/node_modules/electron/dist/Electron.app" || true)
+    local electron_pids=$(pgrep -f "$ELECTRON_APP_PATTERN" || true)
     if [ -n "$electron_pids" ]; then
         echo -e "${BLUE}停止 Electron 进程...${NC}"
         for pid in $electron_pids; do

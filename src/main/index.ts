@@ -327,14 +327,14 @@ function setupMenu() {
         {
           label: "文档",
           click: async () => {
-            await shell.openExternal("https://docs.clawstation.ai");
+            await shell.openExternal("https://github.com/ningblue/clawstation#readme");
           },
         },
         {
           label: "反馈问题",
           click: async () => {
             await shell.openExternal(
-              "https://github.com/clawstation/clawstation/issues",
+              "https://github.com/ningblue/clawstation/issues",
             );
           },
         },

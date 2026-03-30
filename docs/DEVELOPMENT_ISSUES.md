@@ -42,8 +42,8 @@
 **解决方案**:
 - 首次运行需要手动执行命令生成文件:
 ```bash
-mkdir -p $HOME/.clawstation/agents/default/agent
-OPENCLAW_STATE_DIR=$HOME/.clawstation node openclaw.mjs models list --all --json > $HOME/.clawstation/agents/default/agent/models.json
+mkdir -p "$HOME/.clawstation/agents/default/agent"
+OPENCLAW_STATE_DIR="$HOME/.clawstation" node openclaw.mjs models list --all --json > "$HOME/.clawstation/agents/default/agent/models.json"
 ```
 
 ---
