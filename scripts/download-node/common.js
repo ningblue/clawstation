@@ -2,7 +2,7 @@
  * Node.js 下载器 - 共享模块
  */
 
-const NODE_VERSION = '22.14.0';
+const NODE_VERSION = process.env.NODE_VERSION || '22.14.0';
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -39,39 +39,66 @@ function getPlatformNames(targetPlatform) {
 }
 
 /**
- * 下载文件（支持重定向）
+ * 下载文件（支持重定向和备用 URL）
  */
-function downloadFile(url, dest) {
+function downloadFile(urls, dest) {
+  const urlList = Array.isArray(urls) ? urls : [urls];
+  let currentIndex = 0;
+
   return new Promise((resolve, reject) => {
-    console.log(`Downloading: ${url}`);
+    const tryNext = () => {
+      if (currentIndex >= urlList.length) {
+        reject(new Error('All download URLs failed'));
+        return;
+      }
 
-    const file = fs.createWriteStream(dest);
+      const url = urlList[currentIndex++];
+      console.log(`Downloading: ${url}`);
 
-    const request = (url) => {
-      https.get(url, (response) => {
-        if (response.statusCode === 302 || response.statusCode === 301) {
-          request(response.headers.location);
-          return;
-        }
+      // Clean up any partial file
+      if (fs.existsSync(dest)) {
+        fs.unlinkSync(dest);
+      }
 
-        if (response.statusCode !== 200) {
-          reject(new Error(`Failed to download: ${response.statusCode}`));
-          return;
-        }
+      const file = fs.createWriteStream(dest);
 
-        response.pipe(file);
+      const request = (targetUrl) => {
+        https.get(targetUrl, (response) => {
+          if (response.statusCode === 302 || response.statusCode === 301) {
+            // Follow redirect to next URL
+            const location = response.headers.location;
+            if (location && !location.startsWith('http')) {
+              // Relative redirect - reconstruct URL
+              const base = new URL(targetUrl);
+              request(new URL(location, base).href);
+            } else {
+              request(location);
+            }
+            return;
+          }
 
-        file.on('finish', () => {
-          file.close();
-          resolve();
+          if (response.statusCode !== 200) {
+            file.close();
+            tryNext();
+            return;
+          }
+
+          response.pipe(file);
+
+          file.on('finish', () => {
+            file.close();
+            resolve();
+          });
+        }).on('error', (err) => {
+          fs.unlink(dest, () => {});
+          tryNext();
         });
-      }).on('error', (err) => {
-        fs.unlink(dest, () => {});
-        reject(err);
-      });
+      };
+
+      request(url);
     };
 
-    request(url);
+    tryNext();
   });
 }
 

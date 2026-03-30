@@ -30,9 +30,11 @@ async function download(targetArch) {
   const electronBuilderPlatform = 'mac';
   const ext = 'tar.gz';
 
-  // 构建下载 URL
+  // 构建下载 URL（华为镜像优先，官方 CDN 回退）
   const filename = `node-v${common.NODE_VERSION}-${nodePlatform}-${targetArch}.${ext}`;
-  const url = `https://mirrors.huaweicloud.com/nodejs/v${common.NODE_VERSION}/${filename}`;
+  const mirrorUrl = `https://mirrors.huaweicloud.com/nodejs/v${common.NODE_VERSION}/${filename}`;
+  const officialUrl = `https://nodejs.org/dist/v${common.NODE_VERSION}/${filename}`;
+  const urls = [mirrorUrl, officialUrl];
 
   // 确保目录存在
   if (!fs.existsSync(downloadDir)) {
@@ -45,7 +47,7 @@ async function download(targetArch) {
   console.log(`\n📦 [macOS] Downloading Node.js ${common.NODE_VERSION} for ${electronBuilderPlatform}-${targetArch}\n`);
 
   // 下载
-  await common.downloadFile(url, archivePath);
+  await common.downloadFile(urls, archivePath);
 
   // 解压
   extract(archivePath, extractDir);
