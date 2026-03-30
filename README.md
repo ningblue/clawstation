@@ -4,8 +4,6 @@
 [![GitHub release](https://img.shields.io/github/release/ningblue/clawstation.svg)](https://github.com/ningblue/clawstation/releases)
 [![Build Status](https://github.com/ningblue/clawstation/workflows/Build%20and%20Release/badge.svg)](https://github.com/ningblue/clawstation/actions)
 
-[English](./README_EN.md) | [中文](./README.md)
-
 ## 项目概述
 
 X-Claw 是一个跨平台的 AI 数字员工桌面应用，基于 Electron 框架开发，内置 OpenClaw AI 引擎。用户安装应用后即可直接使用 AI 对话功能，无需配置额外环境。

@@ -59,6 +59,18 @@ lib/
 .cache/
 .history/
 .qoder/
+.trae/
+AGENTS.md
+CLAUDE.md
+ARCHITECTURE.md
+ARCHITECTURE_GUIDELINES.md
+BMAD_ARCHITECTURE_PLAN.md
+BUILD_LESSONS.md
+CROSS_PLATFORM_TEST_FINAL.md
+IMPLEMENTATION_SUMMARY.md
+TEST_REPORT_FINAL.md
+UI_IMPROVEMENTS.md
+install-bmad.sh
 
 # Development files
 clawstation (binary)
@@ -97,6 +109,3 @@ logo_*.png
 logo_raw.png
 logo_icons/
 docs/img/Snipaste_*.png
-
-# Local agent specs
-.trae/specs/optimize-dark-theme-colors/
