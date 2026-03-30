@@ -35,7 +35,11 @@ try {
 // 2. Build OpenClaw source (architecture-independent)
 log(`Building OpenClaw source from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
-  execSync(`${pkgManager} install`, { cwd: OPENCLAW_SRC, stdio: "inherit" });
+  // Use --no-frozen-lockfile in CI to avoid lockfile checksum mismatch
+  const installCmd = pkgManager === "pnpm" && process.env.CI
+    ? `${pkgManager} install --no-frozen-lockfile`
+    : `${pkgManager} install`;
+  execSync(installCmd, { cwd: OPENCLAW_SRC, stdio: "inherit" });
   execSync(`${pkgManager} run build`, { cwd: OPENCLAW_SRC, stdio: "inherit" });
   log(`Building OpenClaw UI...`);
   execSync(`${pkgManager} run ui:build`, {
