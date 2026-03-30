@@ -52,10 +52,10 @@ log(`Building OpenClaw source from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
   let installCmd;
   if (pkgManager === "pnpm") {
-    // Windows 上使用 isolated node-linker 避免符号链接 EPERM 问题
-    const isolatedFlag = process.platform === "win32" ? " --node-linker=isolated" : "";
+    // Windows 上使用 hoisted node-linker 彻底避免符号链接 EPERM 问题
+    const linkerFlag = process.platform === "win32" ? " --node-linker=hoisted" : "";
     const noFrozenFlag = process.env.CI ? " --no-frozen-lockfile" : "";
-    installCmd = `pnpm install${noFrozenFlag}${isolatedFlag}`;
+    installCmd = `pnpm install${noFrozenFlag}${linkerFlag}`;
   } else if (pkgManager === "npm") {
     installCmd = `npm install --legacy-peer-deps`;
   } else {

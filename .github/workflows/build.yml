@@ -205,10 +205,11 @@ jobs:
           mkdir -p lib
           git clone --depth 1 --branch ${{ env.OPENCLAW_VERSION }} ${{ env.OPENCLAW_REPO }} lib/openclaw
 
-      # 清除可能损坏的 node_modules 缓存，避免 pnpm 误判 "Already up to date"
-      - name: Clean OpenClaw node_modules
+      # 清除所有嵌套的 node_modules 缓存（包括 workspace 子项目），
+      # 避免上次失败的损坏符号链接残留导致 EPERM
+      - name: Clean OpenClaw all node_modules
         shell: bash
-        run: rm -rf lib/openclaw/node_modules
+        run: find lib/openclaw -name node_modules -type d -prune -exec rm -rf {} +
 
       - name: Restore OpenClaw build artifacts
         uses: actions/cache@v4
