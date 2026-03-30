@@ -235,104 +235,9 @@ jobs:
           path: release/*.exe
           retention-days: 14
 
-  # ─── Linux build ─────────────────────────────────────────────────────────────
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-0 \
-            libnotify4 \
-            libnss3 \
-            libxss1 \
-            libxtst6 \
-            xdg-utils \
-            libatspi2.0-0 \
-            libdrm2 \
-            libgbm1 \
-            libasound2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: echo "STORE_DIR=$(pnpm store path)" >> $GITHUB_ENV
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_DIR }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Cache OpenClaw
-        id: cache-openclaw
-        uses: actions/cache@v4
-        with:
-          path: lib/openclaw
-          key: openclaw-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
-
-      - name: Fetch OpenClaw dependency
-        if: steps.cache-openclaw.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p lib
-          git clone --depth 1 --branch ${{ env.OPENCLAW_VERSION }} ${{ env.OPENCLAW_REPO }} lib/openclaw
-
-      - name: Restore OpenClaw build artifacts
-        uses: actions/cache@v4
-        with:
-          path: resources/openclaw
-          key: openclaw-build-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
-
-      - name: Install dependencies
-        run: npm install --ignore-scripts
-
-      - name: Build openclaw
-        run: node scripts/build-openclaw.js
-
-      - name: Archive openclaw (required by electron-builder)
-        run: node scripts/archive-openclaw.js
-
-      - name: Download Node.js runtime for embedding
-        run: node scripts/download-node.js linux x64
-        env:
-          NODE_VERSION: ${{ env.NODE_EMBED_VERSION }}
-
-      - name: Rebuild native modules
-        run: npx electron-builder install-app-deps --arch x64
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Linux
-        run: npm run build -- --linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ClawStation-linux-x64-AppImage
-          path: release/*.AppImage
-          retention-days: 14
-
   # ─── Release (only on tags) ───────────────────────────────────────────────────
   release:
-    needs: [typecheck, build-mac, build-win, build-linux]
+    needs: [typecheck, build-mac, build-win]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -355,7 +260,6 @@ jobs:
           files: |
             release/**/*.dmg
             release/**/*.exe
-            release/**/*.AppImage
           draft: true
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
         env:
