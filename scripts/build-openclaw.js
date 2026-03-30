@@ -32,22 +32,44 @@ try {
   log("pnpm not found, falling back to npm");
 }
 
-// 2. Build OpenClaw source (architecture-independent)
+// 2. Check if OpenClaw source exists and is valid
+if (!fs.existsSync(OPENCLAW_SRC)) {
+  error(`OpenClaw source not found at ${OPENCLAW_SRC}`);
+  error(`Expected OpenClaw to be cloned by GitHub Actions cache or manually`);
+  process.exit(1);
+}
+
+// Check if package.json exists (basic validation)
+const openclawPackageJson = path.join(OPENCLAW_SRC, "package.json");
+if (!fs.existsSync(openclawPackageJson)) {
+  error(`OpenClaw package.json not found at ${openclawPackageJson}`);
+  error(`The OpenClaw repository may not have been cloned properly`);
+  process.exit(1);
+}
+
+// 3. Build OpenClaw source (architecture-independent)
 log(`Building OpenClaw source from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
   // Use --no-frozen-lockfile in CI to avoid lockfile checksum mismatch
   const installCmd = pkgManager === "pnpm" && process.env.CI
     ? `${pkgManager} install --no-frozen-lockfile`
     : `${pkgManager} install`;
+  
+  log(`Running: ${installCmd}`);
   execSync(installCmd, { cwd: OPENCLAW_SRC, stdio: "inherit" });
+  
+  log(`Running: ${pkgManager} run build`);
   execSync(`${pkgManager} run build`, { cwd: OPENCLAW_SRC, stdio: "inherit" });
+  
   log(`Building OpenClaw UI...`);
   execSync(`${pkgManager} run ui:build`, {
     cwd: OPENCLAW_SRC,
     stdio: "inherit",
   });
 } catch (e) {
-  error("Failed to build OpenClaw");
+  error(`Failed to build OpenClaw: ${e.message}`);
+  error(`Working directory: ${OPENCLAW_SRC}`);
+  error(`Package manager: ${pkgManager}`);
   process.exit(1);
 }
 
