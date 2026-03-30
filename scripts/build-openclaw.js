@@ -25,11 +25,16 @@ if (!fs.existsSync(OPENCLAW_SRC)) {
 
 // 1. Determine Package Manager and build source
 let pkgManager = "npm";
-try {
-  execSync("pnpm --version", { stdio: "ignore" });
-  pkgManager = "pnpm";
-} catch (e) {
-  log("pnpm not found, falling back to npm");
+// 在 Windows 上强制使用 npm，避免 pnpm 的权限问题
+if (process.platform !== 'win32') {
+  try {
+    execSync("pnpm --version", { stdio: "ignore" });
+    pkgManager = "pnpm";
+  } catch (e) {
+    log("pnpm not found, falling back to npm");
+  }
+} else {
+  log("Windows platform detected, using npm to avoid pnpm permission issues");
 }
 
 // 2. Check if OpenClaw source exists and is valid
