@@ -20,8 +20,6 @@ extraResources:
     to: node/bin
     filter:
       - "node"
-  - from: resources/icon.icns
-    to: icon.icns
   - from: scripts/
     to: scripts/
     filter:
@@ -40,7 +38,7 @@ mac:
   category: public.app-category.productivity
   hardenedRuntime: true
   gatekeeperAssess: false
-  icon: resources/icon.png
+  icon: resources/icon.icns
 win:
   target: nsis
   artifactName: ${productName}-Setup-${version}.${ext}
