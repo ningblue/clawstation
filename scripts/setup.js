@@ -21,7 +21,7 @@ const CONFIG = {
     }
   },
   node: {
-    version: '22.14.0',
+    version: '22.22.2',
     platforms: {
       win32: { arch: 'x64', ext: 'zip' },
       darwin: { arch: 'arm64', ext: 'tar.gz' },

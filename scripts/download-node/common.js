@@ -2,7 +2,7 @@
  * Node.js 下载器 - 共享模块
  */
 
-const NODE_VERSION = process.env.NODE_VERSION || '22.14.0';
+const NODE_VERSION = process.env.NODE_VERSION || '22.22.2';
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
