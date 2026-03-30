@@ -35,14 +35,10 @@ function extract(archivePath, destDir) {
 async function download(targetArch) {
   const downloadDir = common.getDownloadDir();
 
-  // Windows 使用 zip 格式
-  const nodePlatform = 'win';
-  const electronBuilderPlatform = 'win';
-  const ext = 'zip';
+  // 使用 common 模块获取平台信息
+  const { electronBuilderPlatform, nodePlatform, ext } = common.getPlatformNames('win32');
 
   // 构建下载 URL（华为镜像优先，官方 CDN 回退）
-  // 平台名称映射：Node.js 官方下载使用 'win' 而不是 'win32'
-  const nodePlatform = platform === 'win32' ? 'win' : platform === 'darwin' ? 'darwin' : platform;
   const filename = `node-v${common.NODE_VERSION}-${nodePlatform}-${targetArch}.${ext}`;
   const mirrorUrl = `https://mirrors.huaweicloud.com/nodejs/v${common.NODE_VERSION}/${filename}`;
   const officialUrl = `https://nodejs.org/dist/v${common.NODE_VERSION}/${filename}`;
