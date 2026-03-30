@@ -55,10 +55,15 @@ if (!fs.existsSync(openclawPackageJson)) {
 // 3. Build OpenClaw source (architecture-independent)
 log(`Building OpenClaw source from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
-  // Use --no-frozen-lockfile in CI to avoid lockfile checksum mismatch
-  const installCmd = pkgManager === "pnpm" && process.env.CI
-    ? `${pkgManager} install --no-frozen-lockfile`
-    : `${pkgManager} install`;
+  let installCmd;
+  if (pkgManager === "pnpm" && process.env.CI) {
+    installCmd = `${pkgManager} install --no-frozen-lockfile`;
+  } else if (pkgManager === "npm") {
+    // npm 在 Windows 上需要特殊标志处理依赖冲突
+    installCmd = `npm install --legacy-peer-deps`;
+  } else {
+    installCmd = `${pkgManager} install`;
+  }
   
   log(`Running: ${installCmd}`);
   execSync(installCmd, { cwd: OPENCLAW_SRC, stdio: "inherit" });
