@@ -8,11 +8,13 @@ export default defineConfig({
   base: "./",
   css: {
     devSourcemap: true,
+    minify: false,
   },
   build: {
     outDir: path.join(__dirname, "dist", "renderer"),
     emptyOutDir: true,
     cssCodeSplit: true,
+    cssMinify: false,
     rollupOptions: {
       input: {
         main: path.join(__dirname, "src", "renderer", "index.html"),

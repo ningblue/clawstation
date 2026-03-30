@@ -458,14 +458,14 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
           <div className="engine-process-info" style={{
             marginTop: '16px',
             padding: '12px',
-            backgroundColor: 'var(--bg-tertiary, #f8fafc)',
+            backgroundColor: 'var(--bg-tertiary)',
             borderRadius: '8px',
-            border: '1px solid var(--border-color, #e2e8f0)',
+            border: '1px solid var(--border-color)',
           }}>
             <div style={{
               fontSize: '13px',
               fontWeight: 500,
-              color: 'var(--text-primary, #1e293b)',
+              color: 'var(--text-primary)',
               marginBottom: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -481,16 +481,16 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
               fontSize: '12px',
             }}>
               <div>
-                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>进程名</div>
-                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.processName}</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>进程名</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.processName}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>PID</div>
-                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.pid}</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>PID</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.pid}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary, #64748b)', marginBottom: '2px' }}>端口</div>
-                <div style={{ color: 'var(--text-primary, #1e293b)', fontWeight: 500 }}>{processInfo.port}</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>端口</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.port}</div>
               </div>
             </div>
           </div>
@@ -500,7 +500,7 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
         <div style={{
           marginTop: '16px',
           paddingTop: '16px',
-          borderTop: '1px solid var(--border-color, #e2e8f0)',
+          borderTop: '1px solid var(--border-color)',
         }}>
           <button
             className="btn btn-sm"
@@ -510,8 +510,8 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              color: engineStatus === 'running' ? '#9ca3af' : '#ef4444',
-              borderColor: engineStatus === 'running' ? '#9ca3af' : '#ef4444',
+              color: engineStatus === 'running' ? 'var(--text-tertiary)' : 'var(--error-text)',
+              borderColor: engineStatus === 'running' ? 'var(--text-tertiary)' : 'var(--error-text)',
               cursor: engineStatus === 'running' ? 'not-allowed' : 'pointer',
             }}
           >
@@ -522,7 +522,7 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
           </button>
           <div style={{
             fontSize: '11px',
-            color: 'var(--text-secondary, #64748b)',
+            color: 'var(--text-secondary)',
             marginTop: '6px',
           }}>
             {engineStatus === 'running'
@@ -727,8 +727,8 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
       <div className="settings-section-title">AI 模型</div>
 
       {/* 当前模型 */}
-      <div className="current-model-display" style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: 'var(--bg-secondary, #f9fafb)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--text-secondary, #6b7280)' }}>当前使用</div>
+      <div className="current-model-display" style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>当前使用</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500 }}>
           {currentModel ? (
             <>
@@ -747,19 +747,19 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
           <span>模型供应商</span>
         </div>
 
-        <div className="ai-model-browser" style={{ display: 'flex', border: '1px solid var(--border-color, #e5e7eb)', borderRadius: '8px', overflow: 'hidden', minHeight: '320px', maxHeight: '480px' }}>
+        <div className="ai-model-browser" style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', minHeight: '320px', maxHeight: '480px' }}>
           {/* 左栏: 供应商分组 */}
-          <div style={{ width: '140px', borderRight: '1px solid var(--border-color, #f3f4f6)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-secondary, #fafafa)', flexShrink: 0 }}>
+          <div style={{ width: '140px', borderRight: '1px solid var(--border-color)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-secondary)', flexShrink: 0 }}>
             {providerGroupList.map(group => (
               <div
                 key={group.groupId}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 8px',
                   borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginBottom: '2px',
-                  backgroundColor: selectedGroupId === group.groupId ? 'var(--primary-light, #eff6ff)' : 'transparent',
-                  color: selectedGroupId === group.groupId ? 'var(--primary, #2563eb)' : group.hasAnyApiKey ? 'var(--text-primary, #374151)' : 'var(--text-secondary, #9ca3af)',
+                  backgroundColor: selectedGroupId === group.groupId ? 'var(--primary-light)' : 'transparent',
+                  color: selectedGroupId === group.groupId ? 'var(--primary-color)' : group.hasAnyApiKey ? 'var(--text-primary)' : 'var(--text-tertiary)',
                   fontWeight: selectedGroupId === group.groupId ? 500 : 400,
-                  borderLeft: group.hasAnyApiKey ? '3px solid #22c55e' : '3px solid transparent',
+                  borderLeft: group.hasAnyApiKey ? '3px solid var(--success-text)' : '3px solid transparent',
                 }}
                 onClick={() => handleGroupClick(group.groupId)}
               >
@@ -770,34 +770,34 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
 
           {/* 中栏: 子分类 (仅多子分类时显示) */}
           {showMiddleColumn && selectedGroup && (
-            <div style={{ width: '110px', borderRight: '1px solid var(--border-color, #f3f4f6)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-tertiary, #f5f5f5)', flexShrink: 0 }}>
+            <div style={{ width: '110px', borderRight: '1px solid var(--border-color)', overflowY: 'auto', padding: '4px', backgroundColor: 'var(--bg-tertiary)', flexShrink: 0 }}>
               {selectedGroup.subCategories.map(sc => (
                 <div
                   key={sc.id}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 8px',
                     borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginBottom: '2px',
-                    backgroundColor: selectedSubCategoryId === sc.id ? 'var(--primary-light, #eff6ff)' : 'transparent',
-                    color: selectedSubCategoryId === sc.id ? 'var(--primary, #2563eb)' : sc.hasApiKey ? 'var(--text-primary, #374151)' : 'var(--text-secondary, #9ca3af)',
+                    backgroundColor: selectedSubCategoryId === sc.id ? 'var(--primary-light)' : 'transparent',
+                    color: selectedSubCategoryId === sc.id ? 'var(--primary-color)' : sc.hasApiKey ? 'var(--text-primary)' : 'var(--text-tertiary)',
                     fontWeight: selectedSubCategoryId === sc.id ? 500 : 400,
                   }}
                   onClick={() => handleSubCategoryClick(sc.id)}
                 >
                   <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.label}</span>
-                  <span style={{ fontSize: '10px', color: '#9ca3af', backgroundColor: '#f3f4f6', padding: '1px 4px', borderRadius: '4px' }}>{sc.models.length}</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-hover)', padding: '1px 4px', borderRadius: '4px' }}>{sc.models.length}</span>
                 </div>
               ))}
             </div>
           )}
 
           {/* 右栏: 模型列表 */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px', backgroundColor: 'var(--bg-primary, #ffffff)' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px', backgroundColor: 'var(--bg-primary)' }}>
             {!selectedGroup ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary, #6b7280)', fontSize: '13px' }}>
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
                 请从左侧选择供应商
               </div>
             ) : displaySubCategories.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary, #6b7280)', fontSize: '13px' }}>
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
                 未找到子分类
               </div>
             ) : (
@@ -805,10 +805,10 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                 <div key={sc.id} style={{ marginBottom: '12px' }}>
                   {/* 子分类标题 */}
                   {selectedGroup.hasMultipleSubCategories && (
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary, #6b7280)', textTransform: 'uppercase', letterSpacing: '0.3px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span>{sc.label}</span>
                       {!sc.hasApiKey && (
-                        <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 500, backgroundColor: '#fef3c7', color: '#92400e', textTransform: 'none', letterSpacing: 0 }}>需配置</span>
+                        <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 500, backgroundColor: 'var(--warning-bg)', color: 'var(--warning-text)', textTransform: 'none', letterSpacing: 0 }}>需配置</span>
                       )}
                     </div>
                   )}
@@ -817,10 +817,10 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', marginBottom: '4px' }}>
                     {sc.hasApiKey ? (
                       <>
-                        <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500 }}>API Key 已配置</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success-text)', fontWeight: 500 }}>API Key 已配置</span>
                         <button
                           className="btn btn-sm"
-                          style={{ fontSize: '11px', padding: '2px 8px', color: '#ef4444' }}
+                          style={{ fontSize: '11px', padding: '2px 8px', color: 'var(--error-text)' }}
                           onClick={() => handleRemoveApiKey(sc.providerId)}
                           disabled={loading}
                         >
@@ -977,14 +977,24 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user }) => {
  * 关于面板
  */
 const AboutSettings: React.FC = () => {
+  const [version, setVersion] = React.useState<string>('');
+
+  React.useEffect(() => {
+    window.electronAPI.getAppInfo().then((info) => {
+      setVersion(info.version);
+    }).catch(() => {
+      setVersion('unknown');
+    });
+  }, []);
+
   return (
     <div className="settings-section">
       <div className="settings-section-title">关于</div>
 
       <div className="about-card">
-        <div className="about-logo">XA</div>
+        <div className="about-logo">XClaw</div>
         <div className="about-name">XClaw</div>
-        <div className="about-version">版本 0.1.0</div>
+        <div className="about-version">版本 {version || '加载中...'}</div>
         <div className="about-description">
           AI数字员工桌面应用
         </div>

@@ -3,19 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' http://127.0.0.1:18791 data:; img-src 'self' data: blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' http://127.0.0.1:18791 https: data:; img-src 'self' https: data: blob:;">
   <title>XClaw - AI数字员工</title>
-  <link rel="stylesheet" href="./styles/chat.css">
-  <link rel="stylesheet" href="./components/ToolCard/styles.css">
   <!-- 引入 highlight.js 用于代码高亮 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <link rel="stylesheet" href="./styles/index.css">
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- React 应用入口 -->
-  <script src="./main.tsx" type="module"></script>
+  <script type="module" src="./main.tsx"></script>
 </body>
 </html>

@@ -53,9 +53,17 @@ export async function setupDatabase(): Promise<Database.Database> {
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       preferences TEXT DEFAULT '{}'
     )
   `);
+
+  // 为已有数据库添加 updatedAt 字段（如果不存在）
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN updatedAt DATETIME');
+  } catch (e) {
+    // 字段可能已存在，忽略错误
+  }
 
   // 创建对话表
   db.exec(`
