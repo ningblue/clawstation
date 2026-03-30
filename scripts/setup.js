@@ -54,26 +54,68 @@ function getPlatform() {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
-// 下载文件
-async function downloadFile(url, dest) {
+// 下载文件（支持多个 URL 回退）
+async function downloadFile(urls, dest) {
+  const urlList = Array.isArray(urls) ? urls : [urls];
+  
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, { timeout: 30000 }, (response) => {
-      if (response.statusCode === 302 || response.statusCode === 301) {
-        // 重定向
-        downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+    let currentIndex = 0;
+    
+    const tryNext = () => {
+      if (currentIndex >= urlList.length) {
+        reject(new Error('All download URLs failed'));
         return;
       }
-      if (response.statusCode !== 200) {
-        reject(new Error(`Download failed: ${response.statusCode}`));
-        return;
+      
+      const url = urlList[currentIndex++];
+      console.log(`[setup] Trying: ${url}`);
+      
+      // 清理部分文件
+      if (fs.existsSync(dest)) {
+        fs.unlinkSync(dest);
       }
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        resolve();
-      });
-    }).on('error', reject);
+      
+      const file = fs.createWriteStream(dest);
+      
+      const request = (targetUrl) => {
+        https.get(targetUrl, { timeout: 60000 }, (response) => {
+          if (response.statusCode === 302 || response.statusCode === 301) {
+            // 重定向
+            const location = response.headers.location;
+            if (location && !location.startsWith('http')) {
+              // 相对重定向 - 重建 URL
+              const base = new URL(targetUrl);
+              request(new URL(location, base).href);
+            } else {
+              request(location);
+            }
+            return;
+          }
+          
+          if (response.statusCode !== 200) {
+            file.close();
+            console.log(`[setup] Failed with status ${response.statusCode}`);
+            tryNext();
+            return;
+          }
+          
+          response.pipe(file);
+          
+          file.on('finish', () => {
+            file.close();
+            resolve();
+          });
+        }).on('error', (err) => {
+          console.log(`[setup] Download error: ${err.message}`);
+          fs.unlink(dest, () => {});
+          tryNext();
+        });
+      };
+      
+      request(url);
+    };
+    
+    tryNext();
   });
 }
 
@@ -165,18 +207,19 @@ async function setupNode() {
   ensureDir(nodeDir);
   ensureDir(CACHE_DIR);
 
-  // 下载地址
+  // 下载地址（华为镜像优先，官方 CDN 回退）
   const filename = `node-v${CONFIG.node.version}-${platform}-${config.arch}.${config.ext}`;
   const cachePath = path.join(CACHE_DIR, filename);
-  const mirrorUrl = 'https://mirrors.huaweicloud.com/nodejs';
-  const downloadUrl = `${mirrorUrl}/v${CONFIG.node.version}/${filename}`;
+  const mirrorUrl = `https://mirrors.huaweicloud.com/nodejs/v${CONFIG.node.version}/${filename}`;
+  const officialUrl = `https://nodejs.org/dist/v${CONFIG.node.version}/${filename}`;
+  const downloadUrls = [mirrorUrl, officialUrl];
 
   // 检查缓存
   if (fs.existsSync(cachePath)) {
     log(`Using cached ${filename}`);
   } else {
     log(`Downloading Node.js ${CONFIG.node.version}...`);
-    await downloadFile(downloadUrl, cachePath);
+    await downloadFile(downloadUrls, cachePath);
     log('Download complete');
   }
 
