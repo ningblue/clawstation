@@ -25,16 +25,11 @@ if (!fs.existsSync(OPENCLAW_SRC)) {
 
 // 1. Determine Package Manager and build source
 let pkgManager = "npm";
-// 在 Windows 上强制使用 npm，避免 pnpm 的权限问题
-if (process.platform !== 'win32') {
-  try {
-    execSync("pnpm --version", { stdio: "ignore" });
-    pkgManager = "pnpm";
-  } catch (e) {
-    log("pnpm not found, falling back to npm");
-  }
-} else {
-  log("Windows platform detected, using npm to avoid pnpm permission issues");
+try {
+  execSync("pnpm --version", { stdio: "ignore" });
+  pkgManager = "pnpm";
+} catch (e) {
+  log("pnpm not found, falling back to npm");
 }
 
 // 2. Check if OpenClaw source exists and is valid
@@ -56,10 +51,12 @@ if (!fs.existsSync(openclawPackageJson)) {
 log(`Building OpenClaw source from ${OPENCLAW_SRC} using ${pkgManager}...`);
 try {
   let installCmd;
-  if (pkgManager === "pnpm" && process.env.CI) {
-    installCmd = `${pkgManager} install --no-frozen-lockfile`;
+  if (pkgManager === "pnpm") {
+    // Windows 上使用 isolated node-linker 避免符号链接 EPERM 问题
+    const isolatedFlag = process.platform === "win32" ? " --node-linker=isolated" : "";
+    const noFrozenFlag = process.env.CI ? " --no-frozen-lockfile" : "";
+    installCmd = `pnpm install${noFrozenFlag}${isolatedFlag}`;
   } else if (pkgManager === "npm") {
-    // npm 在 Windows 上需要特殊标志处理依赖冲突
     installCmd = `npm install --legacy-peer-deps`;
   } else {
     installCmd = `${pkgManager} install`;
