@@ -289,18 +289,7 @@ rm -rf ~/Library/Application\ Support/clawstation/Cache dist/renderer/* && npm r
 - `src/renderer/` - 渲染进程代码
 - `lib/openclaw/` - OpenClaw 源代码（遇到 OpenClaw 相关问题时，优先查看此目录源码，而非 `resources/openclaw/dist/` 编译产物）
 
-## 开发提示
 
-### OpenClaw 问题排查
-
-遇到 OpenClaw 相关问题时（如配置验证、插件问题等），请优先查看 `lib/openclaw/` 目录的源代码，而不是搜索 `resources/openclaw/dist/` 目录的编译后代码。源代码更易理解和调试。
-
-### better-sqlite3 原生模块架构不匹配
-
-**问题原因：**
-- Electron 使用内置的 Node.js 运行时，与系统 Node.js 的 ABI 不同
-- 从其他机器（如 Windows x64）拉取代码后，原生模块是为错误架构编译的
-- `npm install` 后原生模块会重置为系统 Node.js 版本
 
 **解决方案：**
 
@@ -318,3 +307,23 @@ npx electron-rebuild -f -w better-sqlite3
 **预防措施：**
 - `package.json` 已配置 `postinstall` 自动处理
 - 跨平台拉代码后，先运行 `npm run rebuild:native` 再启动
+
+## 会话管理规则（强制执行）
+
+### 会话开始时（自动执行）
+1. 读取项目根目录的 `STATE.md`
+2. 读取最近的 3 条 git commit (`git log --oneline -3`)
+3. 如果有未提交的改动，查看 `git diff`
+4. 向用户汇报："当前工作流状态：[STATE.md 中的进行中任务]，是否继续？"
+
+### 会话结束时（用户说"结束"或"停"时触发）
+1. 更新 `STATE.md`：
+   - 记录已完成的改动（基于 git diff）
+   - 更新"当前进行中的任务"进度百分比
+   - 列出"下一步"（3个优先级最高的）
+   - 记录关键代码位置
+   - 记录遇到的坑/注意事项
+2. 如果有未提交的代码改动，提醒用户："建议先 WIP commit：xxx"
+
+### 定期自动检查（每 30 分钟或上下文快满时）
+- 主动询问："是否需要更新 STATE.md 保存当前进度？"
