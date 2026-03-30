@@ -49,6 +49,13 @@ for (const arch of ARCHITECTURES) {
   cleanDirectory(archSourceDir);
 
   try {
+    // Ensure 7za binary is executable (npm install --ignore-scripts may skip chmod)
+    try {
+      fs.chmodSync(sevenBin.path7za, 0o755);
+    } catch (e) {
+      // ignore
+    }
+
     execSync(`"${sevenBin.path7za}" a "${output7zPath}" . -mx=3 -ms=on -mmt=on`, {
       cwd: archSourceDir,
       stdio: "inherit",
