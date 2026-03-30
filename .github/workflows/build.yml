@@ -138,7 +138,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build macOS
-        run: npm run build -- --mac --${{ matrix.arch }}
+        run: npm run build -- --mac --${{ matrix.arch }} --dir
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
