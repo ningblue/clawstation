@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: lib/openclaw
-          key: openclaw-${{ runner.os }}-${{ matrix.arch }}-v1
+          key: openclaw-${{ runner.os }}-${{ matrix.arch }}-${{ env.OPENCLAW_VERSION }}
 
       - name: Fetch OpenClaw dependency
         if: steps.cache-openclaw.outputs.cache-hit != 'true'
@@ -116,7 +116,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/openclaw
-          key: openclaw-build-${{ runner.os }}-${{ matrix.arch }}-v1
+          key: openclaw-build-${{ runner.os }}-${{ matrix.arch }}-${{ env.OPENCLAW_VERSION }}
 
       - name: Install dependencies
         run: npm install --ignore-scripts
@@ -189,7 +189,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: lib/openclaw
-          key: openclaw-${{ runner.os }}-x64-v1
+          key: openclaw-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
 
       - name: Fetch OpenClaw dependency
         if: steps.cache-openclaw.outputs.cache-hit != 'true'
@@ -202,7 +202,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/openclaw
-          key: openclaw-build-${{ runner.os }}-x64-v1
+          key: openclaw-build-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
 
       - name: Install dependencies
         run: npm install --ignore-scripts
@@ -285,7 +285,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: lib/openclaw
-          key: openclaw-${{ runner.os }}-x64-v1
+          key: openclaw-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
 
       - name: Fetch OpenClaw dependency
         if: steps.cache-openclaw.outputs.cache-hit != 'true'
@@ -297,7 +297,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/openclaw
-          key: openclaw-build-${{ runner.os }}-x64-v1
+          key: openclaw-build-${{ runner.os }}-x64-${{ env.OPENCLAW_VERSION }}
 
       - name: Install dependencies
         run: npm install --ignore-scripts
