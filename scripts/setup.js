@@ -208,7 +208,9 @@ async function setupNode() {
   ensureDir(CACHE_DIR);
 
   // 下载地址（华为镜像优先，官方 CDN 回退）
-  const filename = `node-v${CONFIG.node.version}-${platform}-${config.arch}.${config.ext}`;
+  // 平台名称映射：Node.js 官方下载使用 'win' 而不是 'win32'
+  const nodePlatform = platform === 'win32' ? 'win' : platform === 'darwin' ? 'darwin' : platform;
+  const filename = `node-v${CONFIG.node.version}-${nodePlatform}-${config.arch}.${config.ext}`;
   const cachePath = path.join(CACHE_DIR, filename);
   const mirrorUrl = `https://mirrors.huaweicloud.com/nodejs/v${CONFIG.node.version}/${filename}`;
   const officialUrl = `https://nodejs.org/dist/v${CONFIG.node.version}/${filename}`;
