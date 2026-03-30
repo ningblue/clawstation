@@ -73,7 +73,7 @@ error TS2341: Property 'killProcess' is private
 **严重程度**: 阻塞
 
 **描述**: 
-根据build-simplification.md设计，应该有以下命令：
+根据当时的构建流程设计，应该有以下命令：
 - npm run setup:dev
 - npm run setup:dev:full  
 - npm run check:env
@@ -234,9 +234,7 @@ npm run setup:dev:full      # 未实现
 
 ### 参考文件
 
-- 设计文档: docs/build-simplification.md
-- 详细报告: docs/cross-platform-test-report.md
-- 精简报告: docs/cross-platform-test-report-v2.md
+- 相关内部设计与测试过程文档已从公开仓库移除
 
 ---
 

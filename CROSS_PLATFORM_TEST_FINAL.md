@@ -247,10 +247,9 @@ npm run build               # ❌ 依赖build:main
 
 ### 参考文件
 
-- 测试报告: `docs/cross-platform-test-report.md`
 - 路径配置: `src/backend/services/openclaw.service.ts:1241`
 - Setup脚本: `scripts/setup.js`
-- 构建文档: `docs/build-simplification.md`
+- 相关内部测试与构建过程文档已从公开仓库移除
 
 ---
 

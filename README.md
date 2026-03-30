@@ -10,8 +10,6 @@
 
 X-Claw 是一个跨平台的 AI 数字员工桌面应用，基于 Electron 框架开发，内置 OpenClaw AI 引擎。用户安装应用后即可直接使用 AI 对话功能，无需配置额外环境。
 
-![X-Claw Screenshot](./docs/screenshot.png)
-
 ## 核心特性
 
 - **开箱即用** - 安装即可使用，无需配置环境
