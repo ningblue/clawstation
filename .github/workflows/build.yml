@@ -138,9 +138,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build macOS
-        run: npm run build -- --mac --${{ matrix.arch }} --dir
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build:main && npm run build:renderer && npx electron-builder --mac --${{ matrix.arch }} --dir --publish never
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
@@ -237,9 +235,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Windows
-        run: npm run build -- --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build:main && npm run build:renderer && npx electron-builder --win --publish never
 
       - name: Upload NSIS artifact
         uses: actions/upload-artifact@v4
