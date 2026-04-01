@@ -16,10 +16,8 @@ extraResources:
   - from: resources/openclaw-x64.7z
     to: openclaw-x64.7z
   # Node.js 运行时 - 架构特定
-  - from: resources/node/${os}-${arch}/bin
-    to: node/bin
-    filter:
-      - "node"
+  - from: resources/node/${os}-${arch}/node
+    to: node
   - from: scripts/
     to: scripts/
     filter:

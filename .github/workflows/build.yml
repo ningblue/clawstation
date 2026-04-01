@@ -305,7 +305,7 @@ jobs:
           }
           
           # 检查 Node.js 运行时
-          if (Test-Path "release/win-unpacked/resources/node/bin/node.exe") {
+          if (Test-Path "release/win-unpacked/resources/node/node.exe") {
             Write-Host "✅ Node.js runtime included"
           } else {
             Write-Host "❌ Node.js runtime NOT found"
