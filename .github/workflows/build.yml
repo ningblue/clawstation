@@ -154,7 +154,7 @@ jobs:
         run: |
           echo "Checking build artifacts for ${{ matrix.arch }}..."
           
-          APP_PATH="release/mac-${{ matrix.arch }}/XClaw.app/Contents/Resources"
+          APP_PATH="release/mac/XClaw.app/Contents/Resources"
           
           # 检查 openclaw 目录是否被解压
           if [ -d "$APP_PATH/openclaw" ]; then
