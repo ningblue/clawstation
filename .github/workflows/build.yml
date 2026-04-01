@@ -121,6 +121,16 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Verify 7za available
+        run: |
+          if [ -f "node_modules/7zip-bin/mac/${{ matrix.arch }}/7za" ]; then
+            ls -lh "node_modules/7zip-bin/mac/${{ matrix.arch }}/7za"
+            echo "✅ 7za found for ${{ matrix.arch }}"
+          else
+            echo "❌ 7za not found for ${{ matrix.arch }}"
+            exit 1
+          fi
+
       - name: Build openclaw
         run: node scripts/build-openclaw.js
 
@@ -139,6 +149,29 @@ jobs:
 
       - name: Build macOS
         run: npm run build:main && npm run build:renderer && npx electron-builder --mac --${{ matrix.arch }} --publish never
+
+      - name: Verify build artifacts
+        run: |
+          echo "Checking build artifacts for ${{ matrix.arch }}..."
+          
+          APP_PATH="release/mac-${{ matrix.arch }}/XClaw.app/Contents/Resources"
+          
+          # 检查 openclaw 目录是否被解压
+          if [ -d "$APP_PATH/openclaw" ]; then
+            echo "✅ openclaw directory extracted"
+            ls -la "$APP_PATH/openclaw" | head -5
+          else
+            echo "❌ openclaw directory NOT found"
+            exit 1
+          fi
+          
+          # 检查 Node.js 运行时
+          if [ -f "$APP_PATH/node/bin/node" ]; then
+            echo "✅ Node.js runtime included"
+          else
+            echo "❌ Node.js runtime NOT found"
+            exit 1
+          fi
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
@@ -218,6 +251,18 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Verify 7za.exe available
+        shell: powershell
+        run: |
+          $7zaPath = "node_modules/7zip-bin/win/x64/7za.exe"
+          if (Test-Path $7zaPath) {
+            $size = (Get-Item $7zaPath).Length / 1MB
+            Write-Host "✅ 7za.exe found: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Host "❌ 7za.exe not found at $7zaPath"
+            exit 1
+          }
+
       - name: Build openclaw
         run: node scripts/build-openclaw.js
 
@@ -236,6 +281,36 @@ jobs:
 
       - name: Build Windows
         run: npm run build:main && npm run build:renderer && npx electron-builder --win --publish never
+
+      - name: Verify build artifacts
+        shell: powershell
+        run: |
+          Write-Host "Checking build artifacts..."
+          
+          # 检查 7za.exe 是否被复制到 resources
+          if (Test-Path "release/win-unpacked/resources/7za.exe") {
+            Write-Host "✅ 7za.exe included in resources"
+          } else {
+            Write-Host "❌ 7za.exe NOT found in resources - installer will fail!"
+            exit 1
+          }
+          
+          # 检查 openclaw-x64.7z 是否存在
+          if (Test-Path "release/win-unpacked/resources/openclaw-x64.7z") {
+            $size = (Get-Item "release/win-unpacked/resources/openclaw-x64.7z").Length / 1MB
+            Write-Host "✅ openclaw-x64.7z included: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Host "❌ openclaw-x64.7z NOT found in resources"
+            exit 1
+          }
+          
+          # 检查 Node.js 运行时
+          if (Test-Path "release/win-unpacked/resources/node/bin/node.exe") {
+            Write-Host "✅ Node.js runtime included"
+          } else {
+            Write-Host "❌ Node.js runtime NOT found"
+            exit 1
+          }
 
       - name: Upload NSIS artifact
         uses: actions/upload-artifact@v4

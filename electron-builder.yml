@@ -44,7 +44,8 @@ win:
   artifactName: ${productName}-Setup-${version}.${ext}
   icon: resources/icon.png
   extraResources:
-    - from: resources/7za.exe
+    # 使用 7zip-bin 包中的 7za.exe（打包时自动复制）
+    - from: node_modules/7zip-bin/win/x64/7za.exe
       to: 7za.exe
 linux:
   target: AppImage
