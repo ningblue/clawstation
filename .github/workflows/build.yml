@@ -154,8 +154,15 @@ jobs:
         run: |
           echo "Checking build artifacts for ${{ matrix.arch }}..."
           
-          APP_PATH="release/mac/XClaw.app/Contents/Resources"
-          
+          APP=$(find release -maxdepth 3 -name "XClaw.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "❌ XClaw.app not found in release directory"
+            ls -la release/ || true
+            exit 1
+          fi
+          APP_PATH="$APP/Contents/Resources"
+          echo "Found app at: $APP_PATH"
+
           # 检查 openclaw 目录是否被解压
           if [ -d "$APP_PATH/openclaw" ]; then
             echo "✅ openclaw directory extracted"
