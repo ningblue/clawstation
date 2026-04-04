@@ -877,30 +877,17 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
         </div>
       )}
 
-      {/* 提示文本 */}
-      <div className="model-config-hint">
-        *可选用自定义大模型配置，使用时请遵循相关法律法规
-      </div>
-
-      {/* 确认/取消按钮 */}
-      <div className="model-config-actions">
+      {/* 提示 + 确认按钮 */}
+      <div className="model-config-footer">
+        <div className="model-config-hint">
+          *可选用自定义大模型配置，使用时请遵循相关法律法规
+        </div>
         <button
           className="model-config-btn-confirm"
           onClick={handleConfirm}
           disabled={loading || isRestarting}
         >
           {loading ? '保存中...' : '确 认'}
-        </button>
-        <button
-          className="model-config-btn-cancel"
-          onClick={() => {
-            // 重置到当前实际状态
-            setApiKey('');
-            setShowApiKey(false);
-          }}
-          disabled={loading}
-        >
-          取 消
         </button>
       </div>
     </div>
