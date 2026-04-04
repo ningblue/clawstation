@@ -9,26 +9,21 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+// 同步检测暗黑模式
+const isDarkMode = () =>
+  typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
 // 自定义代码块组件
 const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
-  const isInline = inline || !className || !String(children).includes('\n');
-
-  if (isInline) {
-    return (
-      <code
-        className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground"
-        {...props}
-      >
-        {children}
-      </code>
-    );
-  }
-
-  // 代码块
+  // 所有 hooks 必须在条件 return 之前调用
   const [copied, setCopied] = useState(false);
+  const isInline = inline || !className || !String(children).includes('\n');
+  const isDark = isDarkMode();
+
   const match = /language-(\w+)/.exec(className || '');
   const language = match ? match[1] : '';
   const code = String(children).replace(/\n$/, '');
@@ -43,10 +38,27 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
     }
   }, [code]);
 
+  if (isInline) {
+    return (
+      <code
+        className={cn(
+          "rounded px-1.5 py-0.5 font-mono text-sm",
+          isDark ? "bg-zinc-700 text-zinc-200" : "bg-muted text-foreground"
+        )}
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  }
+
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-border">
-      <div className="flex items-center justify-between bg-muted px-4 py-2">
-        <span className="text-xs text-muted-foreground">{language || 'text'}</span>
+      <div className={cn(
+        "flex items-center justify-between px-4 py-2",
+        isDark ? "bg-zinc-800" : "bg-muted"
+      )}>
+        <span className={cn("text-xs", isDark ? "text-zinc-400" : "text-muted-foreground")}>{language || 'text'}</span>
         <Button
           variant="ghost"
           size="sm"
@@ -75,7 +87,7 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
         </Button>
       </div>
       <SyntaxHighlighter
-        style={oneLight}
+        style={isDark ? oneDark : oneLight}
         language={language}
         PreTag="div"
         showLineNumbers={false}
@@ -83,7 +95,6 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
           margin: 0,
           borderRadius: '0 0 8px 8px',
           fontSize: '0.8125rem',
-          background: 'transparent',
           padding: '1rem',
         }}
         {...props}

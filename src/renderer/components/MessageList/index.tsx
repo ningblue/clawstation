@@ -241,7 +241,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
       {/* 用户消息 */}
       {isUser ? (
         <div className="flex max-w-[80%] flex-col items-end gap-1">
-          <div className="rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-white dark:text-primary-foreground">
+          <div className="rounded-2xl rounded-br-sm bg-primary px-3.5 text-white dark:text-primary-foreground [&_.prose]:!text-inherit [&_.prose_a]:!text-white [&_.prose_a]:!underline [&_.prose_strong]:!text-inherit [&_.prose_code]:!text-inherit">
             {isEditing ? (
               <div className="space-y-2">
                 <textarea
@@ -287,7 +287,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, onDeleteMessage, onU
       ) : (
         /* AI消息 */
         <div className="flex max-w-[85%] flex-col gap-1">
-          <div className="rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2 text-foreground">
+          <div className="rounded-2xl rounded-bl-sm bg-muted px-3.5 text-foreground">
             {isEditing ? (
               <div className="space-y-2">
                 <textarea
@@ -356,7 +356,7 @@ const TypingIndicator: React.FC = () => {
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
         AI
       </div>
-      <div className="rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2">
+      <div className="rounded-2xl rounded-bl-sm bg-muted px-3.5">
         <div className="flex items-center gap-1">
           <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
           <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
@@ -506,7 +506,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
             AI
           </div>
-          <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2">
+          <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3.5">
             {streamingContent ? (
               <>
                 <MarkdownRenderer content={streamingContent} />

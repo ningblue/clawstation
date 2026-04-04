@@ -249,11 +249,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           "w-[240px] min-w-[240px]",
           // Mobile: fixed overlay
           "fixed inset-y-0 left-0 z-50 md:static md:z-auto",
-          isOpen ? "flex" : "hidden md:flex",
+          isOpen ? "" : "hidden",
         )}
       >
         {/* Header - 仅关闭按钮 */}
-        <div className="flex items-center h-10 px-2 shrink-0">
+        <div className="flex items-center justify-end h-10 px-4 shrink-0">
           <Button
             variant="ghost"
             size="icon-sm"

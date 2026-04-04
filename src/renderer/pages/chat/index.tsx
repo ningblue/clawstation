@@ -179,7 +179,7 @@ export const ChatPage: React.FC = () => {
             )}
           </div>
           {/* Electron drag area */}
-          <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+          <div className="h-full flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
           <div className="flex items-center gap-1 pr-2">
             <FeedbackButton onClick={handleFeedbackClick} />
             <WindowControls />
