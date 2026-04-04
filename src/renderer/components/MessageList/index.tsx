@@ -506,7 +506,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
             AI
           </div>
-          <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5">
+          <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2">
             {streamingContent ? (
               <>
                 <MarkdownRenderer content={streamingContent} />

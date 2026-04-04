@@ -229,7 +229,7 @@ const UserMessage: React.FC<{
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground">
+      <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-primary-foreground">
         <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
           {formatContent(message.content)}
         </div>
@@ -301,7 +301,7 @@ const AssistantMessage: React.FC<{
         )}
       </div>
 
-      <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5">
+      <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2">
         <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground">
           {formatContent(message.content)}
           {message.isStreaming && <StreamingCursor />}
