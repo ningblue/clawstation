@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -45,14 +45,14 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
 
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-border">
-      <div className="flex items-center justify-between bg-zinc-800 px-4 py-2">
-        <span className="text-xs text-zinc-400">{language || 'text'}</span>
+      <div className="flex items-center justify-between bg-muted px-4 py-2">
+        <span className="text-xs text-muted-foreground">{language || 'text'}</span>
         <Button
           variant="ghost"
           size="sm"
           className={cn(
-            "h-6 gap-1 text-xs text-zinc-400 hover:text-zinc-200",
-            copied && "text-green-400"
+            "h-6 gap-1 text-xs text-muted-foreground hover:text-foreground",
+            copied && "text-green-500"
           )}
           onClick={handleCopy}
         >
@@ -75,7 +75,7 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
         </Button>
       </div>
       <SyntaxHighlighter
-        style={oneDark}
+        style={oneLight}
         language={language}
         PreTag="div"
         showLineNumbers={false}
@@ -83,6 +83,8 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
           margin: 0,
           borderRadius: '0 0 8px 8px',
           fontSize: '0.8125rem',
+          background: 'transparent',
+          padding: '1rem',
         }}
         {...props}
       >
@@ -155,7 +157,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const { thinkingContent, mainContent } = parseMessageContent(content);
 
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none break-words prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
+    <div className="prose prose-neutral dark:prose-invert max-w-none break-words prose-pre:p-0 prose-pre:bg-transparent prose-code:before:content-none prose-code:after:content-none prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-table:border prose-table:border-border prose-th:border prose-th:border-border prose-th:px-3 prose-th:py-1.5 prose-th:bg-muted prose-td:border prose-td:border-border prose-td:px-3 prose-td:py-1.5 prose-tr:border-b prose-tr:border-border">
       {showThinking && thinkingContent && (
         <ThinkingBlock content={thinkingContent} />
       )}
