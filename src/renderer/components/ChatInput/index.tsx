@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { InlineModelPicker } from './InlineModelPicker';
 
 export interface ChatInputProps {
@@ -47,13 +49,17 @@ interface SmartPromptsProps {
 
 const SmartPrompts: React.FC<SmartPromptsProps> = ({ onSelect, disabled }) => {
   return (
-    <div className="smart-prompts">
-      <div className="smart-prompts-label">快捷提示:</div>
-      <div className="smart-prompts-list">
+    <div className="flex items-center gap-2 px-3 py-1.5">
+      <span className="text-xs text-muted-foreground shrink-0">快捷提示:</span>
+      <div className="flex flex-wrap items-center gap-1.5">
         {SMART_PROMPTS.map((item) => (
           <button
             key={item.text}
-            className="smart-prompt-btn"
+            className={cn(
+              "rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground",
+              "hover:bg-accent hover:text-accent-foreground transition-colors",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
             onClick={() => onSelect(item.prompt)}
             disabled={disabled}
           >
@@ -157,11 +163,16 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   }, [inputValue, adjustHeight]);
 
   return (
-    <div className="input-area">
-      <div className="input-container">
+    <div className="flex justify-center px-4 pb-4 pt-2">
+      <div className="w-full max-w-3xl rounded-xl border border-border bg-background shadow-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
         <textarea
           ref={textareaRef}
-          className="chat-input"
+          className={cn(
+            "w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm text-foreground",
+            "placeholder:text-muted-foreground",
+            "focus:outline-none",
+            "disabled:cursor-not-allowed disabled:opacity-50"
+          )}
           value={inputValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -171,24 +182,28 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           disabled={effectiveDisabled}
           rows={1}
         />
-        <div className="chat-input-footer">
-          <div className="chat-input-footer-left">
+        <div className="flex items-center justify-between px-3 pb-2">
+          <div className="flex items-center">
             <InlineModelPicker disabled={effectiveDisabled} />
           </div>
-          <div className="chat-input-footer-right">
+          <div className="flex items-center">
             {isStreaming ? (
-              <button
-                className="send-btn stop-btn"
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
                 onClick={onCancel}
                 title="停止生成"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <rect x="6" y="6" width="12" height="12" rx="2"/>
                 </svg>
-              </button>
+              </Button>
             ) : (
-              <button
-                className="send-btn"
+              <Button
+                variant="default"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
                 onClick={handleSend}
                 disabled={effectiveDisabled || !inputValue.trim()}
               >
@@ -196,7 +211,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
         </div>

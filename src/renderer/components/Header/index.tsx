@@ -4,6 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Settings, HelpCircle, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import type { EngineStatus } from '../../stores';
 
 export interface HeaderProps {
@@ -30,8 +34,8 @@ const EngineStatusIndicator: React.FC<{
 }> = ({ status, onRestart }) => {
   if (!status) {
     return (
-      <div className="engine-status checking">
-        <div className="status-indicator"></div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="size-2 rounded-full bg-yellow-500 animate-pulse" />
         <span>检查中...</span>
       </div>
     );
@@ -39,28 +43,38 @@ const EngineStatusIndicator: React.FC<{
 
   if (status.isRunning && status.isHealthy) {
     return (
-      <div className="engine-status running">
-        <div className="status-indicator"></div>
-        <span className="engine-status-text">AI引擎运行中</span>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="size-2 rounded-full bg-green-500" />
+        <span>AI引擎运行中</span>
       </div>
     );
   }
 
   if (status.isRunning && !status.isHealthy) {
     return (
-      <div className="engine-status stopped">
-        <div className="status-indicator"></div>
-        <span className="engine-status-text">AI引擎异常</span>
-        <button className="engine-status-btn" onClick={onRestart}>重启</button>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="size-2 rounded-full bg-red-500" />
+        <span>AI引擎异常</span>
+        <button
+          className="ml-1 text-xs text-primary hover:underline"
+          onClick={onRestart}
+        >
+          重启
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="engine-status stopped">
-      <div className="status-indicator"></div>
-      <span className="engine-status-text">AI引擎未运行</span>
-      <button className="engine-status-btn" onClick={onRestart}>重启</button>
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <div className="size-2 rounded-full bg-red-500" />
+      <span>AI引擎未运行</span>
+      <button
+        className="ml-1 text-xs text-primary hover:underline"
+        onClick={onRestart}
+      >
+        重启
+      </button>
     </div>
   );
 };
@@ -76,7 +90,6 @@ const CurrentModelDisplay: React.FC<{
   const [provider, setProvider] = useState<string>('');
 
   useEffect(() => {
-    // 加载当前模型配置
     const loadCurrentModel = async () => {
       try {
         const result = await window.electronAPI.getDefaultAgent();
@@ -103,7 +116,6 @@ const CurrentModelDisplay: React.FC<{
     };
 
     loadCurrentModel();
-    // 监听模型变化事件
     const handleModelChanged = () => loadCurrentModel();
     window.addEventListener('model-changed', handleModelChanged);
     return () => window.removeEventListener('model-changed', handleModelChanged);
@@ -148,15 +160,19 @@ const CurrentModelDisplay: React.FC<{
   };
 
   return (
-    <div className="current-model-display" onClick={onClick} title="点击配置模型">
-      <span className="current-model-icon">{getProviderIcon(provider)}</span>
-      <span className="current-model-text">
+    <button
+      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      onClick={onClick}
+      title="点击配置模型"
+    >
+      <span>{getProviderIcon(provider)}</span>
+      <span className="max-w-[200px] truncate">
         {provider ? `${getProviderName(provider)} / ${currentModel}` : '未配置模型'}
       </span>
-      <svg className="current-model-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 opacity-50">
         <path d="M9 18l6-6-6-6" />
       </svg>
-    </div>
+    </button>
   );
 };
 
@@ -172,52 +188,50 @@ export const Header: React.FC<HeaderProps> = ({
   showSidebarToggle = false,
 }) => {
   const handleOpenModelSettings = () => {
-    // 打开设置页面并切换到AI模型标签
     window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'ai' } }));
   };
 
   return (
-    <header className="header">
-      <div className="header-left">
+    <header className="flex items-center h-12 px-3 border-b border-border bg-background shrink-0">
+      {/* Left */}
+      <div className="flex items-center gap-2">
         {showSidebarToggle && (
-          <button className="sidebar-toggle" onClick={onToggleSidebar}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleSidebar}
+            className="shrink-0"
+          >
+            <Menu className="size-5" />
+          </Button>
         )}
-        <div className="logo">
-          <div className="logo-icon">XClaw</div>
-          <span className="logo-text">XClaw</span>
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-center size-6 rounded-md bg-primary text-primary-foreground text-xs font-bold">
+            X
+          </div>
+          <span className="text-sm font-semibold">XClaw</span>
         </div>
       </div>
 
-      <div className="header-center">
+      {/* Center */}
+      <div className="flex-1 flex justify-center">
         <EngineStatusIndicator
           status={engineStatus}
           onRestart={onRestartEngine}
         />
       </div>
 
-      <div className="header-right">
+      {/* Right */}
+      <div className="flex items-center gap-1">
         <CurrentModelDisplay onClick={handleOpenModelSettings} />
-        <div className="header-divider"></div>
-        <button className="header-btn" onClick={onOpenSettings} title="设置">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          <span>设置</span>
-        </button>
-        <button className="header-btn" onClick={onOpenHelp} title="帮助">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </button>
+        <Separator orientation="vertical" className="h-5 mx-1" />
+        <Button variant="ghost" size="sm" onClick={onOpenSettings} title="设置" className="gap-1">
+          <Settings className="size-4" />
+          <span className="hidden sm:inline">设置</span>
+        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={onOpenHelp} title="帮助">
+          <HelpCircle className="size-4" />
+        </Button>
       </div>
     </header>
   );

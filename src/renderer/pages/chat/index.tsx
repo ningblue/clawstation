@@ -9,8 +9,10 @@ import { MessageList } from '../../components/MessageList';
 import { ChatInput, type ChatInputRef } from '../../components/ChatInput';
 import { WindowControls } from '../../components/WindowControls';
 import { FeedbackButton, FeedbackModal } from '../../components/Feedback';
+import { Button } from '@/components/ui/button';
 import { useChatStore, useUserStore } from '../../stores';
 import { useModels } from '../../hooks/useModels';
+import { cn } from '@/lib/utils';
 import type { Message } from '../../stores';
 
 // 欢迎消息
@@ -28,8 +30,8 @@ export const ChatPage: React.FC = () => {
   const { isRestarting } = useModels();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackScreenshot, setFeedbackScreenshot] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // 侧边栏状态
-  const chatInputRef = useRef<ChatInputRef>(null); // ChatInput ref
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const chatInputRef = useRef<ChatInputRef>(null);
 
   const {
     conversations,
@@ -65,7 +67,6 @@ export const ChatPage: React.FC = () => {
 
   // 处理新建对话
   const handleNewConversation = useCallback(async () => {
-    // 只是重置状态，不立即创建数据库记录
     resetCurrentConversation();
   }, [resetCurrentConversation]);
 
@@ -82,7 +83,6 @@ export const ChatPage: React.FC = () => {
   // 处理功能卡片点击
   const handleFeatureClick = useCallback((prompt: string) => {
     console.log('ChatPage handleFeatureClick:', prompt.substring(0, 50));
-    // 设置输入框文本
     if (chatInputRef.current) {
       chatInputRef.current.setText(prompt);
     }
@@ -90,14 +90,12 @@ export const ChatPage: React.FC = () => {
 
   // 处理打开设置
   const handleOpenSettings = useCallback(() => {
-    // 触发设置模态框打开事件
     window.dispatchEvent(new CustomEvent('open-settings'));
   }, []);
 
   // 处理退出登录
   const handleLogout = useCallback(() => {
     if (confirm('确定要退出登录吗？')) {
-      // 退出登录逻辑
       window.electronAPI?.invoke?.('auth:logout')?.then(() => {
         window.location.reload();
       })?.catch(() => {
@@ -124,9 +122,7 @@ export const ChatPage: React.FC = () => {
   // 处理反馈按钮点击
   const handleFeedbackClick = useCallback(async () => {
     try {
-      // 检查 API 是否可用
       if (window.electronAPI && typeof window.electronAPI.captureScreen === 'function') {
-        // 截取当前屏幕
         const screenshot = await window.electronAPI.captureScreen();
         setFeedbackScreenshot(screenshot);
       } else {
@@ -136,7 +132,6 @@ export const ChatPage: React.FC = () => {
       setIsFeedbackOpen(true);
     } catch (err) {
       console.error('Failed to capture screen:', err);
-      // 即使截图失败也打开反馈窗口
       setFeedbackScreenshot(null);
       setIsFeedbackOpen(true);
     }
@@ -145,7 +140,7 @@ export const ChatPage: React.FC = () => {
   const isMac = navigator.userAgent.toLowerCase().includes('mac');
 
   return (
-    <div className="chat-wrapper">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* 左侧边栏 */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -162,24 +157,30 @@ export const ChatPage: React.FC = () => {
       />
 
       {/* 右侧聊天区域 */}
-      <div className="chat-container">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* 顶部标题栏 - 包含窗口控制按钮 */}
-        <div className={`chat-header ${isMac ? 'mac' : 'win'}`}>
-          <div className="header-left">
+        <div className={cn(
+          "flex h-12 shrink-0 items-center border-b border-border bg-background",
+          isMac ? "pl-20" : "pl-4"
+        )}>
+          <div className="flex items-center">
             {!sidebarOpen && (
-              <button 
-                className="sidebar-toggle-btn"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={() => setSidebarOpen(true)}
                 title="展开侧边栏"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
-          <div className="header-drag-area" />
-          <div className="header-right">
+          {/* Electron drag area */}
+          <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+          <div className="flex items-center gap-1 pr-2">
             <FeedbackButton onClick={handleFeedbackClick} />
             <WindowControls />
           </div>
@@ -195,7 +196,7 @@ export const ChatPage: React.FC = () => {
         />
 
         {/* 主内容区 */}
-        <div className="chat-main">
+        <div className="flex flex-1 flex-col overflow-hidden">
           <MessageList
             messages={displayMessages}
             isTyping={isTyping}

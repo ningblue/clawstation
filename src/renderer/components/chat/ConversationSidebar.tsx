@@ -1,6 +1,18 @@
 // ConversationSidebar.tsx - 历史侧边栏
 
 import React, { useState, useCallback, useMemo } from 'react';
+import {
+  Plus,
+  Search,
+  X,
+  MessageSquare,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 export interface Conversation {
   id: number;
@@ -108,19 +120,21 @@ const ConversationItem: React.FC<{
 
   return (
     <div
-      className={`conversation-item ${isActive ? 'active' : ''}`}
+      className={cn(
+        'group flex items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer transition-colors',
+        isActive
+          ? 'bg-accent text-accent-foreground'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
       onClick={onSelect}
     >
-      <div className="conversation-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      </div>
+      <MessageSquare className="size-4 shrink-0" />
 
-      <div className="conversation-content">
+      <div className="flex-1 min-w-0">
         {isEditing ? (
           <input
             type="text"
+            className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
             onBlur={handleRename}
@@ -132,10 +146,10 @@ const ConversationItem: React.FC<{
           />
         ) : (
           <>
-            <div className="conversation-title" title={conversation.title}>
+            <div className="text-sm truncate" title={conversation.title}>
               {conversation.title || '新对话'}
             </div>
-            <div className="conversation-meta">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
               <span>{formatRelativeTime(conversation.updatedAt)}</span>
               {conversation.messageCount !== undefined && (
                 <span>{conversation.messageCount}条消息</span>
@@ -146,22 +160,19 @@ const ConversationItem: React.FC<{
       </div>
 
       {!isEditing && (
-        <div className="conversation-actions">
+        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            className="action-btn"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(true);
             }}
             title="重命名"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
+            <Pencil className="size-3" />
           </button>
           <button
-            className="action-btn delete"
+            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
               if (confirm('确定要删除这个对话吗？')) {
@@ -170,10 +181,7 @@ const ConversationItem: React.FC<{
             }}
             title="删除"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
+            <Trash2 className="size-3" />
           </button>
         </div>
       )}
@@ -183,7 +191,9 @@ const ConversationItem: React.FC<{
 
 // 分组标题
 const GroupHeader: React.FC<{ title: string }> = ({ title }) => (
-  <div className="group-header">{title}</div>
+  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+    {title}
+  </div>
 );
 
 export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
@@ -242,93 +252,97 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   );
 
   return (
-    <div className="conversation-sidebar">
+    <div className="flex flex-col h-full bg-background">
       {/* 头部 */}
-      <div className="sidebar-header">
-        <button className="new-chat-btn" onClick={onCreate}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+      <div className="p-2 shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5"
+          onClick={onCreate}
+        >
+          <Plus className="size-4" />
           <span>新建对话</span>
-        </button>
+        </Button>
       </div>
 
       {/* 搜索框 */}
-      <div className={`search-box ${isSearchFocused ? 'focused' : ''}`}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input
-          type="text"
-          placeholder="搜索对话..."
-          value={searchQuery}
-          onChange={handleSearch}
-          onFocus={() => setIsSearchFocused(true)}
-          onBlur={() => setIsSearchFocused(false)}
-        />
-        {searchQuery && (
-          <button className="clear-search" onClick={clearSearch}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        )}
+      <div className={cn(
+        'px-2 pb-2 shrink-0',
+      )}>
+        <div className={cn(
+          'relative flex items-center rounded-md border transition-colors',
+          isSearchFocused ? 'border-ring ring-1 ring-ring' : 'border-border',
+        )}>
+          <Search className="size-4 shrink-0 ml-2 text-muted-foreground" />
+          <input
+            type="text"
+            className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+            placeholder="搜索对话..."
+            value={searchQuery}
+            onChange={handleSearch}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+          />
+          {searchQuery && (
+            <button
+              className="p-1 mr-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              onClick={clearSearch}
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 对话列表 */}
-      <div className="conversations-list">
-        {hasConversations ? (
-          <>
-            {Object.entries(grouped).map(
-              ([key, group]) =>
-                group.length > 0 && (
-                  <div key={key} className="conversation-group">
-                    <GroupHeader title={groupLabels[key] || key} />
-                    {group.map((conversation) => (
-                      <ConversationItem
-                        key={conversation.id}
-                        conversation={conversation}
-                        isActive={conversation.id === activeId}
-                        onSelect={() => onSelect(conversation.id)}
-                        onDelete={() => onDelete(conversation.id)}
-                        onRename={(title) => onRename(conversation.id, title)}
-                      />
-                    ))}
-                  </div>
-                )
-            )}
-          </>
-        ) : (
-          <div className="empty-state">
-            {searchQuery ? (
-              <>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <p>未找到匹配的对话</p>
-              </>
-            ) : (
-              <>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <p>暂无对话</p>
-                <p className="empty-hint">点击上方按钮开始新对话</p>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="px-2 pb-2">
+          {hasConversations ? (
+            <>
+              {Object.entries(grouped).map(
+                ([key, group]) =>
+                  group.length > 0 && (
+                    <div key={key}>
+                      <GroupHeader title={groupLabels[key] || key} />
+                      {group.map((conversation) => (
+                        <ConversationItem
+                          key={conversation.id}
+                          conversation={conversation}
+                          isActive={conversation.id === activeId}
+                          onSelect={() => onSelect(conversation.id)}
+                          onDelete={() => onDelete(conversation.id)}
+                          onRename={(title) => onRename(conversation.id, title)}
+                        />
+                      ))}
+                    </div>
+                  )
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              {searchQuery ? (
+                <>
+                  <Search className="size-10 mb-3 opacity-50" />
+                  <p className="text-sm">未找到匹配的对话</p>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="size-10 mb-3 opacity-50" />
+                  <p className="text-sm">暂无对话</p>
+                  <p className="text-xs mt-1">点击上方按钮开始新对话</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
 
       {/* 底部信息 */}
-      <div className="sidebar-footer">
-        <div className="footer-info">
-          <span>{conversations.length} 个对话</span>
-        </div>
+      <div className="border-t border-border px-3 py-2 shrink-0">
+        <span className="text-xs text-muted-foreground">
+          {conversations.length} 个对话
+        </span>
       </div>
     </div>
   );

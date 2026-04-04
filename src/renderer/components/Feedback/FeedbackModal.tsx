@@ -1,4 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { X, Plus, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -15,9 +28,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
 
   useEffect(() => {
     if (isOpen) {
-      // If there's an initial screenshot, add it
       if (initialScreenshot) {
-        // Convert base64 to File object
         fetch(initialScreenshot)
           .then(res => res.blob())
           .then(blob => {
@@ -28,7 +39,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
           .catch(console.error);
       }
     } else {
-      // Reset form when closed
       setContent('');
       setContact('');
       setImages([]);
@@ -43,12 +53,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
     };
   }, [previews]);
 
-  if (!isOpen) return null;
-
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    
-    // Limit to 4 images for example
+
     if (images.length >= 4) {
       alert('最多只能上传4张截图');
       return;
@@ -63,7 +70,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
     if (e.target.files && e.target.files.length > 0) {
       Array.from(e.target.files).forEach(handleFile);
     }
-    // Reset value so same file can be selected again if needed
     if (e.target.value) e.target.value = '';
   };
 
@@ -86,7 +92,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       Array.from(files).forEach(file => {
@@ -119,88 +125,90 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, i
   };
 
   return (
-    <div className="feedback-modal-overlay" onClick={(e) => {
-      if (e.target === e.currentTarget) onClose();
-    }}>
-      <div className="feedback-modal">
-        <div className="feedback-header">
-          <h2 className="feedback-title">问题反馈</h2>
-          <p className="feedback-subtitle">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>问题反馈</DialogTitle>
+          <DialogDescription>
             如果您在使用过程中遇到任何问题，请随时反馈给我们。您的反馈将帮助我们不断改进和优化产品。
-          </p>
-        </div>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="feedback-form-group">
-          <textarea
-            className="feedback-textarea"
+        <div className="space-y-4 py-2">
+          <Textarea
             placeholder="请输入您的问题或建议"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onPaste={handlePaste}
+            rows={4}
+            className="resize-none"
           />
-        </div>
 
-        <div className="feedback-form-group">
-          <label className="feedback-label">屏幕截图：</label>
-          <div 
-            className="feedback-image-upload"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            {previews.map((url, index) => (
-              <div key={index} className="feedback-image-item">
-                <img src={url} alt={`Screenshot ${index + 1}`} />
-                <button 
-                  className="feedback-image-remove"
-                  onClick={() => removeImage(index)}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            
-            <button 
-              className="feedback-upload-btn"
-              onClick={() => fileInputRef.current?.click()}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">屏幕截图：</label>
+            <div
+              className="border border-dashed border-border rounded-lg p-3"
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
             >
-              <span className="feedback-upload-icon">+</span>
-              <span className="feedback-upload-text">点击添加，或拖拽/粘贴图片到此区域</span>
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
+              <div className="flex flex-wrap gap-2">
+                {previews.map((url, index) => (
+                  <div key={index} className="relative size-20 rounded-md overflow-hidden border border-border">
+                    <img src={url} alt={`Screenshot ${index + 1}`} className="size-full object-cover" />
+                    <button
+                      className="absolute top-0.5 right-0.5 size-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  className="flex flex-col items-center justify-center size-20 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="size-5 mb-1" />
+                  <span className="text-[10px]">添加</span>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                点击添加，或拖拽/粘贴图片到此区域
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">联系电话</label>
+            <Input
+              type="text"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+              placeholder=""
             />
           </div>
         </div>
 
-        <div className="feedback-form-group">
-          <label className="feedback-label">联系电话</label>
-          <input
-            type="text"
-            className="feedback-input"
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            placeholder=""
-          />
-        </div>
-
-        <div className="feedback-footer">
-          <button className="feedback-btn feedback-btn-cancel" onClick={onClose}>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
             取消
-          </button>
-          <button 
-            className={`feedback-btn feedback-btn-submit ${content.trim() ? 'active' : ''}`}
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={!content.trim()}
           >
             提交
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

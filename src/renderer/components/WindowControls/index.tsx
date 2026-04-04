@@ -10,7 +10,6 @@ export const WindowControls: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    // 检查窗口是否最大化
     const checkMaximized = async () => {
       if (window.electronAPI?.isWindowMaximized) {
         const maximized = await window.electronAPI.isWindowMaximized();
@@ -36,16 +35,15 @@ export const WindowControls: React.FC = () => {
   };
 
   // macOS 使用原生按钮，不显示自定义按钮
-  // 使用 userAgent 检测平台，因为 renderer 进程中 process.platform 不可用
   const isMac = navigator.userAgent.toLowerCase().includes('mac');
   if (isMac) {
     return null;
   }
 
   return (
-    <div className="window-controls">
+    <div className="flex items-center">
       <button
-        className="window-control-btn minimize"
+        className="inline-flex h-8 w-11 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         onClick={handleMinimize}
         title="最小化"
       >
@@ -54,7 +52,7 @@ export const WindowControls: React.FC = () => {
         </svg>
       </button>
       <button
-        className="window-control-btn maximize"
+        className="inline-flex h-8 w-11 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         onClick={handleMaximize}
         title={isMaximized ? '还原' : '最大化'}
       >
@@ -82,7 +80,7 @@ export const WindowControls: React.FC = () => {
         )}
       </button>
       <button
-        className="window-control-btn close"
+        className="inline-flex h-8 w-11 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white transition-colors"
         onClick={handleClose}
         title="关闭"
       >

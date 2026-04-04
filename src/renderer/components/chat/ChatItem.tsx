@@ -3,6 +3,9 @@
 import React, { useState, useCallback } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export interface Message {
   id: number;
@@ -36,10 +39,15 @@ const CodeBlock: React.FC<{ code: string; language?: string }> = ({ code, langua
   }, [code]);
 
   return (
-    <div className="code-block-wrapper">
-      <div className="code-block-header">
-        <span className="code-language">{language}</span>
-        <button className="copy-button" onClick={handleCopy}>
+    <div className="my-2 overflow-hidden rounded-lg border border-border">
+      <div className="flex items-center justify-between bg-zinc-800 px-4 py-2">
+        <span className="text-xs text-zinc-400">{language}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("h-6 gap-1 text-xs text-zinc-400 hover:text-zinc-200", copied && "text-green-400")}
+          onClick={handleCopy}
+        >
           {copied ? (
             <>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -56,7 +64,7 @@ const CodeBlock: React.FC<{ code: string; language?: string }> = ({ code, langua
               <span>复制</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         language={language}
@@ -80,32 +88,32 @@ const ImageRenderer: React.FC<{ src: string; alt?: string }> = ({ src, alt }) =>
   const [loading, setLoading] = useState(true);
 
   return (
-    <div className="message-image-container">
+    <div className="my-2 overflow-hidden rounded-lg border border-border">
       {loading && !error && (
-        <div className="message-image-loading">
+        <div className="flex items-center gap-2 p-4 text-muted-foreground">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <circle cx="8.5" cy="8.5" r="1.5"></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
           </svg>
-          <span>加载中...</span>
+          <span className="text-sm">加载中...</span>
         </div>
       )}
       {error ? (
-        <div className="message-image-error">
+        <div className="flex flex-col items-center gap-2 p-4 text-destructive">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="15" y1="9" x2="9" y2="15"></line>
             <line x1="9" y1="9" x2="15" y2="15"></line>
           </svg>
-          <span>图片加载失败</span>
-          <a href={src} target="_blank" rel="noopener noreferrer">{src}</a>
+          <span className="text-sm">图片加载失败</span>
+          <a href={src} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">{src}</a>
         </div>
       ) : (
         <img
           src={src}
           alt={alt || ''}
-          className="message-image"
+          className="max-w-full object-contain"
           onLoad={() => setLoading(false)}
           onError={() => {
             setLoading(false);
@@ -121,26 +129,22 @@ const ImageRenderer: React.FC<{ src: string; alt?: string }> = ({ src, alt }) =>
 // 处理消息内容，解析代码块、行内代码和图片
 const formatContent = (content: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
-  // 匹配顺序很重要：先匹配代码块，再匹配图片，最后匹配行内代码
   const combinedRegex = /```(\w+)?\n([\s\S]*?)```|!\[([^\]]*)\]\(([^)]+)\)/g;
 
   let lastIndex = 0;
   let match;
 
   while ((match = combinedRegex.exec(content)) !== null) {
-    // 添加匹配前的文本
     if (match.index > lastIndex) {
       const textBefore = content.slice(lastIndex, match.index);
       parts.push(...processInlineCode(textBefore));
     }
 
     if (match[0].startsWith('```')) {
-      // 代码块
       const language = match[1] || 'text';
       const code = (match[2] || '').trim();
       parts.push(<CodeBlock key={`code-${match.index}`} code={code} language={language} />);
     } else {
-      // 图片 ![alt](src)
       const alt = match[3] || '';
       const src = match[4] || '';
       parts.push(<ImageRenderer key={`img-${match.index}`} src={src} alt={alt} />);
@@ -149,7 +153,6 @@ const formatContent = (content: string): React.ReactNode[] => {
     lastIndex = match.index + match[0].length;
   }
 
-  // 添加剩余文本
   if (lastIndex < content.length) {
     const remainingText = content.slice(lastIndex);
     parts.push(...processInlineCode(remainingText));
@@ -175,7 +178,7 @@ const processInlineCode = (text: string): React.ReactNode[] => {
     }
 
     parts.push(
-      <code key={`inline-${match.index}`} className="inline-code">
+      <code key={`inline-${match.index}`} className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
         {match[1]}
       </code>
     );
@@ -203,13 +206,13 @@ const formatPlainText = (text: string): string => {
     .replace(/\n/g, '<br />')
     .replace(
       /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>'
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary underline">$1</a>'
     );
 };
 
 // 打字机光标组件
 const StreamingCursor: React.FC = () => (
-  <span className="streaming-cursor">▊</span>
+  <span className="animate-pulse text-primary">▊</span>
 );
 
 // 用户消息组件
@@ -222,20 +225,25 @@ const UserMessage: React.FC<{
 
   return (
     <div
-      className="chat-item user-message"
+      className="group flex flex-col items-end gap-1 px-4 py-2"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className="message-bubble user-bubble">
-        <div className="message-text">
+      <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground">
+        <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
           {formatContent(message.content)}
         </div>
       </div>
 
       {/* 操作按钮 */}
-      <div className={`message-actions ${showActions ? 'visible' : ''}`}>
-        <button
-          className="action-btn"
+      <div className={cn(
+        "flex items-center gap-1 transition-opacity",
+        showActions ? "opacity-100" : "opacity-0"
+      )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onCopy?.(message.content)}
           title="复制"
         >
@@ -243,9 +251,11 @@ const UserMessage: React.FC<{
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-        </button>
-        <button
-          className="action-btn"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onDelete?.(message.id)}
           title="删除"
         >
@@ -253,11 +263,11 @@ const UserMessage: React.FC<{
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
           </svg>
-        </button>
+        </Button>
       </div>
 
       {message.timestamp && (
-        <span className="message-time">
+        <span className="text-xs text-muted-foreground">
           {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
             hour: '2-digit',
             minute: '2-digit'
@@ -279,29 +289,34 @@ const AssistantMessage: React.FC<{
 
   return (
     <div
-      className="chat-item assistant-message"
+      className="group flex flex-col gap-1 px-4 py-2"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       {/* 助手名称和模型 */}
-      <div className="message-header">
-        <span className="assistant-name">AI 助手</span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-foreground">AI 助手</span>
         {message.model && (
-          <span className="model-badge">{message.model}</span>
+          <Badge variant="secondary" className="text-xs">{message.model}</Badge>
         )}
       </div>
 
-      <div className="message-bubble assistant-bubble">
-        <div className="message-text">
+      <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5">
+        <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground">
           {formatContent(message.content)}
           {message.isStreaming && <StreamingCursor />}
         </div>
       </div>
 
       {/* 操作按钮 */}
-      <div className={`message-actions ${showActions ? 'visible' : ''}`}>
-        <button
-          className="action-btn"
+      <div className={cn(
+        "flex items-center gap-1 transition-opacity",
+        showActions ? "opacity-100" : "opacity-0"
+      )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onCopy?.(message.content)}
           title="复制"
         >
@@ -309,9 +324,11 @@ const AssistantMessage: React.FC<{
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-        </button>
-        <button
-          className="action-btn"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onRegenerate?.(message.id)}
           title="重新生成"
         >
@@ -319,29 +336,33 @@ const AssistantMessage: React.FC<{
             <polyline points="23 4 23 10 17 10"></polyline>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
           </svg>
-        </button>
-        <button
-          className="action-btn"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onFeedback?.(message.id, 'like')}
           title="有用"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
           </svg>
-        </button>
-        <button
-          className="action-btn"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
           onClick={() => onFeedback?.(message.id, 'dislike')}
           title="无用"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
           </svg>
-        </button>
+        </Button>
       </div>
 
       {message.timestamp && (
-        <span className="message-time">
+        <span className="text-xs text-muted-foreground">
           {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
             hour: '2-digit',
             minute: '2-digit'

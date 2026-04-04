@@ -8,19 +8,20 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // 自定义代码块组件
 const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
-  // 判断是否为内联代码：
-  // 1. inline 属性为 true
-  // 2. 没有 className（代码块通常有 language-xxx）
-  // 3. 没有换行符
   const isInline = inline || !className || !String(children).includes('\n');
 
   if (isInline) {
     return (
-      <code className="inline-code" {...props}>
+      <code
+        className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground"
+        {...props}
+      >
         {children}
       </code>
     );
@@ -43,10 +44,18 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
   }, [code]);
 
   return (
-    <div className="code-block-wrapper">
-      <div className="code-block-header">
-        <span className="code-language">{language || 'text'}</span>
-        <button className={`code-copy-btn ${copied ? 'copied' : ''}`} onClick={handleCopy}>
+    <div className="my-3 overflow-hidden rounded-lg border border-border">
+      <div className="flex items-center justify-between bg-zinc-800 px-4 py-2">
+        <span className="text-xs text-zinc-400">{language || 'text'}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-6 gap-1 text-xs text-zinc-400 hover:text-zinc-200",
+            copied && "text-green-400"
+          )}
+          onClick={handleCopy}
+        >
           {copied ? (
             <>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,7 +72,7 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
               <span>复制</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         style={oneDark}
@@ -88,22 +97,29 @@ const ThinkingBlock = ({ content }: { content: string }) => {
   const [collapsed, setCollapsed] = useState(true);
 
   return (
-    <div className={`thinking-block ${collapsed ? 'collapsed' : ''}`}>
-      <div className="thinking-header" onClick={() => setCollapsed(!collapsed)}>
-        <div className="thinking-title">
-          <svg className="thinking-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <div className={cn(
+      "mb-3 overflow-hidden rounded-lg border border-border bg-muted/50",
+      !collapsed && "border-primary/20"
+    )}>
+      <div
+        className="flex cursor-pointer items-center justify-between px-3 py-2"
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        <div className="flex items-center gap-2">
+          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path>
           </svg>
-          <span>思考过程</span>
+          <span className="text-sm font-medium text-muted-foreground">思考过程</span>
         </div>
-        <div className="thinking-toggle">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
+        <svg
+          className={cn("h-4 w-4 text-muted-foreground transition-transform", !collapsed && "rotate-180")}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
       </div>
       {!collapsed && (
-        <div className="thinking-content">
+        <div className="border-t border-border px-3 py-2">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       )}
@@ -113,8 +129,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
 
 // 解析消息内容，分离思考过程和实际内容
 const parseMessageContent = (content: string) => {
-  // 匹配 think 标签
-  const thinkRegex = /<think>([\s\S]*?)<\/think>/gi;
+  const thinkRegex = /<think[^>]*>([\s\S]*?)<\/think>/gi;
   const thinkingMatches = [...content.matchAll(thinkRegex)];
 
   let thinkingContent = '';
@@ -122,7 +137,6 @@ const parseMessageContent = (content: string) => {
 
   if (thinkingMatches.length > 0) {
     thinkingContent = thinkingMatches.map(m => m[1]).join('\n\n');
-    // 移除 think 标签
     mainContent = content.replace(thinkRegex, '').trim();
   }
 
@@ -141,7 +155,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const { thinkingContent, mainContent } = parseMessageContent(content);
 
   return (
-    <div className="markdown-content">
+    <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
       {showThinking && thinkingContent && (
         <ThinkingBlock content={thinkingContent} />
       )}

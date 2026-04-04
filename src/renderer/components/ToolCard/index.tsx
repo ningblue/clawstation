@@ -4,6 +4,9 @@
  */
 
 import React, { useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 // 工具类型定义
 export interface ToolCall {
@@ -52,7 +55,6 @@ const formatArgs = (args: Record<string, unknown>): string => {
   const keys = Object.keys(args);
   if (keys.length === 0) return '';
 
-  // 优先显示关键参数
   const priorityKeys = ['query', 'pattern', 'path', 'url', 'command', 'file'];
   for (const key of priorityKeys) {
     if (args[key]) {
@@ -61,7 +63,6 @@ const formatArgs = (args: Record<string, unknown>): string => {
     }
   }
 
-  // 显示第一个参数
   const firstKey = keys[0];
   if (!firstKey) return '';
   const value = String(args[firstKey]);
@@ -99,7 +100,6 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, status = 'pending' }) 
     if (isCall) {
       return formatArgs(tool.arguments);
     }
-    // 工具结果
     const result = tool as ToolResult;
     if (result.error) {
       return `错误: ${result.error}`;
@@ -124,30 +124,60 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, status = 'pending' }) 
   const hasMoreContent = getFullContent().length > (isCall ? 50 : 100);
 
   return (
-    <div className={`tool-card ${status} ${expanded ? 'expanded' : ''}`}>
-      <div className="tool-card-header" onClick={() => hasMoreContent && setExpanded(!expanded)}>
-        <div className="tool-icon">{display.icon}</div>
-        <div className="tool-info">
-          <div className="tool-label">
-            <span className="tool-name">{display.title}</span>
-            <span className={`tool-status ${status}`}>{getStatusIcon()}</span>
+    <div
+      className={cn(
+        'rounded-lg border my-1.5 overflow-hidden',
+        status === 'error'
+          ? 'border-destructive/30 bg-destructive/5'
+          : status === 'success'
+            ? 'border-border bg-muted/30'
+            : 'border-border bg-muted/20'
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center gap-2 px-3 py-2',
+          hasMoreContent && 'cursor-pointer hover:bg-muted/50'
+        )}
+        onClick={() => hasMoreContent && setExpanded(!expanded)}
+      >
+        <span className="text-sm shrink-0">{display.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{display.title}</span>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] px-1.5 py-0 h-4 font-mono',
+                status === 'success' && 'text-green-600 dark:text-green-400',
+                status === 'error' && 'text-destructive',
+                status === 'pending' && 'text-muted-foreground'
+              )}
+            >
+              {getStatusIcon()}
+            </Badge>
           </div>
           {detailText && (
-            <div className="tool-detail" title={detailText}>
+            <div className="text-xs text-muted-foreground truncate mt-0.5" title={detailText}>
               {detailText}
             </div>
           )}
         </div>
         {hasMoreContent && (
-          <div className="tool-expand-icon">
-            {expanded ? '▼' : '▶'}
-          </div>
+          <ChevronRight
+            className={cn(
+              'size-4 shrink-0 text-muted-foreground transition-transform',
+              expanded && 'rotate-90'
+            )}
+          />
         )}
       </div>
 
       {expanded && (
-        <div className="tool-card-content">
-          <pre className="tool-content-pre">{getFullContent()}</pre>
+        <div className="border-t border-border bg-muted/20 px-3 py-2">
+          <pre className="whitespace-pre-wrap text-xs text-muted-foreground font-mono overflow-x-auto">
+            {getFullContent()}
+          </pre>
         </div>
       )}
     </div>
@@ -165,7 +195,7 @@ export const ToolCardList: React.FC<ToolCardListProps> = ({ tools }) => {
   if (!tools || tools.length === 0) return null;
 
   return (
-    <div className="tool-card-list">
+    <div className="space-y-1">
       {tools.map((item, index) => (
         <ToolCard key={index} tool={item.tool} status={item.status} />
       ))}

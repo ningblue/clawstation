@@ -6,7 +6,10 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, Settings } from 'lucide-react';
 import { useModels } from '../../hooks/useModels';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export interface ModelSelectorProps {
   /** 当前选中的模型（格式：provider/modelId） */
@@ -114,58 +117,57 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   return (
     <div
       ref={dropdownRef}
-      className={`model-selector ${className} ${disabled ? 'disabled' : ''}`}
+      className={cn('relative', className)}
     >
       {/* 触发按钮 */}
       <button
-        className={`model-selector__trigger ${isRestarting ? 'restarting' : ''}`}
+        className={cn(
+          'flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors',
+          'hover:bg-muted hover:text-foreground',
+          (disabled || isRestarting) && 'opacity-50 pointer-events-none',
+        )}
         onClick={() => !disabled && !isRestarting && setIsOpen(!isOpen)}
         disabled={disabled}
         title={isRestarting ? '切换中...' : '切换模型'}
       >
-        <span className={`model-selector__trigger-icon ${isRestarting ? 'spinning' : ''}`}>
+        <span className={cn(
+          'flex items-center justify-center size-5 rounded text-xs font-medium bg-muted',
+        )}>
           {isRestarting ? '...' : currentProviderName ? currentProviderName.charAt(0) : '?'}
         </span>
-        <span className="model-selector__trigger-text">
+        <span className="text-muted-foreground">
           {isRestarting ? '切换中...' : currentDisplayName}
         </span>
-        <svg
-          className={`model-selector__trigger-arrow ${isOpen ? 'open' : ''}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <ChevronDown
+          className={cn(
+            'size-3.5 text-muted-foreground transition-transform',
+            isOpen && 'rotate-180',
+          )}
+        />
       </button>
 
       {/* 下拉面板 */}
       {isOpen && (
-        <div className="model-selector__dropdown">
+        <div className="absolute bottom-full left-0 mb-1 z-50 w-64 rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
           {/* 模型列表 */}
-          <div className="model-selector__models">
+          <div className="max-h-64 overflow-y-auto p-1">
             {loading ? (
-              <div className="model-selector__loading">
+              <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
                 <span>加载中...</span>
               </div>
             ) : configuredModels.length === 0 ? (
-              <div className="model-selector__empty">
+              <div className="flex flex-col items-center gap-2 py-4 text-sm text-muted-foreground">
                 <span>暂无可用模型</span>
-                <button
-                  className="model-selector__config-btn"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleNavigateToSettings}
                 >
                   去配置
-                </button>
+                </Button>
               </div>
             ) : (
               <>
-                {/* 按厂商分组 */}
                 {(() => {
                   const grouped = new Map<string, typeof configuredModels>();
                   for (const m of configuredModels) {
@@ -174,20 +176,27 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     grouped.set(m.provider, list);
                   }
                   return Array.from(grouped.entries()).map(([provider, models]) => (
-                    <div key={provider} className="model-selector__group">
-                      <div className="model-selector__group-title">{provider}</div>
+                    <div key={provider}>
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                        {provider}
+                      </div>
                       {models.map(model => {
                         const isSelected = currentModelStr === `${model.providerId}/${model.modelId}`;
                         return (
                           <div
                             key={`${model.providerId}/${model.modelId}`}
-                            className={`model-selector__model-item ${isSelected ? 'selected' : ''}`}
+                            className={cn(
+                              'flex items-center justify-between rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
+                              isSelected
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-muted',
+                            )}
                             onClick={() => handleModelSelect(model.providerId, model.modelId)}
                           >
-                            <span className="model-selector__model-name">
-                              {model.modelName}
-                            </span>
-                            {isSelected && <span className="model-selector__model-check">&#10003;</span>}
+                            <span className="truncate">{model.modelName}</span>
+                            {isSelected && (
+                              <span className="shrink-0 text-primary ml-2">&#10003;</span>
+                            )}
                           </div>
                         );
                       })}
@@ -199,11 +208,12 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </div>
 
           {/* 底部 */}
-          <div className="model-selector__footer">
+          <div className="border-t border-border p-1">
             <button
-              className="model-selector__footer-action"
+              className="flex items-center gap-1.5 w-full rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               onClick={handleNavigateToSettings}
             >
+              <Settings className="size-3.5" />
               管理模型配置
             </button>
           </div>

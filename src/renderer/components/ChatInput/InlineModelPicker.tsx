@@ -11,8 +11,10 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, Settings, Search } from 'lucide-react';
 import { useModels, getProviderDisplayName } from '../../hooks/useModels';
 import type { ProviderGroup, SubCategory } from '../../types/models';
+import { cn } from '@/lib/utils';
 
 // 格式化上下文窗口大小
 function formatContextWindow(contextWindow: number): string {
@@ -64,7 +66,6 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
   const currentModelInfo = useMemo(() => {
     if (!currentSelection) return null;
     const modelString = `${currentSelection.provider}/${currentSelection.model}`;
-    // 在 providerGroupList 中查找
     for (const group of providerGroupList) {
       for (const sc of group.subCategories) {
         const model = sc.models.find(
@@ -80,7 +81,6 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
 
   // 右栏要显示的模型
   const displayModels = useMemo(() => {
-    // 搜索模式: 跨所有分组搜索
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase();
       const results: { group: ProviderGroup; subCategory: SubCategory; }[] = [];
@@ -103,7 +103,6 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
       return results;
     }
 
-    // 未选中任何分组: 展示所有已配置分组的模型
     if (!selectedGroup) {
       const results: { group: ProviderGroup; subCategory: SubCategory; }[] = [];
       for (const group of providerGroupList) {
@@ -116,16 +115,13 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
       return results;
     }
 
-    // 选中了分组
     if (selectedSubCategoryId) {
-      // 选中了特定子分类
       const sc = selectedGroup.subCategories.find(s => s.id === selectedSubCategoryId);
       if (sc) {
         return [{ group: selectedGroup, subCategory: sc }];
       }
     }
 
-    // 显示分组下所有子分类的模型
     return selectedGroup.subCategories
       .filter(sc => sc.models.length > 0)
       .map(sc => ({ group: selectedGroup, subCategory: sc }));
@@ -161,15 +157,13 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
-      // 计算下拉面板位置
       if (triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
-        const dropdownHeight = 400; // 下拉面板最大高度
+        const dropdownHeight = 400;
         const spaceAbove = rect.top;
         const spaceBelow = viewportHeight - rect.bottom;
 
-        // 优先向上弹出，如果空间不够则向下
         if (spaceAbove >= dropdownHeight || spaceAbove > spaceBelow) {
           setDropdownPosition({
             bottom: viewportHeight - rect.top + 8,
@@ -212,7 +206,6 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
       return;
     }
     if (selectedGroupId === group.groupId) {
-      // 取消选中
       setSelectedGroupId(null);
       setSelectedSubCategoryId(null);
     } else {
@@ -233,7 +226,6 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
     }
   };
 
-  // 触发按钮显示文本
   const triggerText = isRestarting
     ? '切换中...'
     : currentModelInfo?.model?.name || '选择模型';
@@ -245,35 +237,37 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
       : '?';
 
   return (
-    <div ref={dropdownRef} className="inline-model-picker">
+    <div ref={dropdownRef} className="relative">
       {/* 触发按钮 */}
       <button
         ref={triggerRef}
-        className={`inline-model-picker__trigger ${isRestarting ? 'restarting' : ''} ${!currentModelInfo?.model && !isRestarting ? 'no-model' : ''}`}
+        className={cn(
+          'flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors',
+          'hover:bg-muted',
+          isRestarting && 'animate-pulse',
+          !currentModelInfo?.model && !isRestarting && 'text-muted-foreground',
+        )}
         onClick={handleToggle}
         disabled={disabled}
         title={isRestarting ? '引擎重启中...' : '切换模型'}
       >
-        <span className={`inline-model-picker__trigger-icon ${isRestarting ? 'spinning' : ''}`}>
-          {triggerIcon}
-        </span>
-        <span className="inline-model-picker__trigger-text">{triggerText}</span>
-        <svg
-          className={`inline-model-picker__trigger-arrow ${isOpen ? 'open' : ''}`}
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
+        <span className="text-sm">{triggerIcon}</span>
+        <span className="max-w-[120px] truncate">{triggerText}</span>
+        <ChevronDown
+          className={cn(
+            'size-3 transition-transform',
+            isOpen && 'rotate-180',
+          )}
+        />
       </button>
 
       {/* 下拉面板（使用 fixed 定位） */}
       {isOpen && (
         <div
-          className={`inline-model-picker__dropdown ${showMiddleColumn ? 'three-col' : ''}`}
+          className={cn(
+            'fixed z-50 flex flex-col rounded-lg border border-border bg-popover shadow-xl overflow-hidden',
+            showMiddleColumn ? 'w-[560px]' : 'w-[420px]',
+          )}
           style={{
             bottom: dropdownPosition.bottom || 'auto',
             top: dropdownPosition.bottom === 0 ? 'auto' : undefined,
@@ -281,50 +275,66 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
           }}
         >
           {/* 搜索栏 */}
-          <div className="inline-model-picker__search">
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="搜索模型..."
-              value={searchKeyword}
-              onChange={(e) => {
-                setSearchKeyword(e.target.value);
-                if (e.target.value.trim()) {
-                  // 搜索时清除选中
-                  setSelectedGroupId(null);
-                  setSelectedSubCategoryId(null);
-                }
-              }}
-            />
+          <div className="border-b border-border p-2">
+            <div className="relative flex items-center">
+              <Search className="size-4 ml-2 text-muted-foreground" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+                placeholder="搜索模型..."
+                value={searchKeyword}
+                onChange={(e) => {
+                  setSearchKeyword(e.target.value);
+                  if (e.target.value.trim()) {
+                    setSelectedGroupId(null);
+                    setSelectedSubCategoryId(null);
+                  }
+                }}
+              />
+            </div>
           </div>
 
           {/* 内容区 */}
-          <div className="inline-model-picker__content">
+          <div className={cn(
+            'flex min-h-0 flex-1',
+            showMiddleColumn ? 'max-h-[400px]' : 'max-h-[400px]',
+          )}>
             {/* 左栏: 供应商分组 */}
             {!searchKeyword.trim() && (
-              <div className="inline-model-picker__providers">
+              <div className="w-28 shrink-0 border-r border-border overflow-y-auto">
                 <div
-                  className={`inline-model-picker__provider-item ${selectedGroupId === null ? 'active' : ''}`}
+                  className={cn(
+                    'px-2 py-1.5 text-xs cursor-pointer transition-colors',
+                    selectedGroupId === null
+                      ? 'bg-accent text-accent-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
                   onClick={() => {
                     setSelectedGroupId(null);
                     setSelectedSubCategoryId(null);
                   }}
                 >
-                  <span className="inline-model-picker__provider-name">全部</span>
+                  全部
                 </div>
                 {providerGroupList.map(group => (
                   <div
                     key={group.groupId}
-                    className={`inline-model-picker__provider-item ${
-                      selectedGroupId === group.groupId ? 'active' : ''
-                    } ${!group.hasAnyApiKey ? 'unconfigured' : ''}`}
+                    className={cn(
+                      'flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer transition-colors',
+                      selectedGroupId === group.groupId
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      !group.hasAnyApiKey && 'opacity-60',
+                    )}
                     onClick={() => handleGroupClick(group)}
                     title={group.hasAnyApiKey ? group.groupName : `${group.groupName} - 未配置，点击去配置`}
                   >
-                    <span className="inline-model-picker__provider-name">
-                      {group.groupName}
-                    </span>
-                    <span className={`inline-model-picker__provider-dot ${group.hasAnyApiKey ? 'configured' : ''}`} />
+                    <span className="truncate flex-1">{group.groupName}</span>
+                    <span className={cn(
+                      'size-1.5 rounded-full shrink-0',
+                      group.hasAnyApiKey ? 'bg-green-500' : 'bg-muted-foreground/30',
+                    )} />
                   </div>
                 ))}
               </div>
@@ -332,50 +342,53 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
 
             {/* 中栏: 子分类 (仅多子分类分组显示) */}
             {showMiddleColumn && !searchKeyword.trim() && selectedGroup && (
-              <div className="inline-model-picker__subcategories">
+              <div className="w-28 shrink-0 border-r border-border overflow-y-auto">
                 {selectedGroup.subCategories.map(sc => (
                   <div
                     key={sc.id}
-                    className={`inline-model-picker__subcategory-item ${
-                      selectedSubCategoryId === sc.id ? 'active' : ''
-                    } ${!sc.hasApiKey ? 'unconfigured' : ''}`}
+                    className={cn(
+                      'flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer transition-colors',
+                      selectedSubCategoryId === sc.id
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      !sc.hasApiKey && 'opacity-60',
+                    )}
                     onClick={() => handleSubCategoryClick(sc)}
                     title={sc.hasApiKey ? sc.label : `${sc.label} - 未配置`}
                   >
-                    <span className="inline-model-picker__subcategory-label">
-                      {sc.label}
-                    </span>
-                    <span className="inline-model-picker__subcategory-count">
-                      {sc.models.length}
-                    </span>
-                    <span className={`inline-model-picker__provider-dot ${sc.hasApiKey ? 'configured' : ''}`} />
+                    <span className="truncate flex-1">{sc.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{sc.models.length}</span>
+                    <span className={cn(
+                      'size-1.5 rounded-full shrink-0',
+                      sc.hasApiKey ? 'bg-green-500' : 'bg-muted-foreground/30',
+                    )} />
                   </div>
                 ))}
               </div>
             )}
 
             {/* 右栏: 模型列表 */}
-            <div className="inline-model-picker__models">
+            <div className="flex-1 overflow-y-auto min-w-0">
               {loading ? (
-                <div className="inline-model-picker__status">
-                  <span className="inline-model-picker__spinner" />
+                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                  <span className="mr-2 size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                   <span>加载中...</span>
                 </div>
               ) : error ? (
-                <div className="inline-model-picker__status error">
+                <div className="flex items-center justify-center py-8 text-sm text-destructive">
                   <span>加载失败</span>
                 </div>
               ) : displayModels.length === 0 ? (
-                <div className="inline-model-picker__status">
+                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                   <span>未找到模型</span>
                 </div>
               ) : (
                 displayModels.map(({ group, subCategory }) => (
-                  <div key={`${group.groupId}/${subCategory.providerId}`} className="inline-model-picker__group">
-                    <div className="inline-model-picker__group-title">
+                  <div key={`${group.groupId}/${subCategory.providerId}`}>
+                    <div className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground sticky top-0 bg-popover">
                       <span>{group.icon} {group.hasMultipleSubCategories ? `${group.groupName} / ${subCategory.label}` : group.groupName}</span>
                       {!subCategory.hasApiKey && (
-                        <span className="inline-model-picker__group-badge">需配置</span>
+                        <span className="ml-auto text-[10px] rounded bg-muted px-1.5 py-0.5">需配置</span>
                       )}
                     </div>
                     {subCategory.hasApiKey ? (
@@ -384,15 +397,20 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
                         return (
                           <div
                             key={`${model.provider}/${model.id}`}
-                            className={`inline-model-picker__model-item ${isSelected ? 'selected' : ''}`}
+                            className={cn(
+                              'flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer transition-colors',
+                              isSelected
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-muted',
+                            )}
                             onClick={() => handleModelSelect(model.provider, model.id)}
                           >
-                            <span className="inline-model-picker__model-name">
+                            <span className="flex items-center gap-1 truncate">
                               {model.name}
-                              {isSelected && <span className="inline-model-picker__check">&#10003;</span>}
+                              {isSelected && <span className="text-primary">&#10003;</span>}
                             </span>
                             {model.contextWindow && (
-                              <span className="inline-model-picker__model-ctx">
+                              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground bg-muted rounded px-1 py-0.5">
                                 {formatContextWindow(model.contextWindow)}
                               </span>
                             )}
@@ -401,7 +419,7 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
                       })
                     ) : (
                       <div
-                        className="inline-model-picker__unconfigured-hint"
+                        className="px-3 py-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
                         onClick={handleNavigateToSettings}
                       >
                         点击配置 API Key 后可使用
@@ -414,14 +432,15 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
           </div>
 
           {/* 底部 */}
-          <div className="inline-model-picker__footer">
-            <span className="inline-model-picker__footer-info">
+          <div className="flex items-center justify-between border-t border-border px-3 py-1.5">
+            <span className="text-xs text-muted-foreground">
               {configuredProviders.length} 个服务商已配置
             </span>
             <button
-              className="inline-model-picker__footer-action"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={handleNavigateToSettings}
             >
+              <Settings className="size-3" />
               管理配置
             </button>
           </div>

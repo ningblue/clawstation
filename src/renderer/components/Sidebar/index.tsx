@@ -14,6 +14,16 @@ import {
   LogOut,
   MessageSquare,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { Conversation } from "../../stores";
 
 export interface SidebarProps {
@@ -68,28 +78,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [editTitle, setEditTitle] = useState(conversation.title);
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    if (showMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showMenu]);
 
   const handleStartEdit = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      setShowMenu(false);
       setIsEditing(true);
       setEditTitle(conversation.title);
     },
@@ -119,7 +111,6 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   const handleDelete = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      setShowMenu(false);
       if (confirm(`确定要删除会话 "${conversation.title}" 吗？`)) {
         await onDelete();
       }
@@ -127,21 +118,20 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     [conversation.title, onDelete],
   );
 
-  const toggleMenu = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu((prev) => !prev);
-  }, []);
-
   return (
     <div
-      ref={menuRef}
-      className={`sidebar-history-item ${isActive ? "active" : ""}`}
+      className={cn(
+        "group flex items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer text-sm transition-colors",
+        isActive
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
       onClick={onSelect}
     >
       {isEditing ? (
         <input
           type="text"
-          className="conversation-title-input"
+          className="flex-1 bg-background border border-border rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
           onBlur={handleFinishEdit}
@@ -153,38 +143,28 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         />
       ) : (
         <>
-          <span className="sidebar-history-item-text">
-            <MessageSquare
-              size={14}
-              style={{ marginRight: 8, flexShrink: 0 }}
-            />
+          <span className="flex items-center gap-2 truncate flex-1 min-w-0">
+            <MessageSquare className="size-3.5 shrink-0" />
             {conversation.title}
           </span>
-          <button
-            className="conversation-menu-btn"
-            onClick={toggleMenu}
-            title="更多操作"
-          >
-            <MoreHorizontal size={16} />
-          </button>
-          {showMenu && (
-            <div className="conversation-menu-dropdown">
-              <button
-                className="conversation-menu-item"
-                onClick={handleStartEdit}
-              >
-                <Pencil size={14} />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="size-4 text-muted-foreground hover:text-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="right" sideOffset={4}>
+              <DropdownMenuItem onClick={handleStartEdit}>
+                <Pencil className="size-4" />
                 <span>重命名</span>
-              </button>
-              <button
-                className="conversation-menu-item danger"
-                onClick={handleDelete}
-              >
-                <Trash2 size={14} />
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={handleDelete}>
+                <Trash2 className="size-4" />
                 <span>删除</span>
-              </button>
-            </div>
-          )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       )}
     </div>
@@ -207,40 +187,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onLogout,
 }) => {
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭用户菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
-      ) {
-        setShowUserMenu(false);
-      }
-    };
-    if (showUserMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showUserMenu]);
-
-  // 获取用户显示信息
-  const getUserDisplay = () => {
-    if (user?.username) {
-      return {
-        name: user.username,
-        initial: user.username.charAt(0).toUpperCase(),
-      };
-    }
-    return { name: "Demo User", initial: "D" };
-  };
-
-  const { name, initial } = getUserDisplay();
-
   // 分组对话
   const groupConversations = () => {
     const groups: {
@@ -274,149 +220,142 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const grouped = groupConversations();
 
+  // 获取用户显示信息
+  const getUserDisplay = () => {
+    if (user?.username) {
+      return {
+        name: user.username,
+        initial: user.username.charAt(0).toUpperCase(),
+      };
+    }
+    return { name: "Demo User", initial: "D" };
+  };
+
+  const { name, initial } = getUserDisplay();
+
   return (
     <>
-      {/* 移动端遮罩 - 仅在移动端显示 */}
-      <div
-        className="sidebar-overlay"
-        onClick={onClose}
-        style={{ display: isOpen ? "block" : "none" }}
-      />
+      {/* 移动端遮罩 */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
 
       <aside
-        className="sidebar"
-        style={{
-          display: isOpen ? "flex" : "none",
-          width: "240px",
-          minWidth: "240px",
-        }}
+        className={cn(
+          "flex flex-col h-full bg-background border-r border-border shrink-0",
+          "w-[240px] min-w-[240px]",
+          // Mobile: fixed overlay
+          "fixed inset-y-0 left-0 z-50 md:static md:z-auto",
+          isOpen ? "flex" : "hidden md:flex",
+        )}
       >
         {/* Header - 仅关闭按钮 */}
-        <div className="sidebar-header">
-          <button
-            className="sidebar-close-btn"
+        <div className="flex items-center h-10 px-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={(e) => {
               e.stopPropagation();
               onClose?.();
             }}
-            type="button"
             aria-label="收起侧边栏"
           >
-            <ChevronLeft size={20} />
-          </button>
+            <ChevronLeft className="size-5" />
+          </Button>
         </div>
 
         {/* 新建对话按钮 */}
-        <div
-          className="sidebar-new-chat"
-          onClick={() => onNewConversation?.()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onNewConversation?.();
-            }
-          }}
-        >
-          <Plus size={20} />
-          <span>新建对话</span>
+        <div className="px-2 shrink-0">
+          <button
+            className="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+            onClick={() => onNewConversation?.()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onNewConversation?.();
+              }
+            }}
+          >
+            <Plus className="size-5" />
+            <span>新建对话</span>
+          </button>
         </div>
 
         {/* 历史记录标题 */}
-        <div className="sidebar-history-title">历史记录</div>
-
-        {/* 历史记录列表 */}
-        <div className="sidebar-history">
-          {conversations.length === 0 ? (
-            <div className="sidebar-empty">
-              <div className="sidebar-empty-text">暂无历史记录</div>
-            </div>
-          ) : (
-            <div className="sidebar-history-list">
-              {grouped.today.length > 0 && (
-                <>
-                  {grouped.today.map((conv) => (
-                    <ConversationItem
-                      key={conv.id}
-                      conversation={conv}
-                      isActive={conv.id === currentConversationId}
-                      onSelect={() => onSelectConversation(conv.id)}
-                      onRename={(title) => onRenameConversation(conv.id, title)}
-                      onDelete={() => onDeleteConversation(conv.id)}
-                    />
-                  ))}
-                </>
-              )}
-              {grouped.yesterday.length > 0 && (
-                <>
-                  {grouped.yesterday.map((conv) => (
-                    <ConversationItem
-                      key={conv.id}
-                      conversation={conv}
-                      isActive={conv.id === currentConversationId}
-                      onSelect={() => onSelectConversation(conv.id)}
-                      onRename={(title) => onRenameConversation(conv.id, title)}
-                      onDelete={() => onDeleteConversation(conv.id)}
-                    />
-                  ))}
-                </>
-              )}
-              {grouped.older.length > 0 && (
-                <>
-                  {grouped.older.map((conv) => (
-                    <ConversationItem
-                      key={conv.id}
-                      conversation={conv}
-                      isActive={conv.id === currentConversationId}
-                      onSelect={() => onSelectConversation(conv.id)}
-                      onRename={(title) => onRenameConversation(conv.id, title)}
-                      onDelete={() => onDeleteConversation(conv.id)}
-                    />
-                  ))}
-                </>
-              )}
-            </div>
-          )}
+        <div className="px-4 py-2 text-xs font-medium text-muted-foreground shrink-0">
+          历史记录
         </div>
 
-        {/* Footer - 用户信息 */}
-        <div className="sidebar-footer" ref={userMenuRef}>
-          <div className="sidebar-footer-row">
-            <div
-              className="sidebar-user"
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div className="sidebar-user-avatar-default">{initial}</div>
-              <span className="sidebar-user-name">{name}</span>
-            </div>
+        {/* 历史记录列表 */}
+        <ScrollArea className="flex-1 overflow-hidden">
+          <div className="px-2 space-y-0.5">
+            {conversations.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                暂无历史记录
+              </div>
+            ) : (
+              <>
+                {grouped.today.map((conv) => (
+                  <ConversationItem
+                    key={conv.id}
+                    conversation={conv}
+                    isActive={conv.id === currentConversationId}
+                    onSelect={() => onSelectConversation(conv.id)}
+                    onRename={(title) => onRenameConversation(conv.id, title)}
+                    onDelete={() => onDeleteConversation(conv.id)}
+                  />
+                ))}
+                {grouped.yesterday.map((conv) => (
+                  <ConversationItem
+                    key={conv.id}
+                    conversation={conv}
+                    isActive={conv.id === currentConversationId}
+                    onSelect={() => onSelectConversation(conv.id)}
+                    onRename={(title) => onRenameConversation(conv.id, title)}
+                    onDelete={() => onDeleteConversation(conv.id)}
+                  />
+                ))}
+                {grouped.older.map((conv) => (
+                  <ConversationItem
+                    key={conv.id}
+                    conversation={conv}
+                    isActive={conv.id === currentConversationId}
+                    onSelect={() => onSelectConversation(conv.id)}
+                    onRename={(title) => onRenameConversation(conv.id, title)}
+                    onDelete={() => onDeleteConversation(conv.id)}
+                  />
+                ))}
+              </>
+            )}
           </div>
+        </ScrollArea>
 
-          {/* 用户菜单 */}
-          {showUserMenu && (
-            <div className="sidebar-user-menu">
-              <button
-                className="user-menu-item"
-                onClick={() => {
-                  setShowUserMenu(false);
-                  onOpenSettings?.();
-                }}
-              >
-                <Settings size={16} />
+        {/* Footer - 用户信息 */}
+        <div className="border-t border-border p-2 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-2 w-full rounded-lg px-2 py-1.5 hover:bg-muted transition-colors">
+              <div className="flex items-center justify-center size-6 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                {initial}
+              </div>
+              <span className="text-sm text-foreground truncate">{name}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" sideOffset={8}>
+              <DropdownMenuItem onClick={() => onOpenSettings?.()}>
+                <Settings className="size-4" />
                 <span>设置</span>
-              </button>
-              <button
-                className="user-menu-item danger"
-                onClick={() => {
-                  setShowUserMenu(false);
-                  onLogout?.();
-                }}
-              >
-                <LogOut size={16} />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => onLogout?.()}>
+                <LogOut className="size-4" />
                 <span>退出</span>
-              </button>
-            </div>
-          )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
     </>
