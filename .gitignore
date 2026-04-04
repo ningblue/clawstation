@@ -53,6 +53,7 @@ _bmad-output/
 
 # Third-party libraries (development only, fetched during build)
 lib/
+!src/renderer/lib/
 
 # Claude Code local settings
 .claude/
