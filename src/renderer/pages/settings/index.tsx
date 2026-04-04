@@ -8,6 +8,14 @@ import { useUserStore } from '../../stores';
 import type { Theme, FontSize, Locale } from '../../stores';
 import { useModels } from '../../hooks/useModels';
 import { MODEL_MODE_CONFIGS, getApiKeyUrl } from '../../config/provider-groups';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 // 设置标签页类型
 type SettingsTab = 'engine' | 'ai' | 'appearance' | 'account' | 'about';
@@ -112,55 +120,84 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
   onUpdatePreferences,
 }) => {
   return (
-    <div className="settings-section">
-      <div className="settings-section-title">外观设置</div>
+    <div className="animate-in fade-in duration-200">
+      <div className="text-xl font-semibold text-foreground mb-5">外观设置</div>
 
       {/* 主题选择 */}
-      <div className="settings-group">
-        <div className="settings-group-title">主题</div>
-        <div className="theme-grid">
+      <div className="mb-6">
+        <div className="text-sm font-medium text-muted-foreground mb-3">主题</div>
+        <div className="grid grid-cols-2 gap-3">
           <div
-            className={`theme-card ${preferences.theme === 'light' ? 'active' : ''}`}
+            className={cn(
+              "cursor-pointer rounded-xl border-2 p-3 transition-all hover:border-primary/50",
+              preferences.theme === 'light' && "border-primary bg-primary/5"
+            )}
             onClick={() => onUpdatePreferences({ theme: 'light' })}
           >
-            <div className="theme-preview light">
-              <div className="theme-preview-header"></div>
-              <div className="theme-preview-sidebar"></div>
-              <div className="theme-preview-content"></div>
+            <div className="rounded-lg overflow-hidden mb-2 border border-border">
+              <div className="h-4 bg-muted-foreground/10 border-b border-border" />
+              <div className="flex h-16">
+                <div className="w-10 bg-muted border-r border-border" />
+                <div className="flex-1 p-1.5 space-y-1">
+                  <div className="h-1.5 w-3/4 bg-muted rounded" />
+                  <div className="h-1.5 w-1/2 bg-muted rounded" />
+                </div>
+              </div>
             </div>
-            <div className="theme-name">明亮</div>
-            {preferences.theme === 'light' && <div className="theme-check">✓</div>}
+            <div className="text-sm font-medium text-center">明亮</div>
+            {preferences.theme === 'light' && (
+              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">✓</div>
+            )}
           </div>
           <div
-            className={`theme-card ${preferences.theme === 'dark' ? 'active' : ''}`}
+            className={cn(
+              "cursor-pointer rounded-xl border-2 p-3 transition-all hover:border-primary/50",
+              preferences.theme === 'dark' && "border-primary bg-primary/5"
+            )}
             onClick={() => onUpdatePreferences({ theme: 'dark' })}
           >
-            <div className="theme-preview dark">
-              <div className="theme-preview-header"></div>
-              <div className="theme-preview-sidebar"></div>
-              <div className="theme-preview-content"></div>
+            <div className="rounded-lg overflow-hidden mb-2 border border-border bg-popover">
+              <div className="h-4 bg-popover border-b border-border" />
+              <div className="flex h-16">
+                <div className="w-10 bg-muted border-r border-border" />
+                <div className="flex-1 p-1.5 space-y-1">
+                  <div className="h-1.5 w-3/4 bg-muted rounded" />
+                  <div className="h-1.5 w-1/2 bg-muted rounded" />
+                </div>
+              </div>
             </div>
-            <div className="theme-name">暗黑</div>
-            {preferences.theme === 'dark' && <div className="theme-check">✓</div>}
+            <div className="text-sm font-medium text-center">暗黑</div>
+            {preferences.theme === 'dark' && (
+              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">✓</div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 字体大小 */}
-      <div className="settings-group">
-        <div className="settings-group-title">字体大小</div>
-        <div className="font-size-options">
+      <div className="mb-6">
+        <div className="text-sm font-medium text-muted-foreground mb-3">字体大小</div>
+        <div className="flex gap-2">
           {(['small', 'medium', 'large'] as FontSize[]).map((size) => (
-            <button
+            <Button
               key={size}
-              className={`font-size-btn ${preferences.fontSize === size ? 'active' : ''}`}
+              variant={preferences.fontSize === size ? 'default' : 'outline'}
+              size="sm"
               onClick={() => onUpdatePreferences({ fontSize: size })}
+              className="flex-1"
             >
-              <span className={`font-size-preview font-${size}`}>Aa</span>
-              <span className="font-size-label">
+              <span className={cn(
+                "font-bold",
+                size === 'small' && "text-xs",
+                size === 'medium' && "text-sm",
+                size === 'large' && "text-base"
+              )}>
+                Aa
+              </span>
+              <span className="ml-1.5">
                 {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
               </span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -408,122 +445,93 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
   const statusInfo = getEngineStatusInfo();
 
   return (
-    <div className="settings-section">
-      <div className="settings-section-title">AI 引擎</div>
+    <div className="animate-in fade-in duration-200">
+      <div className="text-xl font-semibold text-foreground mb-5">AI 引擎</div>
 
       {/* 引擎状态和控制 */}
-      <div className="engine-status-card">
-        <div className="engine-status-header">
-          <div className="engine-status-indicator">
-            <span className="engine-status-icon" style={{ color: statusInfo.color }}>
+      <div className="rounded-xl border border-border p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium" style={{ color: statusInfo.color }}>
               {statusInfo.icon}
             </span>
-            <span className="engine-status-text" style={{ color: statusInfo.color }}>
+            <span className="text-sm font-medium" style={{ color: statusInfo.color }}>
               引擎{statusInfo.label}
             </span>
           </div>
-          <div className="engine-status-actions">
+          <div className="flex items-center gap-2">
             {engineStatus === 'running' ? (
               <>
-                <button
-                  className="btn btn-sm"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleStopEngine}
                   disabled={loading}
                 >
                   {loading ? '停止中...' : '停止'}
-                </button>
-                <button
-                  className="btn btn-sm btn-primary"
+                </Button>
+                <Button
+                  size="sm"
                   onClick={handleRestartEngine}
                   disabled={loading}
                 >
                   {loading ? '重启中...' : '重启'}
-                </button>
+                </Button>
               </>
             ) : (
-              <button
-                className="btn btn-sm btn-primary"
+              <Button
+                size="sm"
                 onClick={handleStartEngine}
                 disabled={loading || engineStatus === 'starting'}
               >
                 {loading || engineStatus === 'starting' ? '启动中...' : '启动引擎'}
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {/* 进程信息 */}
         {processInfo && (
-          <div className="engine-process-info" style={{
-            marginTop: '16px',
-            padding: '12px',
-            backgroundColor: 'var(--bg-tertiary)',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-          }}>
-            <div style={{
-              fontSize: '13px',
-              fontWeight: 500,
-              color: 'var(--text-primary)',
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}>
+          <div className="mt-4 p-3 bg-muted rounded-lg border border-border">
+            <div className="text-[13px] font-medium text-foreground mb-2 flex items-center gap-1.5">
               <span>🖥️</span>
               <span>进程信息</span>
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '12px',
-              fontSize: '12px',
-            }}>
+            <div className="grid grid-cols-3 gap-3 text-xs">
               <div>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>进程名</div>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.processName}</div>
+                <div className="text-muted-foreground mb-0.5">进程名</div>
+                <div className="text-foreground font-medium">{processInfo.processName}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>PID</div>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.pid}</div>
+                <div className="text-muted-foreground mb-0.5">PID</div>
+                <div className="text-foreground font-medium">{processInfo.pid}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>端口</div>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{processInfo.port}</div>
+                <div className="text-muted-foreground mb-0.5">端口</div>
+                <div className="text-foreground font-medium">{processInfo.port}</div>
               </div>
             </div>
           </div>
         )}
 
         {/* 异常修复按钮 */}
-        <div style={{
-          marginTop: '16px',
-          paddingTop: '16px',
-          borderTop: '1px solid var(--border-color)',
-        }}>
-          <button
-            className="btn btn-sm"
+        <div className="mt-4 pt-4 border-t border-border">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleRepairEngine}
             disabled={isRepairing || engineStatus === 'running'}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: engineStatus === 'running' ? 'var(--text-tertiary)' : 'var(--error-text)',
-              borderColor: engineStatus === 'running' ? 'var(--text-tertiary)' : 'var(--error-text)',
-              cursor: engineStatus === 'running' ? 'not-allowed' : 'pointer',
-            }}
+            className={cn(
+              "gap-1.5",
+              engineStatus !== 'running' && "text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+            )}
           >
             <span>{isRepairing ? '⟳' : '🔧'}</span>
             <span>
               {isRepairing ? '修复中...' : engineStatus === 'running' ? '引擎运行正常' : '异常修复'}
             </span>
-          </button>
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-secondary)',
-            marginTop: '6px',
-          }}>
+          </Button>
+          <div className="text-[11px] text-muted-foreground mt-1.5">
             {engineStatus === 'running'
               ? 'AI引擎运行正常，无需修复'
               : '清理残留进程并强制重启应用'}
@@ -531,7 +539,7 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
         </div>
 
         {engineError && (
-          <div className="engine-status-error">
+          <div className="mt-3 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
             {engineError}
           </div>
         )}
@@ -741,87 +749,104 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
   };
 
   return (
-    <div className="settings-section">
-      <div className="settings-section-title">大模型设置</div>
+    <div className="animate-in fade-in duration-200">
+      <div className="text-xl font-semibold text-foreground mb-5">大模型设置</div>
 
       {/* 三选一 Radio */}
-      <div className="model-mode-radios">
+      <div className="flex flex-col gap-2 mb-6">
         {MODEL_MODE_CONFIGS.map(mode => (
-          <label key={mode.modeId} className={`model-mode-radio ${selectedMode === mode.modeId ? 'active' : ''}`}>
+          <label
+            key={mode.modeId}
+            className={cn(
+              "flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-all hover:border-primary/50",
+              selectedMode === mode.modeId
+                ? "border-primary bg-primary/5"
+                : "border-border"
+            )}
+          >
             <input
               type="radio"
               name="model-mode"
+              className="sr-only"
               checked={selectedMode === mode.modeId}
               onChange={() => handleModeChange(mode.modeId)}
             />
-            <span className="model-mode-radio-dot" />
-            <span className="model-mode-radio-label">{mode.modeName}</span>
+            <span className={cn(
+              "flex items-center justify-center size-4 rounded-full border-2 shrink-0 transition-colors",
+              selectedMode === mode.modeId
+                ? "border-primary bg-primary"
+                : "border-muted-foreground/30"
+            )}>
+              {selectedMode === mode.modeId && (
+                <span className="size-2 rounded-full bg-primary-foreground" />
+              )}
+            </span>
+            <span className="text-sm font-medium">{mode.modeName}</span>
           </label>
         ))}
       </div>
 
       {/* 自定义模式的表单区域 */}
       {selectedMode !== 'default' && currentModeConfig && (
-        <div className="model-config-form">
+        <div className="mb-6 space-y-4">
           {/* 模型厂商下拉 */}
-          <div className="model-config-field">
-            <label className="model-config-label">模型厂商：</label>
-            <select
-              className="model-config-select"
-              value={selectedProviderId}
-              onChange={e => handleProviderChange(e.target.value)}
-            >
-              <option value="">请选择厂商</option>
-              {currentModeConfig.providers.map(provider => (
-                <option key={provider.providerId} value={provider.providerId}>
-                  {provider.label}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-muted-foreground">模型厂商：</label>
+            <Select value={selectedProviderId} onValueChange={(value) => handleProviderChange(value ?? '')}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择厂商" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentModeConfig.providers.map(provider => (
+                  <SelectItem key={provider.providerId} value={provider.providerId}>
+                    {provider.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 模型名称下拉 */}
           {selectedProviderId && (
-            <div className="model-config-field">
-              <label className="model-config-label">模型名称：</label>
-              <select
-                className="model-config-select"
-                value={selectedModelId}
-                onChange={e => setSelectedModelId(e.target.value)}
-              >
-                <option value="">请选择模型</option>
-                {availableModels.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}{model.contextWindow ? ` (${model.contextWindow >= 1000 ? `${Math.round(model.contextWindow / 1000)}K` : model.contextWindow})` : ''}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-muted-foreground">模型名称：</label>
+              <Select value={selectedModelId} onValueChange={(value) => setSelectedModelId(value ?? '')}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="请选择模型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map(model => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}{model.contextWindow ? ` (${model.contextWindow >= 1000 ? `${Math.round(model.contextWindow / 1000)}K` : model.contextWindow})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
           {/* API Key 输入 */}
           {selectedProviderId && (
-            <div className="model-config-field">
-              <div className="model-config-label-row">
-                <label className="model-config-label">API Key：</label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-muted-foreground">API Key：</label>
                 {currentApiKeyUrl && (
-                  <a
-                    className="model-config-link"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => {
                       window.electronAPI.openExternalUrl(currentApiKeyUrl);
                     }}
                   >
                     前往官网获取
-                  </a>
+                  </button>
                 )}
               </div>
               {hasApiKey ? (
-                <div className="model-config-apikey-status">
-                  <span className="apikey-configured-text">API Key 已配置</span>
-                  <button
-                    className="btn btn-sm"
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/50">
+                  <span className="text-sm text-muted-foreground">API Key 已配置</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={async () => {
                       if (!confirm('确定要删除此 API Key 吗？')) return;
                       try {
@@ -840,19 +865,20 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                     disabled={loading}
                   >
                     重新配置
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <div className="model-config-apikey-input">
-                  <input
+                <div className="flex gap-2">
+                  <Input
                     type={showApiKey ? 'text' : 'password'}
-                    className="model-config-input"
                     placeholder="请输入 API Key"
                     value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
+                    className="flex-1"
                   />
-                  <button
-                    className="model-config-eye-btn"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setShowApiKey(!showApiKey)}
                     title={showApiKey ? '隐藏' : '显示'}
                   >
@@ -869,7 +895,7 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
                         </>
                       )}
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -878,17 +904,17 @@ const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
       )}
 
       {/* 提示 + 确认按钮 */}
-      <div className="model-config-footer">
-        <div className="model-config-hint">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground">
           *可选用自定义大模型配置，使用时请遵循相关法律法规
         </div>
-        <button
-          className="model-config-btn-confirm"
+        <Button
           onClick={handleConfirm}
           disabled={loading || isRestarting}
+          size="sm"
         >
           {loading ? '保存中...' : '确 认'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -903,33 +929,32 @@ interface AccountSettingsProps {
 
 const AccountSettings: React.FC<AccountSettingsProps> = ({ user }) => {
   return (
-    <div className="settings-section">
-      <div className="settings-section-title">账户设置</div>
+    <div className="animate-in fade-in duration-200">
+      <div className="text-xl font-semibold text-foreground mb-5">账户设置</div>
 
-      <div className="settings-group">
-        <div className="account-info">
-          <div className="account-avatar">
-            {(user?.username || 'D').charAt(0).toUpperCase()}
-          </div>
-          <div className="account-details">
-            <div className="account-name">{user?.username || 'Demo User'}</div>
-            <div className="account-email">{user?.email || 'demo@clawstation.local'}</div>
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <Avatar size="lg">
+            <AvatarFallback className="text-base font-semibold">
+              {(user?.username || 'D').charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="text-sm font-medium text-foreground">{user?.username || 'Demo User'}</div>
+            <div className="text-xs text-muted-foreground">{user?.email || 'demo@clawstation.local'}</div>
           </div>
         </div>
       </div>
 
-      <div className="settings-group">
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">用户ID</div>
-          </div>
-          <div className="settings-item-value">{user?.id || '-'}</div>
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between py-2">
+          <div className="text-sm text-muted-foreground">用户ID</div>
+          <div className="text-sm font-medium text-foreground">{user?.id || '-'}</div>
         </div>
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">创建时间</div>
-          </div>
-          <div className="settings-item-value">
+        <Separator />
+        <div className="flex items-center justify-between py-2">
+          <div className="text-sm text-muted-foreground">创建时间</div>
+          <div className="text-sm font-medium text-foreground">
             {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '-'}
           </div>
         </div>
@@ -953,30 +978,27 @@ const AboutSettings: React.FC = () => {
   }, []);
 
   return (
-    <div className="settings-section">
-      <div className="settings-section-title">关于</div>
+    <div className="animate-in fade-in duration-200">
+      <div className="text-xl font-semibold text-foreground mb-5">关于</div>
 
-      <div className="about-card">
-        <div className="about-logo">XClaw</div>
-        <div className="about-name">XClaw</div>
-        <div className="about-version">版本 {version || '加载中...'}</div>
-        <div className="about-description">
+      <div className="rounded-xl border border-border p-6 mb-6 flex flex-col items-center text-center">
+        <div className="text-3xl font-bold text-primary mb-1">XClaw</div>
+        <div className="text-lg font-semibold text-foreground mb-1">XClaw</div>
+        <div className="text-sm text-muted-foreground mb-2">版本 {version || '加载中...'}</div>
+        <div className="text-sm text-muted-foreground">
           AI数字员工桌面应用
         </div>
       </div>
 
-      <div className="settings-group">
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">技术栈</div>
-          </div>
-          <div className="settings-item-value">Electron + React + TypeScript</div>
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between py-2">
+          <div className="text-sm text-muted-foreground">技术栈</div>
+          <div className="text-sm font-medium text-foreground">Electron + React + TypeScript</div>
         </div>
-        <div className="settings-item">
-          <div className="settings-item-label">
-            <div className="settings-item-title">AI 引擎</div>
-          </div>
-          <div className="settings-item-value">OpenClaw Gateway</div>
+        <Separator />
+        <div className="flex items-center justify-between py-2">
+          <div className="text-sm text-muted-foreground">AI 引擎</div>
+          <div className="text-sm font-medium text-foreground">OpenClaw Gateway</div>
         </div>
       </div>
     </div>
@@ -1096,21 +1118,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay active" onClick={onClose}>
-      <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="flex flex-row gap-0 max-w-[720px] h-[520px] p-0 overflow-hidden sm:max-w-[720px]" showCloseButton={false}>
         {/* 左侧菜单 */}
-        <div className="settings-sidebar">
-          <div className="settings-sidebar-header">
-            <h2 className="settings-title">设置</h2>
+        <div className="w-[180px] shrink-0 border-r border-border flex flex-col bg-muted/30">
+          <div className="p-4 pb-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+            <h2 className="text-base font-semibold text-foreground">设置</h2>
           </div>
-          <nav className="settings-nav">
+          <nav className="flex-1 px-2 space-y-0.5">
             {SETTINGS_MENU.map((item) => (
               <button
                 key={item.id}
-                className={`settings-nav-item ${activeTab === item.id ? 'active' : ''}`}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  activeTab === item.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
                 onClick={() => handleTabChange(item.id)}
               >
                 <MenuIcon name={item.icon} />
@@ -1121,31 +1146,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         </div>
 
         {/* 右侧内容 */}
-        <div className="settings-content">
-          <div className="settings-content-header">
-            <h3 className="settings-content-title">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+            <h3 className="text-sm font-medium text-foreground">
               {SETTINGS_MENU.find(m => m.id === activeTab)?.label}
             </h3>
-            <button className="settings-close-btn" onClick={onClose}>
+            <button
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              onClick={onClose}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
-          <div className="settings-content-body">
-            {renderContent()}
-          </div>
+          <ScrollArea className="flex-1">
+            <div className="px-6 py-4">
+              {renderContent()}
+            </div>
+          </ScrollArea>
         </div>
-      </div>
+      </DialogContent>
 
       {/* Toast 提示 */}
       {toast && (
-        <div className={`toast toast-${toast.type}`}>
+        <div className={cn(
+          "fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg text-sm font-medium shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-200",
+          toast.type === 'success'
+            ? "bg-primary text-primary-foreground"
+            : "bg-destructive text-destructive-foreground"
+        )}>
           {toast.message}
         </div>
       )}
-    </div>
+    </Dialog>
   );
 };
 
