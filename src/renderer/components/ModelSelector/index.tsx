@@ -7,7 +7,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useModels } from '../../hooks/useModels';
-import './styles.css';
 
 export interface ModelSelectorProps {
   /** 当前选中的模型（格式：provider/modelId） */

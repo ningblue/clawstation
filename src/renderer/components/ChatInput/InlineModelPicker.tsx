@@ -13,7 +13,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useModels, getProviderDisplayName } from '../../hooks/useModels';
 import type { ProviderGroup, SubCategory } from '../../types/models';
-import './inline-model-picker.css';
 
 // 格式化上下文窗口大小
 function formatContextWindow(contextWindow: number): string {

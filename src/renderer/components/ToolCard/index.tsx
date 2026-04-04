@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import './styles.css';
 
 // 工具类型定义
 export interface ToolCall {

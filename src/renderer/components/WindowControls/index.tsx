@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './styles.css';
 
 export const WindowControls: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
