@@ -145,9 +145,6 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               </div>
             </div>
             <div className="text-sm font-medium text-center">明亮</div>
-            {preferences.theme === 'light' && (
-              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">✓</div>
-            )}
           </div>
           <div
             className={cn(
@@ -167,9 +164,6 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
               </div>
             </div>
             <div className="text-sm font-medium text-center">暗黑</div>
-            {preferences.theme === 'dark' && (
-              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">✓</div>
-            )}
           </div>
         </div>
       </div>
@@ -1146,7 +1140,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
         </div>
 
         {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
             <h3 className="text-sm font-medium text-foreground">
               {SETTINGS_MENU.find(m => m.id === activeTab)?.label}
@@ -1161,7 +1155,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               </svg>
             </button>
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden">
             <div className="px-6 py-4">
               {renderContent()}
             </div>

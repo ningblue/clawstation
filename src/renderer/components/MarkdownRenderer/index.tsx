@@ -82,7 +82,7 @@ const CodeBlock = ({ children, className, inline, node, ...props }: any) => {
         customStyle={{
           margin: 0,
           borderRadius: '0 0 8px 8px',
-          fontSize: '13px',
+          fontSize: '0.8125rem',
         }}
         {...props}
       >
@@ -155,7 +155,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const { thinkingContent, mainContent } = parseMessageContent(content);
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
+    <div className="prose prose-neutral dark:prose-invert max-w-none break-words prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
       {showThinking && thinkingContent && (
         <ThinkingBlock content={thinkingContent} />
       )}

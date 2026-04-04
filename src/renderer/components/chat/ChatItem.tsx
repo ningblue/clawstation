@@ -72,7 +72,7 @@ const CodeBlock: React.FC<{ code: string; language?: string }> = ({ code, langua
         customStyle={{
           margin: 0,
           borderRadius: '0 0 8px 8px',
-          fontSize: '13px',
+          fontSize: '0.8125rem',
           lineHeight: '1.5',
         }}
       >

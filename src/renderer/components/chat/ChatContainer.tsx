@@ -76,7 +76,7 @@ const WelcomeScreen: React.FC<{
   ];
 
   return (
-    <div className="flex h-full items-center justify-center bg-background dark:bg-[#0f0f0f]">
+    <div className="flex h-full items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 px-6">
         <div className="text-muted-foreground">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -238,7 +238,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       />
 
       {/* 主聊天区域 */}
-      <div className="flex flex-1 flex-col bg-background dark:bg-[#0f0f0f]">
+      <div className="flex flex-1 flex-col bg-background">
         {/* 顶部工具栏 */}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
           <div className="flex items-center">

@@ -376,35 +376,37 @@ interface EmptyStateProps {
 
 // 导出 EmptyState 组件
 export const EmptyState: React.FC<EmptyStateProps> = ({ onFeatureClick }) => {
+  const cardStyles = [
+    'hover:border-chart-1/40',
+    'hover:border-chart-2/40',
+    'hover:border-chart-3/40',
+    'hover:border-chart-4/40',
+    'hover:border-chart-5/40',
+    'hover:border-chart-1/40',
+  ];
+
   const features = [
-    {
-      title: '文档转换',
-      desc: 'Markdown 转精美 PDF，支持目录',
+    { title: '文档转换', desc: 'Markdown 转精美 PDF，支持目录',
       prompt: '帮我把【上传的 Markdown 文件】转换成排版精美的 PDF 文档，要求：自定义封面页（标题 + 作者 + 日期）、自动生成目录、代码块带语法高亮、表格有交替行底色、页脚显示页码。',
     },
     {
-      title: 'Excel 分析',
-      desc: '上传 Excel，生成图表分析报告',
+      title: 'Excel 分析', desc: '上传 Excel，生成图表分析报告',
       prompt: '请分析【上传你的 Excel 文件】，生成包含数据洞察和可视化图表的专业 Excel 分析报告。要求：\n1. 数据概况和基本统计\n2. 关键指标分析\n3. 趋势分析\n4. 发现的问题和建议\n5. 生成可视化图表',
     },
     {
-      title: '项目管理表',
-      desc: '创建优雅的项目管理表',
+      title: '项目管理表', desc: '创建优雅的项目管理表',
       prompt: '创建一个项目管理表，用于跟踪项目全生命周期的任务，具有优雅且简约的视觉风格。要求包含：\n1. 任务名称\n2. 负责人\n3. 开始/截止日期\n4. 优先级\n5. 状态（待处理/进行中/已完成）\n6. 进度百分比\n7. 备注',
     },
     {
-      title: '简历优化',
-      desc: '优化简历，增加量化成果',
+      title: '简历优化', desc: '优化简历，增加量化成果',
       prompt: '帮我优化【这份简历】，让它更有吸引力：\n1. 优化表述方式，更专业更有亮点\n2. 增加一些量化成果\n3. 调整简历结构\n\n请直接给出优化后的完整简历内容。',
     },
     {
-      title: '合同审核',
-      desc: '检查合同风险，给出修改建议',
+      title: '合同审核', desc: '检查合同风险，给出修改建议',
       prompt: '帮我审核【这份合同】，检查潜在风险点：\n1. 付款条款是否合理\n2. 违约责任是否对等\n3. 关键条款是否有遗漏\n4. 知识产权归属是否清晰\n5. 争议解决机制是否完善\n\n请逐条列出发现的问题，并给出具体的修改建议。',
     },
     {
-      title: '会议纪要',
-      desc: '整理结构化纪要，列待办事项',
+      title: '会议纪要', desc: '整理结构化纪要，列待办事项',
       prompt: '帮我把【这段会议记录】整理成结构化的会议纪要，包含：\n1. 会议主题\n2. 会议时间\n3. 参与人员\n4. 讨论要点\n5. 决策事项\n6. 待办事项（包含负责人和截止时间）\n\n请用清晰的Markdown格式输出。',
     },
   ];
@@ -421,24 +423,24 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onFeatureClick }) => {
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center bg-background px-6 py-12 dark:bg-[#0f0f0f]">
+    <div className="flex h-full flex-col items-center justify-center bg-background px-6 py-12">
       <div className="mb-10 flex flex-col items-center gap-3">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground">
           X
         </div>
         <h1 className="text-2xl font-bold text-foreground">XClaw</h1>
-        <p className="text-sm text-muted-foreground dark:text-gray-400">7x24小时，随时随地召唤的全能电脑 AI 助手</p>
+        <p className="text-sm text-muted-foreground">7x24小时，随时随地召唤的全能电脑 AI 助手</p>
       </div>
 
       <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3">
         {features.map((feature, index) => (
           <div
             key={index}
-            className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-[#1a1a1a]"
+            className={`group cursor-pointer rounded-lg border border-border/50 bg-card/50 p-3.5 transition-all hover:bg-card hover:shadow-sm ${cardStyles[index]}`}
             onClick={() => handleFeatureClick(feature.prompt)}
           >
-            <h3 className="text-sm font-medium text-foreground dark:text-white">{feature.title}</h3>
-            <p className="mt-1 text-xs text-muted-foreground dark:text-gray-400">{feature.desc}</p>
+            <h3 className="text-sm font-medium text-foreground/90 group-hover:text-foreground">{feature.title}</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground/70 group-hover:text-muted-foreground">{feature.desc}</p>
           </div>
         ))}
       </div>
@@ -472,7 +474,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   // 如果显示空状态
   if (showEmptyState && messages.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto bg-background dark:bg-[#0f0f0f]" ref={containerRef}>
+      <div className="flex-1 overflow-y-auto bg-background" ref={containerRef}>
         <EmptyState onFeatureClick={onFeatureClick} />
       </div>
     );
@@ -480,7 +482,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div
-      className="flex flex-1 flex-col overflow-y-auto bg-background px-0 py-5 dark:bg-gray-950"
+      className="flex flex-1 flex-col overflow-y-auto bg-background px-0 py-5"
       ref={containerRef}
     >
       {messages.length === 0 ? (

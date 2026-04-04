@@ -97,8 +97,12 @@ export function useUserStore() {
    * 应用字体大小到界面
    */
   const applyFontSize = useCallback((fontSize: FontSize) => {
-    document.body.classList.remove('font-small', 'font-medium', 'font-large');
-    document.body.classList.add(`font-${fontSize}`);
+    const sizeMap: Record<FontSize, string> = {
+      small: '14px',
+      medium: '16px',
+      large: '18px',
+    };
+    document.documentElement.style.fontSize = sizeMap[fontSize] || '16px';
   }, []);
 
   /**
