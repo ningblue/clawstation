@@ -3084,6 +3084,319 @@ body.dark-theme .search-input {
   margin-top: 20px;
 }
 
+/* ========== 大模型设置 - QClaw 风格 ========== */
+
+/* 三选一 Radio 组 */
+.model-mode-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.model-mode-radio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #111827;
+  user-select: none;
+}
+
+.model-mode-radio input[type="radio"] {
+  display: none;
+}
+
+.model-mode-radio-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.model-mode-radio-dot::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.model-mode-radio.active .model-mode-radio-dot {
+  border-color: #111827;
+}
+
+.model-mode-radio.active .model-mode-radio-dot::after {
+  background: #111827;
+}
+
+.model-mode-radio-label {
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* 表单区域 */
+.model-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-left: 34px;
+}
+
+.model-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-config-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.model-config-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.model-config-link {
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.model-config-link:hover {
+  text-decoration: underline;
+}
+
+.model-config-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #111827;
+  background-color: #ffffff;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.model-config-select:focus {
+  outline: none;
+  border-color: #111827;
+}
+
+/* API Key 输入 */
+.model-config-apikey-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.model-config-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  font-size: 15px;
+  color: #111827;
+  background: transparent;
+  outline: none;
+}
+
+.model-config-eye-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.model-config-eye-btn:hover {
+  color: #6b7280;
+}
+
+/* API Key 已配置状态 */
+.model-config-apikey-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #d1fae5;
+  border-radius: 10px;
+  background: #ecfdf5;
+}
+
+.apikey-configured-text {
+  font-size: 14px;
+  color: #059669;
+  flex: 1;
+}
+
+/* 提示文本 */
+.model-config-hint {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 24px;
+  padding-left: 34px;
+}
+
+/* 确认/取消按钮 */
+.model-config-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.model-config-btn-confirm {
+  padding: 12px 48px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: #111827;
+  color: #ffffff;
+  letter-spacing: 4px;
+  transition: opacity 0.2s;
+}
+
+.model-config-btn-confirm:hover {
+  opacity: 0.85;
+}
+
+.model-config-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-config-btn-cancel {
+  padding: 12px 48px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  background: #ffffff;
+  color: #374151;
+  letter-spacing: 4px;
+  transition: all 0.2s;
+}
+
+.model-config-btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.model-config-btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 大模型设置 - Dark Theme ========== */
+body.dark-theme .model-mode-radio {
+  color: #e5e7eb;
+}
+
+body.dark-theme .model-mode-radio-dot {
+  border-color: #4b5563;
+}
+
+body.dark-theme .model-mode-radio.active .model-mode-radio-dot {
+  border-color: #e5e7eb;
+}
+
+body.dark-theme .model-mode-radio.active .model-mode-radio-dot::after {
+  background: #e5e7eb;
+}
+
+body.dark-theme .model-config-label {
+  color: #e5e7eb;
+}
+
+body.dark-theme .model-config-link {
+  color: #60a5fa;
+}
+
+body.dark-theme .model-config-select {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+body.dark-theme .model-config-select:focus {
+  border-color: #e5e7eb;
+}
+
+body.dark-theme .model-config-apikey-input {
+  border-color: #374151;
+  background: #1f2937;
+}
+
+body.dark-theme .model-config-input {
+  color: #e5e7eb;
+}
+
+body.dark-theme .model-config-eye-btn {
+  color: #6b7280;
+}
+
+body.dark-theme .model-config-eye-btn:hover {
+  color: #9ca3af;
+}
+
+body.dark-theme .model-config-apikey-status {
+  border-color: #065f46;
+  background: #064e3b;
+}
+
+body.dark-theme .apikey-configured-text {
+  color: #34d399;
+}
+
+body.dark-theme .model-config-hint {
+  color: #6b7280;
+}
+
+body.dark-theme .model-config-btn-confirm {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+body.dark-theme .model-config-btn-cancel {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-theme .model-config-btn-cancel:hover {
+  background: #374151;
+}
+
+/* ========== End 大模型设置 ========== */
+
 /* 引擎状态卡片 */
 .engine-status-card {
   background: #f8fafc;
