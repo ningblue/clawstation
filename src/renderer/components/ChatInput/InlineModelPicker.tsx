@@ -1,28 +1,18 @@
-/**
- * InlineModelPicker 组件
- *
- * 输入框内部右下角的紧凑型模型选择器
- * 特性：
- * - 向上弹出下拉面板
- * - 三栏层级: 左侧供应商分组 + 中间子分类 + 右侧模型列表
- * - 无子分类的供应商跳过中栏直接显示模型
- * - 已配置/未配置供应商用不同颜色区分
- * - 未配置供应商点击跳转设置页
- */
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Search, Settings } from "lucide-react";
+import { useModels } from "../../hooks/useModels";
+import type { ModelModeId } from "../../../shared/types/model-config.types";
+import { cn } from "@/lib/utils";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Settings, Search } from 'lucide-react';
-import { useModels, getProviderDisplayName } from '../../hooks/useModels';
-import type { ProviderGroup, SubCategory } from '../../types/models';
-import { cn } from '@/lib/utils';
-
-// 格式化上下文窗口大小
-function formatContextWindow(contextWindow: number): string {
+function formatContextWindow(contextWindow?: number): string | null {
+  if (!contextWindow) {
+    return null;
+  }
   if (contextWindow >= 1000000) {
     return `${(contextWindow / 1000000).toFixed(1)}M`;
   }
   if (contextWindow >= 1000) {
-    return `${(contextWindow / 1000).toFixed(0)}K`;
+    return `${Math.round(contextWindow / 1000)}K`;
   }
   return String(contextWindow);
 }
@@ -35,99 +25,73 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedMode, setSelectedMode] =
+    useState<Exclude<ModelModeId, "default">>("model-api");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ bottom: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
-    providerGroupList,
-    configuredProviders,
+    activeMode,
     currentSelection,
+    currentSelectionInfo,
     loading,
-    error,
     isRestarting,
+    providerGroupList,
     selectModel,
   } = useModels();
 
-  // 当前选中的 group
-  const selectedGroup = useMemo(() => {
-    if (!selectedGroupId) return null;
-    return providerGroupList.find(g => g.groupId === selectedGroupId) || null;
-  }, [selectedGroupId, providerGroupList]);
-
-  // 是否显示中栏
-  const showMiddleColumn = selectedGroup?.hasMultipleSubCategories ?? false;
-
-  // 当前模型信息
-  const currentModelInfo = useMemo(() => {
-    if (!currentSelection) return null;
-    const modelString = `${currentSelection.provider}/${currentSelection.model}`;
-    for (const group of providerGroupList) {
-      for (const sc of group.subCategories) {
-        const model = sc.models.find(
-          m => m.provider === currentSelection.provider && m.id === currentSelection.model
-        );
-        if (model) {
-          return { group, subCategory: sc, model, modelString };
-        }
-      }
+  useEffect(() => {
+    if (activeMode === "model-api" || activeMode === "coding-plan") {
+      setSelectedMode(activeMode);
     }
-    return { group: null, subCategory: null, model: null, modelString };
-  }, [currentSelection, providerGroupList]);
+  }, [activeMode]);
 
-  // 右栏要显示的模型
-  const displayModels = useMemo(() => {
-    if (searchKeyword.trim()) {
-      const keyword = searchKeyword.toLowerCase();
-      const results: { group: ProviderGroup; subCategory: SubCategory; }[] = [];
-      for (const group of providerGroupList) {
-        for (const sc of group.subCategories) {
-          const filtered = sc.models.filter(
-            m => m.name.toLowerCase().includes(keyword) || m.id.toLowerCase().includes(keyword)
-          );
-          if (filtered.length > 0 || group.groupName.toLowerCase().includes(keyword) || sc.label.toLowerCase().includes(keyword)) {
-            results.push({
-              group,
-              subCategory: {
-                ...sc,
-                models: filtered.length > 0 ? filtered : sc.models,
-              },
-            });
-          }
-        }
-      }
-      return results;
-    }
+  const groupsForMode = useMemo(() => {
+    return providerGroupList
+      .map((group) => ({
+        ...group,
+        subCategories: group.subCategories.filter(
+          (subcategory) => subcategory.modeId === selectedMode
+        ),
+      }))
+      .filter((group) => group.subCategories.length > 0);
+  }, [providerGroupList, selectedMode]);
 
-    if (!selectedGroup) {
-      const results: { group: ProviderGroup; subCategory: SubCategory; }[] = [];
-      for (const group of providerGroupList) {
-        for (const sc of group.subCategories) {
-          if (sc.models.length > 0) {
-            results.push({ group, subCategory: sc });
-          }
-        }
-      }
-      return results;
-    }
-
-    if (selectedSubCategoryId) {
-      const sc = selectedGroup.subCategories.find(s => s.id === selectedSubCategoryId);
-      if (sc) {
-        return [{ group: selectedGroup, subCategory: sc }];
+  const preferredGroupId = useMemo(() => {
+    if (currentSelection?.modeId === selectedMode) {
+      const matchedGroup = groupsForMode.find(
+        (group) => group.groupId === currentSelection.provider
+      );
+      if (matchedGroup) {
+        return matchedGroup.groupId;
       }
     }
 
-    return selectedGroup.subCategories
-      .filter(sc => sc.models.length > 0)
-      .map(sc => ({ group: selectedGroup, subCategory: sc }));
-  }, [searchKeyword, selectedGroup, selectedSubCategoryId, providerGroupList]);
+    const configuredGroup = groupsForMode.find(
+      (group) => group.subCategories[0]?.hasApiKey
+    );
+    return configuredGroup?.groupId ?? groupsForMode[0]?.groupId ?? null;
+  }, [currentSelection?.modeId, currentSelection?.provider, groupsForMode, selectedMode]);
 
-  // 点击外部关闭
+  useEffect(() => {
+    if (!selectedGroupId || !groupsForMode.some((group) => group.groupId === selectedGroupId)) {
+      setSelectedGroupId(preferredGroupId);
+    }
+  }, [groupsForMode, preferredGroupId, selectedGroupId]);
+
+  useEffect(() => {
+    if (isOpen && preferredGroupId && currentSelection?.modeId === selectedMode) {
+      setSelectedGroupId(preferredGroupId);
+    }
+  }, [currentSelection?.modeId, isOpen, preferredGroupId, selectedMode]);
+
+  useEffect(() => {
+    if (!isOpen && searchKeyword) {
+      setSearchKeyword("");
+    }
+  }, [isOpen, searchKeyword]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -135,314 +99,199 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
       }
     };
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // ESC 关闭
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+  const filteredGroups = useMemo(() => {
+    if (!searchKeyword.trim()) {
+      return groupsForMode;
     }
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+    const keyword = searchKeyword.toLowerCase();
+    return groupsForMode.filter(
+      (group) =>
+        group.groupName.toLowerCase().includes(keyword) ||
+        group.subCategories.some(
+          (subcategory) =>
+            subcategory.models.some(
+              (model) =>
+                model.name.toLowerCase().includes(keyword) ||
+                model.id.toLowerCase().includes(keyword)
+            )
+        )
+    );
+  }, [groupsForMode, searchKeyword]);
 
-  // 打开时聚焦搜索框并计算位置
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const dropdownHeight = 400;
-        const spaceAbove = rect.top;
-        const spaceBelow = viewportHeight - rect.bottom;
+  const selectedGroup =
+    filteredGroups.find((group) => group.groupId === selectedGroupId) ??
+    filteredGroups[0] ??
+    null;
+  const currentSubCategory = selectedGroup?.subCategories[0] ?? null;
 
-        if (spaceAbove >= dropdownHeight || spaceAbove > spaceBelow) {
-          setDropdownPosition({
-            bottom: viewportHeight - rect.top + 8,
-            left: rect.left,
-          });
-        } else {
-          setDropdownPosition({
-            bottom: 0,
-            left: rect.left,
-          });
-        }
-      }
-    }
-    if (!isOpen) {
-      setSearchKeyword('');
-      setSelectedGroupId(null);
-      setSelectedSubCategoryId(null);
-    }
-  }, [isOpen]);
-
-  const handleToggle = () => {
-    if (!disabled && !isRestarting) {
-      setIsOpen(!isOpen);
-    }
-  };
+  const currentLabel = currentSelectionInfo
+    ? `${currentSelectionInfo.modelName} / ${currentSelectionInfo.providerLabel}`
+    : "选择模型";
 
   const handleModelSelect = async (providerId: string, modelId: string) => {
-    setIsOpen(false);
-    await selectModel(providerId, modelId);
-  };
-
-  const handleNavigateToSettings = () => {
-    setIsOpen(false);
-    window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'ai' } }));
-  };
-
-  const handleGroupClick = (group: ProviderGroup) => {
-    if (!group.hasAnyApiKey) {
-      handleNavigateToSettings();
-      return;
-    }
-    if (selectedGroupId === group.groupId) {
-      setSelectedGroupId(null);
-      setSelectedSubCategoryId(null);
-    } else {
-      setSelectedGroupId(group.groupId);
-      setSelectedSubCategoryId(null);
+    try {
+      await selectModel(providerId, modelId, selectedMode);
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Failed to select model:", error);
     }
   };
-
-  const handleSubCategoryClick = (sc: SubCategory) => {
-    if (!sc.hasApiKey) {
-      handleNavigateToSettings();
-      return;
-    }
-    if (selectedSubCategoryId === sc.id) {
-      setSelectedSubCategoryId(null);
-    } else {
-      setSelectedSubCategoryId(sc.id);
-    }
-  };
-
-  const triggerText = isRestarting
-    ? '切换中...'
-    : currentModelInfo?.model?.name || '选择模型';
-
-  const triggerIcon = isRestarting
-    ? '...'
-    : currentModelInfo?.group
-      ? currentModelInfo.group.icon
-      : '?';
 
   return (
     <div ref={dropdownRef} className="relative">
-      {/* 触发按钮 */}
       <button
-        ref={triggerRef}
         className={cn(
-          'flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors',
-          'hover:bg-muted',
-          isRestarting && 'animate-pulse',
-          !currentModelInfo?.model && !isRestarting && 'text-muted-foreground',
+          "flex min-w-[280px] items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-muted",
+          (disabled || isRestarting) && "pointer-events-none opacity-50"
         )}
-        onClick={handleToggle}
         disabled={disabled}
-        title={isRestarting ? '引擎重启中...' : '切换模型'}
+        onClick={() => setIsOpen((value) => !value)}
       >
-        <span className="text-sm">{triggerIcon}</span>
-        <span className="max-w-[120px] truncate">{triggerText}</span>
-        <ChevronDown
-          className={cn(
-            'size-3 transition-transform',
-            isOpen && 'rotate-180',
-          )}
-        />
+        <span className="max-w-[260px] truncate text-muted-foreground">
+          {isRestarting ? "切换中..." : currentLabel}
+        </span>
+        <ChevronDown className={cn("size-3.5", isOpen && "rotate-180")} />
       </button>
 
-      {/* 下拉面板（使用 fixed 定位） */}
       {isOpen && (
-        <div
-          className={cn(
-            'fixed z-50 flex flex-col rounded-lg border border-border bg-popover shadow-xl overflow-hidden',
-            showMiddleColumn ? 'w-[560px]' : 'w-[420px]',
-          )}
-          style={{
-            bottom: dropdownPosition.bottom || 'auto',
-            top: dropdownPosition.bottom === 0 ? 'auto' : undefined,
-            left: dropdownPosition.left,
-          }}
-        >
-          {/* 搜索栏 */}
-          <div className="border-b border-border p-2">
-            <div className="relative flex items-center">
-              <Search className="size-4 ml-2 text-muted-foreground" />
+        <div className="absolute bottom-full left-0 z-[80] mb-2 w-[min(440px,calc(100vw-24px))] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-border bg-popover shadow-xl sm:w-[min(460px,calc(100vw-40px))] sm:max-w-[calc(100vw-40px)]">
+          <div className="border-b border-border p-2.5">
+            <div className="mb-2.5 flex gap-2">
+              <button
+                className={cn(
+                  "rounded-md px-2.5 py-1.5 text-xs font-medium",
+                  selectedMode === "model-api"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                )}
+                onClick={() => setSelectedMode("model-api")}
+              >
+                模型 API
+              </button>
+              <button
+                className={cn(
+                  "rounded-md px-2.5 py-1.5 text-xs font-medium",
+                  selectedMode === "coding-plan"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                )}
+                onClick={() => setSelectedMode("coding-plan")}
+              >
+                Coding Plan
+              </button>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+              <Search className="size-3.5 text-muted-foreground" />
               <input
-                ref={searchInputRef}
-                type="text"
-                className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
-                placeholder="搜索模型..."
+                className="w-full bg-transparent text-xs outline-none"
+                placeholder="搜索模型或厂商"
                 value={searchKeyword}
-                onChange={(e) => {
-                  setSearchKeyword(e.target.value);
-                  if (e.target.value.trim()) {
-                    setSelectedGroupId(null);
-                    setSelectedSubCategoryId(null);
-                  }
-                }}
+                onChange={(event) => setSearchKeyword(event.target.value)}
               />
             </div>
           </div>
 
-          {/* 内容区 */}
-          <div className={cn(
-            'flex min-h-0 flex-1',
-            showMiddleColumn ? 'max-h-[400px]' : 'max-h-[400px]',
-          )}>
-            {/* 左栏: 供应商分组 */}
-            {!searchKeyword.trim() && (
-              <div className="w-28 shrink-0 border-r border-border overflow-y-auto">
-                <div
-                  className={cn(
-                    'px-2 py-1.5 text-xs cursor-pointer transition-colors',
-                    selectedGroupId === null
-                      ? 'bg-accent text-accent-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                  onClick={() => {
-                    setSelectedGroupId(null);
-                    setSelectedSubCategoryId(null);
-                  }}
-                >
-                  全部
-                </div>
-                {providerGroupList.map(group => (
-                  <div
+          <div className="grid min-h-[260px] max-h-[min(68vh,460px)] grid-cols-1 overflow-hidden md:grid-cols-[182px_minmax(0,1fr)]">
+            <div className="max-h-[180px] overflow-y-auto border-b border-border p-2 md:max-h-none md:border-b-0 md:border-r">
+              {filteredGroups.map((group) => {
+                const subcategory = group.subCategories[0];
+                const isConfigured = Boolean(subcategory?.hasApiKey);
+                return (
+                  <button
                     key={group.groupId}
                     className={cn(
-                      'flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer transition-colors',
-                      selectedGroupId === group.groupId
-                        ? 'bg-accent text-accent-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      !group.hasAnyApiKey && 'opacity-60',
+                      "mb-1 w-full rounded-lg px-2.5 py-2 text-left",
+                      selectedGroup?.groupId === group.groupId
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-muted"
                     )}
-                    onClick={() => handleGroupClick(group)}
-                    title={group.hasAnyApiKey ? group.groupName : `${group.groupName} - 未配置，点击去配置`}
+                    onClick={() => setSelectedGroupId(group.groupId)}
                   >
-                    <span className="truncate flex-1">{group.groupName}</span>
-                    <span className={cn(
-                      'size-1.5 rounded-full shrink-0',
-                      group.hasAnyApiKey ? 'bg-green-500' : 'bg-muted-foreground/30',
-                    )} />
-                  </div>
-                ))}
-              </div>
-            )}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 text-[13px] font-medium leading-4">
+                        {group.groupName}
+                      </div>
+                      <div
+                        className={cn(
+                          "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          isConfigured
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {isConfigured ? "已配" : "未配"}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* 中栏: 子分类 (仅多子分类分组显示) */}
-            {showMiddleColumn && !searchKeyword.trim() && selectedGroup && (
-              <div className="w-28 shrink-0 border-r border-border overflow-y-auto">
-                {selectedGroup.subCategories.map(sc => (
-                  <div
-                    key={sc.id}
-                    className={cn(
-                      'flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer transition-colors',
-                      selectedSubCategoryId === sc.id
-                        ? 'bg-accent text-accent-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      !sc.hasApiKey && 'opacity-60',
-                    )}
-                    onClick={() => handleSubCategoryClick(sc)}
-                    title={sc.hasApiKey ? sc.label : `${sc.label} - 未配置`}
+            <div className="min-w-0 overflow-y-auto p-3">
+              {!currentSubCategory ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  暂无可用模型
+                </div>
+              ) : !currentSubCategory.hasApiKey ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+                  <div>该厂商尚未配置 API Key</div>
+                  <button
+                    className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5"
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.dispatchEvent(
+                        new CustomEvent("open-settings", { detail: { tab: "ai" } })
+                      );
+                    }}
                   >
-                    <span className="truncate flex-1">{sc.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{sc.models.length}</span>
-                    <span className={cn(
-                      'size-1.5 rounded-full shrink-0',
-                      sc.hasApiKey ? 'bg-green-500' : 'bg-muted-foreground/30',
-                    )} />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 右栏: 模型列表 */}
-            <div className="flex-1 overflow-y-auto min-w-0">
-              {loading ? (
-                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                  <span className="mr-2 size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                  <span>加载中...</span>
+                    <Settings className="size-4" />
+                    去设置
+                  </button>
                 </div>
-              ) : error ? (
-                <div className="flex items-center justify-center py-8 text-sm text-destructive">
-                  <span>加载失败</span>
-                </div>
-              ) : displayModels.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                  <span>未找到模型</span>
+              ) : loading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  加载中...
                 </div>
               ) : (
-                displayModels.map(({ group, subCategory }) => (
-                  <div key={`${group.groupId}/${subCategory.providerId}`}>
-                    <div className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground sticky top-0 bg-popover">
-                      <span>{group.icon} {group.hasMultipleSubCategories ? `${group.groupName} / ${subCategory.label}` : group.groupName}</span>
-                      {!subCategory.hasApiKey && (
-                        <span className="ml-auto text-[10px] rounded bg-muted px-1.5 py-0.5">需配置</span>
-                      )}
-                    </div>
-                    {subCategory.hasApiKey ? (
-                      subCategory.models.map(model => {
-                        const isSelected = currentModelInfo?.modelString === `${model.provider}/${model.id}`;
-                        return (
-                          <div
-                            key={`${model.provider}/${model.id}`}
-                            className={cn(
-                              'flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer transition-colors',
-                              isSelected
-                                ? 'bg-accent text-accent-foreground'
-                                : 'hover:bg-muted',
-                            )}
-                            onClick={() => handleModelSelect(model.provider, model.id)}
-                          >
-                            <span className="flex items-center gap-1 truncate">
-                              {model.name}
-                              {isSelected && <span className="text-primary">&#10003;</span>}
-                            </span>
-                            {model.contextWindow && (
-                              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground bg-muted rounded px-1 py-0.5">
-                                {formatContextWindow(model.contextWindow)}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div
-                        className="px-3 py-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
-                        onClick={handleNavigateToSettings}
+                <div className="space-y-1.5">
+                  {currentSubCategory.models.map((model) => {
+                    const isSelected =
+                      currentSelection?.provider === model.provider &&
+                      currentSelection?.model === model.id &&
+                      currentSelection?.modeId === selectedMode;
+                    return (
+                      <button
+                        key={`${model.provider}/${model.id}`}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted"
+                        )}
+                        onClick={() => handleModelSelect(model.provider, model.id)}
                       >
-                        点击配置 API Key 后可使用
-                      </div>
-                    )}
-                  </div>
-                ))
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="truncate text-[13px] font-medium leading-5">
+                            {model.name}
+                          </div>
+                          {formatContextWindow(model.contextWindow) && (
+                            <div className="shrink-0 text-[11px] text-muted-foreground">
+                              {formatContextWindow(model.contextWindow)}
+                            </div>
+                          )}
+                        </div>
+                        {isSelected && <span className="text-[11px] text-primary">当前</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
-          </div>
-
-          {/* 底部 */}
-          <div className="flex items-center justify-between border-t border-border px-3 py-1.5">
-            <span className="text-xs text-muted-foreground">
-              {configuredProviders.length} 个服务商已配置
-            </span>
-            <button
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              onClick={handleNavigateToSettings}
-            >
-              <Settings className="size-3" />
-              管理配置
-            </button>
           </div>
         </div>
       )}

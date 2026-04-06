@@ -1,4 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type {
+  AppModelConfig,
+  CurrentAppModelSelection,
+  ModeConfig,
+  ModelModeId,
+} from "../shared/types/model-config.types";
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -154,6 +160,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("openclaw:apikey:providers", agentId),
   removeApiKey: (provider: string, agentId?: string) =>
     ipcRenderer.invoke("openclaw:apikey:remove", provider, agentId),
+
+  // 应用层模型配置 API
+  getAppModelConfig: () => ipcRenderer.invoke("app:model-config:get"),
+  getAppModelMode: (modeId: ModelModeId) =>
+    ipcRenderer.invoke("app:model-config:getMode", modeId),
+  selectAppModel: (vendorId: string, modelId: string, modeId?: ModelModeId) =>
+    ipcRenderer.invoke("app:model-config:selectModel", vendorId, modelId, modeId),
+  setAppModelApiKey: (
+    vendorId: string,
+    apiKey: string,
+    modeId?: ModelModeId,
+  ) => ipcRenderer.invoke("app:model-config:setApiKey", vendorId, apiKey, modeId),
+  removeAppModelApiKey: (vendorId: string, modeId?: ModelModeId) =>
+    ipcRenderer.invoke("app:model-config:removeApiKey", vendorId, modeId),
+  getCurrentAppModel: () => ipcRenderer.invoke("app:model-config:current"),
+  setAppModelMode: (modeId: ModelModeId) =>
+    ipcRenderer.invoke("app:model-config:setMode", modeId),
 
   // MiniMax OAuth API
   miniMaxOAuthStart: (region?: 'cn' | 'global') =>
@@ -449,6 +472,49 @@ declare global {
         provider: string,
         agentId?: string
       ) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+
+      getAppModelConfig: () => Promise<{
+        success: boolean;
+        config?: AppModelConfig;
+        error?: string;
+      }>;
+      getAppModelMode: (modeId: ModelModeId) => Promise<{
+        success: boolean;
+        mode?: ModeConfig | null;
+        error?: string;
+      }>;
+      selectAppModel: (
+        vendorId: string,
+        modelId: string,
+        modeId?: ModelModeId,
+      ) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      setAppModelApiKey: (
+        vendorId: string,
+        apiKey: string,
+        modeId?: ModelModeId,
+      ) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      removeAppModelApiKey: (
+        vendorId: string,
+        modeId?: ModelModeId,
+      ) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      getCurrentAppModel: () => Promise<{
+        success: boolean;
+        current?: CurrentAppModelSelection | null;
+        error?: string;
+      }>;
+      setAppModelMode: (modeId: ModelModeId) => Promise<{
         success: boolean;
         error?: string;
       }>;

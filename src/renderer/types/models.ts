@@ -1,3 +1,11 @@
+import type {
+  AppModelConfig,
+  AppModelCurrentSelection,
+  ModelModeId,
+  VendorConfig,
+  VendorModel,
+} from "../../shared/types/model-config.types";
+
 /**
  * 模型选择器类型定义
  */
@@ -31,6 +39,7 @@ export interface ModelConfig {
 export interface UserModelSelection {
   provider: string;
   model: string;
+  modeId?: Exclude<ModelModeId, "default">;
   lastUsed?: string;
 }
 
@@ -38,6 +47,8 @@ export interface UserModelSelection {
 export interface ProviderModelGroup {
   provider: string;
   providerName: string;
+  icon?: string;
+  modeId?: Exclude<ModelModeId, "default">;
   models: ModelConfig[];
   hasApiKey: boolean;
 }
@@ -46,6 +57,7 @@ export interface ProviderModelGroup {
 export interface SubCategory {
   /** 子分类唯一标识（groupId/index，用于 UI 选中状态） */
   id: string;
+  modeId: Exclude<ModelModeId, "default">;
   /** 实际 OpenClaw provider ID（用于模型匹配和 API Key 操作） */
   providerId: string;
   /** 子分类显示名(如"通用"、"编程计划") */
@@ -80,6 +92,14 @@ export interface ModelSelectorState {
   loading: boolean;
   error: string | null;
 }
+
+export type {
+  AppModelConfig,
+  AppModelCurrentSelection,
+  ModelModeId,
+  VendorConfig,
+  VendorModel,
+};
 
 // API响应类型
 export interface ModelsListResponse {

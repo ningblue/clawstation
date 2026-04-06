@@ -92,24 +92,14 @@ const CurrentModelDisplay: React.FC<{
   useEffect(() => {
     const loadCurrentModel = async () => {
       try {
-        const result = await window.electronAPI.getDefaultAgent();
-        if (result.success && result.agent?.model) {
-          const modelConfig = result.agent.model;
-          let modelStr = '';
-          if (typeof modelConfig === 'string') {
-            modelStr = modelConfig;
-          } else if (modelConfig.primary) {
-            modelStr = modelConfig.primary;
-          }
-
-          if (modelStr) {
-            const parts = modelStr.split('/');
-            if (parts.length >= 2 && parts[0]) {
-              setProvider(parts[0]);
-              setCurrentModel(parts.slice(1).join('/'));
-            }
-          }
+        const result = await window.electronAPI.getCurrentAppModel();
+        if (result.success && result.current) {
+          setProvider(result.current.openclawProviderId);
+          setCurrentModel(result.current.modelName);
+          return;
         }
+        setProvider('');
+        setCurrentModel('');
       } catch (error) {
         console.error('Failed to load current model:', error);
       }

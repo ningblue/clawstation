@@ -21,3 +21,4 @@ export { setupMessageRoutes } from './routes/message.route';
 export { setupOpenClawRoutes } from './routes/openclaw.route';
 export { setupAuditRoutes } from './routes/audit.route';
 export { setupOpenClawMonitorRoutes } from './routes/openclaw-monitor.route';
+export { setupModelConfigRoutes } from './routes/model-config.route';

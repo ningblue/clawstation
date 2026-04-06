@@ -441,6 +441,15 @@ export function useChatStore(userId: number | null) {
           cancelStreamRef.current = null;
           activeConversationRef.current = null;
 
+          if (!fullContent.trim()) {
+            await addMessage(
+              'assistant',
+              '抱歉，AI 未返回有效内容。请检查当前模型配置或稍后重试。',
+              targetConversationId
+            );
+            return;
+          }
+
           // 保存完整的AI回复到数据库
           await addMessage('assistant', fullContent, targetConversationId);
 

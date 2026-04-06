@@ -10,6 +10,7 @@ import { setupOpenClawMonitorRoutes } from '../routes/openclaw-monitor.route';
 import { setupAuditRoutes } from '../routes/audit.route';
 import { setupReminderHandlers } from './reminders';
 import { setupMiniMaxOAuthRoutes } from '../routes/minimax-oauth.route';
+import { setupModelConfigRoutes } from '../routes/model-config.route';
 
 // 跟踪已注册的处理器
 let handlersInitialized = false;
@@ -40,6 +41,7 @@ export function initializeApiHandlers(openclawManager?: OpenClawManager): void {
     setupOpenClawRoutes(openclawManager);
     setupOpenClawMonitorRoutes(openclawManager);
     setupMiniMaxOAuthRoutes(openclawManager);
+    setupModelConfigRoutes(openclawManager);
     openClawHandlersInitialized = true;
     console.log('OpenClaw routes initialized');
   }
