@@ -4,6 +4,10 @@
  */
 
 export {
+  AppModelConfigManager,
+} from "./app-model-config";
+
+export {
   OpenClawConfigManager,
   getOpenClawConfigManager,
   resetOpenClawConfigManager,

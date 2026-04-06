@@ -1,8 +1,11 @@
 import { ipcMain, IpcMainInvokeEvent } from "electron";
-import { AppModelConfigManager } from "../../backend/config/app-model-config";
+import { AppModelConfigManager } from "../../backend/config";
 import { ModelConfigSyncService } from "../../backend/services/model-config-sync.service";
 import { OpenClawManager } from "../../backend/services/openclaw.service";
-import { isConfigurableModeId } from "../../shared/types/model-config.types";
+import {
+  isConfigurableModeId,
+  type VendorConfig,
+} from "../../shared/types/model-config.types";
 
 export function setupModelConfigRoutes(openclawManager: OpenClawManager): void {
   const configManager = openclawManager.getConfigManager();
@@ -69,7 +72,9 @@ export function setupModelConfigRoutes(openclawManager: OpenClawManager): void {
         return { success: false, error: "Invalid modeId" };
       }
       const modeConfig = appModelConfigManager.getModeConfig(modeId);
-      const vendor = modeConfig?.vendors.find((item) => item.vendorId === vendorId);
+      const vendor = modeConfig?.vendors.find(
+        (item: VendorConfig) => item.vendorId === vendorId
+      );
       if (!vendor) {
         return { success: false, error: "Unknown vendor" };
       }
@@ -87,7 +92,9 @@ export function setupModelConfigRoutes(openclawManager: OpenClawManager): void {
         return { success: false, error: "Invalid modeId" };
       }
       const modeConfig = appModelConfigManager.getModeConfig(modeId);
-      const vendor = modeConfig?.vendors.find((item) => item.vendorId === vendorId);
+      const vendor = modeConfig?.vendors.find(
+        (item: VendorConfig) => item.vendorId === vendorId
+      );
       if (!vendor) {
         return { success: false, error: "Unknown vendor" };
       }
