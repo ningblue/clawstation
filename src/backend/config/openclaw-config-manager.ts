@@ -125,11 +125,15 @@ export interface ModelProviderConfig {
   baseUrl: string;
   apiKey?: string;
   auth?: "api-key" | "aws-sdk" | "oauth" | "token";
+  api?: string;
+  authHeader?: boolean;
+  input?: Array<"text" | "image">;
   models: Array<{
     id: string;
     name: string;
-    contextWindow: number;
-    maxTokens: number;
+    contextWindow?: number;
+    maxTokens?: number;
+    input?: Array<"text" | "image">;
   }>;
 }
 
@@ -1087,6 +1091,31 @@ export class OpenClawConfigManager {
   getConfiguredProviders(agentId: string): string[] {
     const authConfig = this.loadAuthProfiles(agentId);
     return Object.values(authConfig.profiles).map((p) => p.provider);
+  }
+
+  replaceProviders(
+    providers: Record<string, ModelProviderConfig>,
+    mode?: ModelsConfig["mode"]
+  ): void {
+    if (!this.config.models) {
+      this.config.models = {};
+    }
+
+    this.config.models = {
+      ...this.config.models,
+      mode: mode || this.config.models.mode || "merge",
+      providers,
+    };
+    this.saveConfig();
+  }
+
+  replaceAuthProfileReferences(
+    profiles: Record<string, AuthProfileReference>
+  ): void {
+    this.config.auth = {
+      profiles,
+    };
+    this.saveConfig();
   }
 
   /**

@@ -8,7 +8,7 @@ jest.mock('electron', () => ({
     isPackaged: false,
     on: jest.fn(),
     quit: jest.fn(),
-    whenReady: jest.fn().mockResolvedValue(undefined)
+    whenReady: jest.fn().mockResolvedValue(undefined as never)
   },
   ipcMain: {
     handle: jest.fn(),

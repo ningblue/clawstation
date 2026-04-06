@@ -6,12 +6,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserStore } from '../../stores';
 import type { Theme, FontSize, Locale } from '../../stores';
-import { useModels } from '../../hooks/useModels';
-import { MODEL_MODE_CONFIGS, getApiKeyUrl } from '../../config/provider-groups';
+import StandaloneAIModelSettings from './AIModelSettings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,75 +30,6 @@ const SETTINGS_MENU = [
 export interface OpenSettingsEventDetail {
   tab?: SettingsTab;
 }
-
-// 提供商显示名称映射（仅国内模型服务商）
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  'kimi-code': 'Kimi (月之暗面)',
-  'kimi-coding': 'Kimi Coding',
-  kimi: 'Kimi',
-  moonshot: 'Moonshot',
-  deepseek: 'DeepSeek',
-  zai: 'ZAI',
-  minimax: 'MiniMax API Key',
-  'minimax-portal': 'MiniMax OAuth',
-  'minimax-cn': 'MiniMax API Key (CN)',
-  volcengine: '火山引擎',
-  'volcengine-plan': '火山引擎 (套餐)',
-  byteplus: 'BytePlus',
-  'byteplus-plan': 'BytePlus (套餐)',
-  doubao: '豆包',
-  bailian: '百炼/阿里云',
-  qwen: '通义千问',
-  'qwen-portal': '通义千问 OAuth',
-};
-
-// 模型配置接口
-interface ModelConfig {
-  provider: string;
-  id: string;
-  name: string;
-  contextWindow?: number;
-}
-
-// 提供商配置
-interface ProviderConfig {
-  id: string;
-  name: string;
-  hasKey: boolean;
-  models: ModelConfig[];
-}
-
-// 提供商图标（仅国内模型服务商）
-const getProviderIcon = (providerId: string): string => {
-  const icons: Record<string, string> = {
-    // MiniMax
-    minimax: 'MM',
-    'minimax-portal': 'MM',
-    'minimax-cn': 'MM',
-    // Moonshot/Kimi
-    moonshot: 'Ki',
-    kimi: 'Ki',
-    'kimi-coding': 'Ki',
-    // Volcano Engine
-    volcengine: 'VC',
-    'volcengine-plan': 'VC',
-    // BytePlus
-    byteplus: 'BP',
-    'byteplus-plan': 'BP',
-    // Z.AI
-    zai: 'Z',
-    // Qwen
-    qwen: 'QW',
-    'qwen-portal': 'QW',
-    // Bailian
-    bailian: 'BL',
-    // DeepSeek
-    deepseek: 'DS',
-    // Doubao
-    doubao: '豆包',
-  };
-  return icons[providerId] || '🤖';
-};
 
 /**
  * 外观设置面板
@@ -222,19 +150,10 @@ interface AIEngineSettingsProps {
 
 const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
   const [loading, setLoading] = useState(false);
-  const [providers, setProviders] = useState<ProviderConfig[]>([]);
-  const [currentModel, setCurrentModel] = useState<string>('');
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [apiKey, setApiKey] = useState('');
-  const [showAddKey, setShowAddKey] = useState(false);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('stopped');
   const [engineError, setEngineError] = useState<string>('');
   const [processInfo, setProcessInfo] = useState<ProcessInfo | null>(null);
   const [isRepairing, setIsRepairing] = useState(false);
-
-  const getProviderDisplayName = useCallback((provider: string): string => {
-    return PROVIDER_DISPLAY_NAMES[provider] || provider;
-  }, []);
 
   // 获取引擎状态显示信息
   const getEngineStatusInfo = useCallback((): { label: string; color: string; icon: string } => {
@@ -543,378 +462,6 @@ const AIEngineSettings: React.FC<AIEngineSettingsProps> = ({ onShowToast }) => {
 };
 
 /**
- * AI模型设置面板 - QClaw 风格三选一 radio 设计
- *
- * 三种模式:
- * 1. 默认大模型 - 开箱即用
- * 2. 自定义大模型—模型API - 选厂商 → 选模型 → 填 API Key
- * 3. 自定义大模型—Coding Plan - 选套餐厂商 → 选模型 → 填 API Key
- */
-interface AIModelSettingsProps {
-  onShowToast: (message: string, type: 'success' | 'error') => void;
-}
-
-const AIModelSettings: React.FC<AIModelSettingsProps> = ({ onShowToast }) => {
-  const [loading, setLoading] = useState(false);
-  const [currentModel, setCurrentModel] = useState<string>('');
-  // 当前选中的模式
-  const [selectedMode, setSelectedMode] = useState<'default' | 'model-api' | 'coding-plan'>('default');
-  // 当前选中的厂商 providerId
-  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
-  // 当前选中的模型 ID
-  const [selectedModelId, setSelectedModelId] = useState<string>('');
-  // API Key
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-
-  const {
-    providerGroups,
-    configuredProviders,
-    isRestarting,
-    selectModel,
-    refresh: refreshModels,
-  } = useModels();
-
-  // 加载当前模型配置，推断当前模式
-  useEffect(() => {
-    const loadCurrentModel = async () => {
-      try {
-        const agentResult = await window.electronAPI.getDefaultAgent();
-        if (agentResult.success && agentResult.agent?.model) {
-          const modelConfig = agentResult.agent.model;
-          let modelStr = '';
-          if (typeof modelConfig === 'string') {
-            modelStr = modelConfig;
-          } else if (modelConfig.primary) {
-            modelStr = modelConfig.primary;
-          }
-          setCurrentModel(modelStr);
-
-          // 推断当前模式
-          if (modelStr) {
-            const [provider] = modelStr.split('/');
-            if (provider) {
-              // 检查 provider 属于哪种模式
-              const codingPlanMode = MODEL_MODE_CONFIGS.find(m => m.modeId === 'coding-plan');
-              const modelApiMode = MODEL_MODE_CONFIGS.find(m => m.modeId === 'model-api');
-              if (codingPlanMode?.providers.some(p => p.providerId === provider)) {
-                // 检查是否为 coding plan 特有的 provider
-                const isExclusiveCodingPlan = !modelApiMode?.providers.some(p => p.providerId === provider);
-                if (isExclusiveCodingPlan) {
-                  setSelectedMode('coding-plan');
-                  setSelectedProviderId(provider);
-                } else {
-                  // 两者都有，默认显示模型API
-                  setSelectedMode('model-api');
-                  setSelectedProviderId(provider);
-                }
-              } else if (modelApiMode?.providers.some(p => p.providerId === provider)) {
-                setSelectedMode('model-api');
-                setSelectedProviderId(provider);
-              }
-              // 设置模型
-              const modelId = modelStr.split('/').slice(1).join('/');
-              if (modelId) setSelectedModelId(modelId);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load current model:', error);
-      }
-    };
-    loadCurrentModel();
-  }, []);
-
-  // 获取当前模式的配置
-  const currentModeConfig = useMemo(() => {
-    return MODEL_MODE_CONFIGS.find(m => m.modeId === selectedMode);
-  }, [selectedMode]);
-
-  // 获取选中厂商的可用模型
-  const availableModels = useMemo(() => {
-    if (!selectedProviderId) return [];
-    const group = providerGroups.find(g => g.provider === selectedProviderId);
-    return group?.models || [];
-  }, [selectedProviderId, providerGroups]);
-
-  // 获取选中厂商的 API Key 状态
-  const hasApiKey = useMemo(() => {
-    return configuredProviders.includes(selectedProviderId);
-  }, [configuredProviders, selectedProviderId]);
-
-  // 当前选中厂商的 API Key 获取链接
-  const currentApiKeyUrl = useMemo(() => {
-    return getApiKeyUrl(selectedProviderId);
-  }, [selectedProviderId]);
-
-  // 切换模式时重置厂商和模型选择
-  const handleModeChange = (mode: 'default' | 'model-api' | 'coding-plan') => {
-    setSelectedMode(mode);
-    setSelectedProviderId('');
-    setSelectedModelId('');
-    setApiKey('');
-    setShowApiKey(false);
-  };
-
-  // 切换厂商时重置模型选择
-  const handleProviderChange = (providerId: string) => {
-    setSelectedProviderId(providerId);
-    setSelectedModelId('');
-    setApiKey('');
-    setShowApiKey(false);
-  };
-
-  // 保存 API Key
-  const handleSaveApiKey = async () => {
-    if (!selectedProviderId || !apiKey.trim()) {
-      onShowToast('请输入 API Key', 'error');
-      return;
-    }
-    try {
-      setLoading(true);
-      const result = await window.electronAPI.setApiKey(selectedProviderId, apiKey);
-      if (result.success) {
-        onShowToast('API Key 已保存', 'success');
-        setApiKey('');
-        setShowApiKey(false);
-        refreshModels();
-      } else {
-        throw new Error(result.error || '保存失败');
-      }
-    } catch (error) {
-      onShowToast('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 确认选择（应用模型配置）
-  const handleConfirm = async () => {
-    if (selectedMode === 'default') {
-      // 默认模型 - 清除自定义配置
-      try {
-        setLoading(true);
-        // 设置为空或默认值
-        await window.electronAPI.setDefaultModel({ primary: '', fallbacks: [] });
-        setCurrentModel('');
-        onShowToast('已切换为默认大模型', 'success');
-        window.dispatchEvent(new CustomEvent('model-changed'));
-      } catch (error) {
-        onShowToast('切换失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!selectedProviderId) {
-      onShowToast('请选择模型厂商', 'error');
-      return;
-    }
-    if (!hasApiKey && !apiKey.trim()) {
-      onShowToast('请先配置 API Key', 'error');
-      return;
-    }
-    if (!selectedModelId) {
-      onShowToast('请选择模型', 'error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      // 先保存 API Key（如果有输入）
-      if (apiKey.trim() && !hasApiKey) {
-        const keyResult = await window.electronAPI.setApiKey(selectedProviderId, apiKey);
-        if (!keyResult.success) {
-          throw new Error(keyResult.error || 'API Key 保存失败');
-        }
-      }
-      // 切换模型
-      await selectModel(selectedProviderId, selectedModelId);
-      setCurrentModel(`${selectedProviderId}/${selectedModelId}`);
-      onShowToast('模型配置已保存', 'success');
-      setApiKey('');
-      setShowApiKey(false);
-    } catch (error) {
-      onShowToast('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="animate-in fade-in duration-200">
-      <div className="text-xl font-semibold text-foreground mb-5">大模型设置</div>
-
-      {/* 三选一 Radio */}
-      <div className="flex flex-col gap-2 mb-6">
-        {MODEL_MODE_CONFIGS.map(mode => (
-          <label
-            key={mode.modeId}
-            className={cn(
-              "flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-all hover:border-primary/50",
-              selectedMode === mode.modeId
-                ? "border-primary bg-primary/5"
-                : "border-border"
-            )}
-          >
-            <input
-              type="radio"
-              name="model-mode"
-              className="sr-only"
-              checked={selectedMode === mode.modeId}
-              onChange={() => handleModeChange(mode.modeId)}
-            />
-            <span className={cn(
-              "flex items-center justify-center size-4 rounded-full border-2 shrink-0 transition-colors",
-              selectedMode === mode.modeId
-                ? "border-primary bg-primary"
-                : "border-muted-foreground/30"
-            )}>
-              {selectedMode === mode.modeId && (
-                <span className="size-2 rounded-full bg-primary-foreground" />
-              )}
-            </span>
-            <span className="text-sm font-medium">{mode.modeName}</span>
-          </label>
-        ))}
-      </div>
-
-      {/* 自定义模式的表单区域 */}
-      {selectedMode !== 'default' && currentModeConfig && (
-        <div className="mb-6 space-y-4">
-          {/* 模型厂商下拉 */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground">模型厂商：</label>
-            <Select value={selectedProviderId} onValueChange={(value) => handleProviderChange(value ?? '')}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="请选择厂商" />
-              </SelectTrigger>
-              <SelectContent>
-                {currentModeConfig.providers.map(provider => (
-                  <SelectItem key={provider.providerId} value={provider.providerId}>
-                    {provider.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 模型名称下拉 */}
-          {selectedProviderId && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-muted-foreground">模型名称：</label>
-              <Select value={selectedModelId} onValueChange={(value) => setSelectedModelId(value ?? '')}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="请选择模型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels.map(model => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.name}{model.contextWindow ? ` (${model.contextWindow >= 1000 ? `${Math.round(model.contextWindow / 1000)}K` : model.contextWindow})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* API Key 输入 */}
-          {selectedProviderId && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-muted-foreground">API Key：</label>
-                {currentApiKeyUrl && (
-                  <button
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => {
-                      window.electronAPI.openExternalUrl(currentApiKeyUrl);
-                    }}
-                  >
-                    前往官网获取
-                  </button>
-                )}
-              </div>
-              {hasApiKey ? (
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/50">
-                  <span className="text-sm text-muted-foreground">API Key 已配置</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      if (!confirm('确定要删除此 API Key 吗？')) return;
-                      try {
-                        setLoading(true);
-                        const result = await window.electronAPI.removeApiKey(selectedProviderId);
-                        if (result.success) {
-                          onShowToast('API Key 已删除', 'success');
-                          refreshModels();
-                        }
-                      } catch (error) {
-                        onShowToast('删除失败', 'error');
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                  >
-                    重新配置
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    type={showApiKey ? 'text' : 'password'}
-                    placeholder="请输入 API Key"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    title={showApiKey ? '隐藏' : '显示'}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {showApiKey ? (
-                        <>
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </>
-                      ) : (
-                        <>
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </>
-                      )}
-                    </svg>
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 提示 + 确认按钮 */}
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          *可选用自定义大模型配置，使用时请遵循相关法律法规
-        </div>
-        <Button
-          onClick={handleConfirm}
-          disabled={loading || isRestarting}
-          size="sm"
-        >
-          {loading ? '保存中...' : '确 认'}
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-/**
  * 账户设置面板
  */
 interface AccountSettingsProps {
@@ -1078,6 +625,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'engine');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
+
   // 切换标签页时也关闭搜索
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
@@ -1102,7 +655,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
       case 'engine':
         return <AIEngineSettings onShowToast={showToast} />;
       case 'ai':
-        return <AIModelSettings onShowToast={showToast} />;
+        return <StandaloneAIModelSettings onShowToast={showToast} />;
       case 'account':
         return <AccountSettings user={user} />;
       case 'about':
@@ -1179,4 +732,3 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 };
 
 export default SettingsModal;
-

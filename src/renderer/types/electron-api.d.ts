@@ -1,3 +1,10 @@
+import type {
+  AppModelConfig,
+  CurrentAppModelSelection,
+  ModeConfig,
+  ModelModeId,
+} from "../../shared/types/model-config.types";
+
 // Electron API 类型定义
 // 解决 electronAPI 重复声明问题，统一在此文件中定义
 
@@ -214,6 +221,40 @@ export interface ElectronAPI {
     provider: string,
     agentId?: string
   ) => Promise<{ success: boolean; error?: string }>;
+
+  getAppModelConfig: () => Promise<{
+    success: boolean;
+    config?: AppModelConfig;
+    error?: string;
+  }>;
+  getAppModelMode: (modeId: ModelModeId) => Promise<{
+    success: boolean;
+    mode?: ModeConfig | null;
+    error?: string;
+  }>;
+  selectAppModel: (
+    vendorId: string,
+    modelId: string,
+    modeId?: ModelModeId
+  ) => Promise<{ success: boolean; error?: string }>;
+  setAppModelApiKey: (
+    vendorId: string,
+    apiKey: string,
+    modeId?: ModelModeId
+  ) => Promise<{ success: boolean; error?: string }>;
+  removeAppModelApiKey: (
+    vendorId: string,
+    modeId?: ModelModeId
+  ) => Promise<{ success: boolean; error?: string }>;
+  getCurrentAppModel: () => Promise<{
+    success: boolean;
+    current?: CurrentAppModelSelection | null;
+    error?: string;
+  }>;
+  setAppModelMode: (modeId: ModelModeId) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 
   // MiniMax OAuth API
   miniMaxOAuthStart: (region?: 'cn' | 'global') => Promise<{

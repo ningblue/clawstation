@@ -1,286 +1,104 @@
-/**
- * 模型选择器 Hook
- */
-
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
+  AppModelConfig,
+  AppModelCurrentSelection,
   ModelConfig,
-  ProviderModelGroup,
+  ModelModeId,
   ProviderGroup,
+  ProviderModelGroup,
   SubCategory,
   UserModelSelection,
 } from "../types/models";
-import {
-  PROVIDER_GROUP_DEFINITIONS,
-  buildProviderToGroupIndex,
-} from "../config/provider-groups";
-import type { ProviderGroupDef } from "../config/provider-groups";
 
-// 默认模型配置（仅国内模型服务商，与 OpenClaw 内置模型对齐）
-const DEFAULT_PROVIDER_MODELS: Record<
-  string,
-  { id: string; name: string; contextWindow?: number }[]
-> = {
-  // Z.AI - GLM 系列模型
-  zai: [
-    { id: "glm-5", name: "GLM-5", contextWindow: 128000 },
-    { id: "glm-4.7", name: "GLM-4.7", contextWindow: 128000 },
-    { id: "glm-4.7-flash", name: "GLM-4.7 Flash", contextWindow: 128000 },
-    { id: "glm-4.7-flashx", name: "GLM-4.7 FlashX", contextWindow: 128000 },
-  ],
-  // MiniMax - OAuth (推荐)
-  "minimax-portal": [
-    { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
-    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
-    {
-      id: "MiniMax-M2.5-highspeed",
-      name: "MiniMax M2.5 Highspeed",
-      contextWindow: 200000,
-    },
-  ],
-  // MiniMax - API Key
-  minimax: [
-    { id: "MiniMax-VL-01", name: "MiniMax VL 01", contextWindow: 200000 },
-    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 200000 },
-    {
-      id: "MiniMax-M2.5-highspeed",
-      name: "MiniMax M2.5 Highspeed",
-      contextWindow: 200000,
-    },
-  ],
-  // MiniMax - CN 直连
-  "minimax-cn": [
-    { id: "MiniMax-VL-01", name: "MiniMax VL 01 (CN)", contextWindow: 200000 },
-    { id: "MiniMax-M2.5", name: "MiniMax M2.5 (CN)", contextWindow: 200000 },
-    {
-      id: "MiniMax-M2.5-highspeed",
-      name: "MiniMax M2.5 Highspeed (CN)",
-      contextWindow: 200000,
-    },
-  ],
-  // Moonshot / Kimi
-  moonshot: [{ id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 256000 }],
-  "kimi-coding": [
-    { id: "k2p5", name: "Kimi K2.5 Coding", contextWindow: 256000 },
-  ],
-  // Qwen
-  qwen: [{ id: "qwen-max", name: "Qwen Max", contextWindow: 128000 }],
-  "qwen-portal": [{ id: "qwen-max", name: "Qwen Max", contextWindow: 128000 }],
-  // Volcano Engine / BytePlus
-  volcengine: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
-  "volcengine-plan": [
-    { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 },
-  ],
-  byteplus: [{ id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 }],
-  "byteplus-plan": [
-    { id: "doubao-pro", name: "Doubao Pro", contextWindow: 128000 },
-  ],
-  // Bailian Coding Plan (阿里云 Coding Plan) - 使用 bailian 作为 provider ID
-  bailian: [
-    { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", contextWindow: 1000000 },
-    { id: "qwen3-max-2026-01-23", name: "Qwen 3 Max", contextWindow: 262144 },
-    {
-      id: "qwen3-coder-next",
-      name: "Qwen 3 Coder Next",
-      contextWindow: 262144,
-    },
-    {
-      id: "qwen3-coder-plus",
-      name: "Qwen 3 Coder Plus",
-      contextWindow: 1000000,
-    },
-    { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextWindow: 196608 },
-    { id: "glm-5", name: "GLM 5", contextWindow: 202752 },
-    { id: "glm-4.7", name: "GLM 4.7", contextWindow: 202752 },
-    { id: "kimi-k2.5", name: "Kimi K2.5", contextWindow: 262144 },
-  ],
-};
+function isConfigurableModeId(
+  modeId: ModelModeId
+): modeId is Exclude<ModelModeId, "default"> {
+  return modeId === "model-api" || modeId === "coding-plan";
+}
 
-// 服务商显示名称映射 - 仅国内模型服务商
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  // 国内 AI 供应商
-  moonshot: "Moonshot AI",
-  "kimi-coding": "Kimi Coding",
-  kimi: "Kimi",
-  minimax: "MiniMax",
-  "minimax-portal": "MiniMax OAuth",
-  "minimax-cn": "MiniMax (国内)",
-  volcengine: "火山引擎",
-  "volcengine-plan": "火山引擎 (套餐)",
-  byteplus: "BytePlus",
-  "byteplus-plan": "BytePlus (套餐)",
-  qwen: "通义千问",
-  "qwen-portal": "通义千问 OAuth",
-  zai: "Z.AI",
-  bailian: "百炼/阿里云",
-  "bailian-coding-plan": "Bailian Coding Plan",
-  deepseek: "DeepSeek",
-  doubao: "豆包",
-};
+export function getProviderDisplayName(
+  providerId: string,
+  appConfig?: AppModelConfig
+): string {
+  if (!appConfig) {
+    return providerId;
+  }
 
-/**
- * 获取服务商显示名称
- */
-export function getProviderDisplayName(providerId: string): string {
-  return PROVIDER_DISPLAY_NAMES[providerId] || providerId;
+  for (const modeId of ["model-api", "coding-plan"] as const) {
+    const vendor = appConfig.modes[modeId].vendors.find(
+      (item) => item.vendorId === providerId
+    );
+    if (vendor) {
+      return vendor.label;
+    }
+  }
+  return providerId;
 }
 
 export function useModels() {
-  const [models, setModels] = useState<ModelConfig[]>([]);
-  const [providerGroups, setProviderGroups] = useState<ProviderModelGroup[]>(
-    [],
-  );
-  const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
-  const [currentSelection, setCurrentSelection] =
-    useState<UserModelSelection | null>(null);
+  const [appConfig, setAppConfig] = useState<AppModelConfig | null>(null);
+  const [currentSelectionInfo, setCurrentSelectionInfo] =
+    useState<AppModelCurrentSelection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
-  const restartingRef = useRef(false);
 
-  // 加载模型和配置数据
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!options?.silent) {
+        setLoading(true);
+      }
       setError(null);
 
-      // 并行获取全量模型目录、提供商列表和已配置的认证信息
-      // 添加超时处理
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Loading timed out")), 10000),
-      );
+      const [config, current] = await Promise.all([
+        window.electronAPI.getAppModelConfig(),
+        window.electronAPI.getCurrentAppModel(),
+      ]);
 
-      const [catalogResult, providersResult, authResult] = (await Promise.race([
-        Promise.all([
-          window.electronAPI.getModelCatalog(),
-          window.electronAPI.getCatalogProviders(),
-          window.electronAPI.getAuthProfiles(),
-        ]),
-        timeoutPromise,
-      ])) as [any, any, any];
-
-      // 处理模型数据
-      const catalogModels = catalogResult.models || [];
-      const providers = providersResult.providers || [];
-      const authProfiles = authResult.profiles || [];
-
-      // 获取已配置的提供商列表
-      const configured = authProfiles
-        .filter((p: { provider: string; hasKey: boolean }) => p.hasKey)
-        .map((p: { provider: string }) => p.provider);
-      setConfiguredProviders(configured);
-
-      // 转换为 ModelConfig 格式
-      const loadedModels: ModelConfig[] = catalogModels.map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        provider: m.provider,
-        contextWindow: m.contextWindow,
-        maxTokens: m.contextWindow, // 使用 contextWindow 作为 maxTokens
-      }));
-
-      // 按服务商分组（包含没有模型的供应商，供 UI 展示"未配置"状态）
-      const groups: ProviderModelGroup[] = [];
-      for (const provider of providers) {
-        const providerId = provider.id;
-        let providerModels = loadedModels.filter(
-          (m: ModelConfig) => m.provider === providerId,
-        );
-
-        // 如果没有找到模型，但配置了 API Key，使用默认模型
-        if (providerModels.length === 0 && configured.includes(providerId)) {
-          const defaults = DEFAULT_PROVIDER_MODELS[providerId];
-          if (defaults) {
-            providerModels = defaults.map((d) => ({
-              id: d.id,
-              name: d.name,
-              provider: providerId,
-              contextWindow: d.contextWindow,
-              maxTokens: d.contextWindow,
-            }));
-          }
-        }
-
-        groups.push({
-          provider: providerId,
-          providerName: provider.name || getProviderDisplayName(providerId),
-          models: providerModels,
-          hasApiKey: configured.includes(providerId),
-        });
+      if (!config.success || !config.config) {
+        throw new Error(config.error || "Failed to load app model config");
+      }
+      if (!current.success) {
+        throw new Error(current.error || "Failed to load current selection");
       }
 
-      // 按服务商名称排序
-      groups.sort((a, b) => a.providerName.localeCompare(b.providerName));
-
-      setModels(loadedModels);
-      setProviderGroups(groups);
-
-      // 设置当前选中的模型（从默认Agent获取）
-      const defaultAgent = await window.electronAPI.getDefaultAgent();
-      if (defaultAgent.success && defaultAgent.agent?.model) {
-        const modelConfig = defaultAgent.agent.model;
-        if (typeof modelConfig === "string") {
-          const parts = modelConfig.split("/");
-          if (parts.length >= 2) {
-            const [provider, modelId] = parts;
-            if (provider && modelId) {
-              setCurrentSelection({ provider, model: modelId });
-            }
-          }
-        } else if (modelConfig.primary) {
-          const parts = modelConfig.primary.split("/");
-          if (parts.length >= 2) {
-            const [provider, modelId] = parts;
-            if (provider && modelId) {
-              setCurrentSelection({ provider, model: modelId });
-            }
-          }
-        }
-      }
+      setAppConfig(config.config);
+      setCurrentSelectionInfo(current.current ?? null);
     } catch (err) {
-      console.error("Error loading models:", err);
+      console.error("Failed to load app model config:", err);
       setError(err instanceof Error ? err.message : "Failed to load models");
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
-  // 切换模型（OpenClaw 支持动态配置重载，无需重启引擎）
-  const selectModel = useCallback(async (provider: string, modelId: string) => {
-    try {
-      setIsRestarting(true);
-      const modelString = `${provider}/${modelId}`;
-
-      // 使用 setDefaultModel 同时更新 agents.defaults.model 和默认 agent 的模型
-      // OpenClaw 引擎会动态检测配置变化并重新加载，无需重启
-      await window.electronAPI.setDefaultModel({
-        primary: modelString,
-        fallbacks: [],
+  const updateModeConfig = useCallback(
+    (
+      modeId: Exclude<ModelModeId, "default">,
+      updater: (mode: AppModelConfig["modes"][Exclude<ModelModeId, "default">]) => AppModelConfig["modes"][Exclude<ModelModeId, "default">]
+    ) => {
+      setAppConfig((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return {
+          ...prev,
+          modes: {
+            ...prev.modes,
+            [modeId]: updater(prev.modes[modeId]),
+          },
+        };
       });
+    },
+    []
+  );
 
-      setCurrentSelection({ provider, model: modelId });
-
-      // 通知全局模型已变更
-      window.dispatchEvent(new CustomEvent("model-changed"));
-    } catch (err) {
-      console.error("Error selecting model:", err);
-      setError(err instanceof Error ? err.message : "Failed to select model");
-    } finally {
-      setIsRestarting(false);
-    }
-  }, []);
-
-  // 刷新数据
-  const refresh = useCallback(() => {
-    loadData();
-  }, [loadData]);
-
-  // 初始加载
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // 监听 model-changed 事件，自动刷新数据
   useEffect(() => {
     const handler = () => {
       loadData();
@@ -289,93 +107,270 @@ export function useModels() {
     return () => window.removeEventListener("model-changed", handler);
   }, [loadData]);
 
-  // 构建三栏层级分组数据: ProviderGroup[]
-  const providerGroupList = useMemo(() => {
-    const providerToGroup = buildProviderToGroupIndex();
-    // 用 providerGroups（扁平数据）按 groupId 索引
-    const flatMap = new Map<string, ProviderModelGroup>();
-    for (const g of providerGroups) {
-      flatMap.set(g.provider, g);
+  const activeMode = appConfig?.activeMode ?? "model-api";
+
+  const currentSelection = useMemo<UserModelSelection | null>(() => {
+    if (!currentSelectionInfo) {
+      return null;
+    }
+    return {
+      modeId: currentSelectionInfo.modeId,
+      provider: currentSelectionInfo.vendorId,
+      model: currentSelectionInfo.modelId,
+    };
+  }, [currentSelectionInfo]);
+
+  const providerGroupList = useMemo<ProviderGroup[]>(() => {
+    if (!appConfig) {
+      return [];
     }
 
-    const usedProviderIds = new Set<string>();
-    const groups: ProviderGroup[] = [];
+    const vendorIds = new Set<string>([
+      ...appConfig.modes["model-api"].vendors.map((vendor) => vendor.vendorId),
+      ...appConfig.modes["coding-plan"].vendors.map((vendor) => vendor.vendorId),
+    ]);
 
-    for (const def of PROVIDER_GROUP_DEFINITIONS) {
+    return Array.from(vendorIds).map((vendorId) => {
       const subCategories: SubCategory[] = [];
 
-      for (let memberIdx = 0; memberIdx < def.members.length; memberIdx++) {
-        const member = def.members[memberIdx]!;
-        // 合并同一子分类下所有 providerIds 的模型
-        const allModels: ModelConfig[] = [];
-        const seenModelIds = new Set<string>();
-
-        // 主 providerId（用于 API Key 配置）
-        const primaryProviderId = member.providerIds[0] || member.label;
-
-        for (const pid of member.providerIds) {
-          usedProviderIds.add(pid);
-          const flat = flatMap.get(pid);
-          if (flat) {
-            // 去重: 多个别名 provider 可能有相同的模型
-            for (const m of flat.models) {
-              const key = `${m.provider}/${m.id}`;
-              if (!seenModelIds.has(key)) {
-                seenModelIds.add(key);
-                allModels.push(m);
-              }
-            }
-          }
+      for (const modeId of ["model-api", "coding-plan"] as const) {
+        const vendor = appConfig.modes[modeId].vendors.find(
+          (item) => item.vendorId === vendorId
+        );
+        if (!vendor) {
+          continue;
         }
-
-        // 只检查主 providerId 的 API Key 状态
-        // 这样确保每个子分类独立显示配置状态
-        const primaryFlat = flatMap.get(primaryProviderId);
-        let hasApiKey = primaryFlat?.hasApiKey || false;
-
-        // 共享认证: 如果父 provider 已配置，子分类也标记为已配置
-        if (!hasApiKey && member.sharesAuthWith) {
-          const parentFlat = flatMap.get(member.sharesAuthWith);
-          if (parentFlat?.hasApiKey) hasApiKey = true;
-        }
-
         subCategories.push({
-          id: `${def.groupId}/${memberIdx}`,
-          providerId: primaryProviderId,
-          label: member.label,
-          models: allModels,
-          hasApiKey,
+          id: `${modeId}:${vendorId}`,
+          modeId,
+          providerId: vendor.vendorId,
+          label: modeId === "model-api" ? "模型 API" : "Coding Plan",
+          models: vendor.models.map((model) => ({
+            id: model.id,
+            name: model.name,
+            provider: vendor.vendorId,
+            contextWindow: model.contextWindow,
+            maxTokens: model.contextWindow,
+          })),
+          hasApiKey: vendor.apiKeyConfigured,
         });
       }
 
-      const hasAnyApiKey = subCategories.some((sc) => sc.hasApiKey);
+      const seed =
+        appConfig.modes["model-api"].vendors.find(
+          (vendor) => vendor.vendorId === vendorId
+        ) ??
+        appConfig.modes["coding-plan"].vendors.find(
+          (vendor) => vendor.vendorId === vendorId
+        );
 
-      groups.push({
-        groupId: def.groupId,
-        groupName: def.groupName,
-        icon: def.icon,
+      return {
+        groupId: vendorId,
+        groupName:
+          seed?.label.replace(/（.*?）/g, "").replace(/\(.*?\)/g, "").trim() ??
+          vendorId,
+        icon: seed?.icon ?? "",
         subCategories,
-        hasAnyApiKey,
+        hasAnyApiKey: subCategories.some((item) => item.hasApiKey),
         hasMultipleSubCategories: subCategories.length > 1,
-      });
-    }
+      };
+    });
+  }, [appConfig]);
 
-    // 注意：不再添加不在 PROVIDER_GROUP_DEFINITIONS 中的 provider
-    // 确保列表严格与 OpenClaw AUTH_CHOICE_GROUP_DEFS 一致
-    return groups;
+  const providerGroups = useMemo<ProviderModelGroup[]>(() => {
+    if (!appConfig || !isConfigurableModeId(activeMode)) {
+      return [];
+    }
+    return appConfig.modes[activeMode].vendors.map((vendor) => ({
+      provider: vendor.vendorId,
+      providerName: vendor.label,
+      icon: vendor.icon,
+      modeId: activeMode,
+      models: vendor.models.map((model) => ({
+        id: model.id,
+        name: model.name,
+        provider: vendor.vendorId,
+        contextWindow: model.contextWindow,
+        maxTokens: model.contextWindow,
+      })),
+      hasApiKey: vendor.apiKeyConfigured,
+    }));
+  }, [activeMode, appConfig]);
+
+  const models = useMemo<ModelConfig[]>(() => {
+    return providerGroups.flatMap((group) => group.models);
   }, [providerGroups]);
 
+  const configuredProviders = useMemo<string[]>(() => {
+    return providerGroups
+      .filter((group) => group.hasApiKey)
+      .map((group) => group.provider);
+  }, [providerGroups]);
+
+  const selectModel = useCallback(
+    async (
+      providerId: string,
+      modelId: string,
+      modeId?: Exclude<ModelModeId, "default">
+    ) => {
+      const resolvedMode =
+        modeId ??
+        currentSelection?.modeId ??
+        (activeMode === "coding-plan" ? "coding-plan" : "model-api");
+      setIsRestarting(true);
+      try {
+        const result = await window.electronAPI.invoke(
+          "app:model-config:selectModel",
+          providerId,
+          modelId,
+          resolvedMode
+        );
+        if (!result?.success) {
+          throw new Error(result?.error || "Failed to select model");
+        }
+        setAppConfig((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          return {
+            ...prev,
+            activeMode: resolvedMode,
+            modes: {
+              ...prev.modes,
+              [resolvedMode]: {
+                ...prev.modes[resolvedMode],
+                selectedModel: {
+                  vendorId: providerId,
+                  modelId,
+                },
+              },
+            },
+          };
+        });
+        setCurrentSelectionInfo((prev) => {
+          const vendor = appConfig?.modes[resolvedMode].vendors.find(
+            (item) => item.vendorId === providerId
+          );
+          const model = vendor?.models.find((item) => item.id === modelId);
+          if (!vendor || !model) {
+            return prev;
+          }
+          return {
+            modeId: resolvedMode,
+            vendorId: providerId,
+            modelId,
+            modelName: model.name,
+            providerLabel: vendor.label,
+            openclawProviderId: vendor.openclawProviderId,
+          };
+        });
+        void loadData({ silent: true });
+        window.dispatchEvent(new CustomEvent("model-changed"));
+      } finally {
+        setIsRestarting(false);
+      }
+    },
+    [activeMode, appConfig, currentSelection?.modeId, loadData]
+  );
+
+  const setMode = useCallback(async (modeId: ModelModeId) => {
+    const result = await window.electronAPI.invoke(
+      "app:model-config:setMode",
+      modeId
+    );
+    if (!result?.success) {
+      throw new Error(result?.error || "Failed to switch mode");
+    }
+    setAppConfig((prev) => (prev ? { ...prev, activeMode: modeId } : prev));
+    void loadData({ silent: true });
+  }, [loadData]);
+
+  const setApiKey = useCallback(
+    async (
+      modeId: Exclude<ModelModeId, "default">,
+      vendorId: string,
+      apiKey: string
+    ) => {
+      const result = await window.electronAPI.invoke(
+        "app:model-config:setApiKey",
+        vendorId,
+        apiKey,
+        modeId
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Failed to set API key");
+      }
+      updateModeConfig(modeId, (mode) => ({
+        ...mode,
+        vendors: mode.vendors.map((vendor) =>
+          vendor.vendorId === vendorId
+            ? { ...vendor, apiKeyConfigured: true }
+            : vendor
+        ),
+      }));
+      void loadData({ silent: true });
+      window.dispatchEvent(new CustomEvent("model-changed"));
+    },
+    [loadData, updateModeConfig]
+  );
+
+  const removeApiKey = useCallback(
+    async (modeId: Exclude<ModelModeId, "default">, vendorId: string) => {
+      const result = await window.electronAPI.invoke(
+        "app:model-config:removeApiKey",
+        vendorId,
+        modeId
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Failed to remove API key");
+      }
+      updateModeConfig(modeId, (mode) => ({
+        ...mode,
+        selectedModel:
+          mode.selectedModel?.vendorId === vendorId ? null : mode.selectedModel,
+        vendors: mode.vendors.map((vendor) =>
+          vendor.vendorId === vendorId
+            ? { ...vendor, apiKeyConfigured: false }
+            : vendor
+        ),
+      }));
+      setCurrentSelectionInfo((prev) =>
+        prev?.modeId === modeId && prev.vendorId === vendorId ? null : prev
+      );
+      void loadData({ silent: true });
+      window.dispatchEvent(new CustomEvent("model-changed"));
+    },
+    [loadData, updateModeConfig]
+  );
+
+  const getVendorForMode = useCallback(
+    (modeId: Exclude<ModelModeId, "default">, vendorId: string) => {
+      return appConfig?.modes[modeId].vendors.find(
+        (vendor) => vendor.vendorId === vendorId
+      );
+    },
+    [appConfig]
+  );
+
   return {
+    appConfig,
+    activeMode,
     models,
     providerGroups,
     providerGroupList,
     configuredProviders,
     currentSelection,
+    currentSelectionInfo,
     loading,
     error,
     isRestarting,
     selectModel,
-    refresh,
-    getProviderDisplayName,
+    setMode,
+    setApiKey,
+    removeApiKey,
+    refresh: loadData,
+    getProviderDisplayName: (providerId: string) =>
+      getProviderDisplayName(providerId, appConfig ?? undefined),
+    getVendorForMode,
   };
 }

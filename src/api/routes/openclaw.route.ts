@@ -538,6 +538,13 @@ export function setupOpenClawRoutes(openclawManager: OpenClawManager): void {
           }
 
           if (!abortController.signal.aborted) {
+            if (!fullContent.trim()) {
+              event.sender.send("openclaw:stream:chunk", {
+                type: "error",
+                error: "AI 未返回有效内容，请检查当前模型配置或稍后重试",
+              });
+              return;
+            }
             event.sender.send("openclaw:stream:chunk", {
               type: "done",
               content: fullContent,
