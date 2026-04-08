@@ -6,6 +6,7 @@ import type {
   VendorDefault,
   VendorModel,
 } from "../types/model-config.types";
+import { ENTERPRISE_DEFAULT_MODE } from "./enterprise.config";
 
 const modelApiVendors: VendorDefault[] = [
   {
@@ -378,11 +379,12 @@ export function createDefaultModeConfig(
 export function createDefaultAppModelConfig(
   activeMode: Exclude<ModelModeId, "default"> = "model-api",
 ): AppModelConfig {
+  const defaultMode = ENTERPRISE_DEFAULT_MODE;
   return {
     version: 1,
-    activeMode,
+    activeMode: defaultMode.enabled ? "default" : activeMode,
     modes: {
-      default: { enabled: false },
+      default: defaultMode,
       "model-api": createDefaultModeConfig("model-api"),
       "coding-plan": createDefaultModeConfig("coding-plan"),
     },

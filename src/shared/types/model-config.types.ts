@@ -35,7 +35,19 @@ export interface VendorModelRef {
 }
 
 export interface DefaultModeConfig {
-  enabled: false;
+  enabled: boolean;
+  vendor?: {
+    vendorId: string;
+    label: string;
+    icon: string;
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    modelName: string;
+    api?: string;
+    authHeader?: boolean;
+    extraBody?: Record<string, unknown>;
+  };
 }
 
 export interface ModeConfig {

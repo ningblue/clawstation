@@ -109,3 +109,4 @@ resources/openclaw-x64.7z
 logo_*.png
 logo_raw.png
 logo_icons/
+.npm-cache

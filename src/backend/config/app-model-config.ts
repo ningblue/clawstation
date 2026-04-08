@@ -130,6 +130,23 @@ export class AppModelConfigManager {
 
   getCurrentSelection(): AppModelCurrentSelection | null {
     const config = this.initialize();
+
+    // 企业 default 模式
+    if (config.activeMode === "default") {
+      const defaultMode = config.modes.default;
+      if (!defaultMode.enabled || !defaultMode.vendor) {
+        return null;
+      }
+      return {
+        modeId: "default" as any,
+        vendorId: defaultMode.vendor.vendorId,
+        modelId: defaultMode.vendor.model,
+        modelName: defaultMode.vendor.modelName,
+        providerLabel: defaultMode.vendor.label,
+        openclawProviderId: defaultMode.vendor.vendorId,
+      };
+    }
+
     if (!isConfigurableModeId(config.activeMode)) {
       return null;
     }
@@ -185,16 +202,26 @@ export class AppModelConfigManager {
       input?.activeMode === "coding-plan" ? "coding-plan" : "model-api"
     );
 
+    // 确定 activeMode：尊重用户已有的选择
+    let resolvedActiveMode: ModelModeId;
+    if (
+      input?.activeMode === "default" ||
+      input?.activeMode === "model-api" ||
+      input?.activeMode === "coding-plan"
+    ) {
+      resolvedActiveMode = input.activeMode;
+    } else if (base.modes.default.enabled) {
+      // 首次初始化且企业模式启用时，默认使用 default
+      resolvedActiveMode = "default";
+    } else {
+      resolvedActiveMode = base.activeMode;
+    }
+
     return {
       version: APP_MODEL_CONFIG_VERSION,
-      activeMode:
-        input?.activeMode === "default" ||
-        input?.activeMode === "model-api" ||
-        input?.activeMode === "coding-plan"
-          ? input.activeMode
-          : base.activeMode,
+      activeMode: resolvedActiveMode,
       modes: {
-        default: base.modes.default,
+        default: base.modes.default.enabled ? base.modes.default : (input?.modes?.default?.enabled ? input.modes.default : base.modes.default),
         "model-api": this.mergeModeConfig(
           base.modes["model-api"],
           input?.modes?.["model-api"]

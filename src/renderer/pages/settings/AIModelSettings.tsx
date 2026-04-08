@@ -6,7 +6,7 @@ interface AIModelSettingsProps {
   onShowToast: (message: string, type: "success" | "error") => void;
 }
 
-const MODES: Array<{
+const CUSTOM_MODES: Array<{
   id: Exclude<ModelModeId, "default">;
   label: string;
 }> = [
@@ -29,20 +29,30 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({
     selectModel,
   } = useModels();
 
-  const [selectedMode, setSelectedMode] =
-    useState<Exclude<ModelModeId, "default">>("model-api");
+  const enterpriseDefault = appConfig?.modes.default;
+  const hasEnterpriseDefault = enterpriseDefault?.enabled === true;
+
+  // 当前选中的 tab：default | model-api | coding-plan
+  const [selectedTab, setSelectedTab] = useState<ModelModeId>("model-api");
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [apiKey, setApiKeyValue] = useState("");
 
-  useEffect(() => {
-    if (activeMode === "model-api" || activeMode === "coding-plan") {
-      setSelectedMode(activeMode);
-    }
-  }, [activeMode]);
+  // 兼容旧代码中对 selectedMode 的引用（仅用于自定义模式）
+  const selectedMode =
+    selectedTab === "default" ? "model-api" : selectedTab;
 
   useEffect(() => {
-    const modeConfig = appConfig?.modes[selectedMode];
+    if (activeMode === "default" && hasEnterpriseDefault) {
+      setSelectedTab("default");
+    } else if (activeMode === "model-api" || activeMode === "coding-plan") {
+      setSelectedTab(activeMode);
+    }
+  }, [activeMode, hasEnterpriseDefault]);
+
+  useEffect(() => {
+    if (selectedTab === "default") return;
+    const modeConfig = appConfig?.modes[selectedTab];
     if (!modeConfig) {
       return;
     }
@@ -55,7 +65,7 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({
     const firstVendor = modeConfig.vendors[0];
     setSelectedVendorId(firstVendor?.vendorId ?? "");
     setSelectedModelId("");
-  }, [appConfig, selectedMode]);
+  }, [appConfig, selectedTab]);
 
   const currentModeConfig = appConfig?.modes[selectedMode];
   const selectedVendor = currentModeConfig?.vendors.find(
@@ -63,11 +73,14 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({
   );
 
   const currentModelDisplay = useMemo(() => {
+    if (activeMode === "default" && hasEnterpriseDefault) {
+      return "企业大模型";
+    }
     if (!currentSelectionInfo) {
       return "未配置模型";
     }
     return `${currentSelectionInfo.providerLabel} / ${currentSelectionInfo.modelName}`;
-  }, [currentSelectionInfo]);
+  }, [activeMode, hasEnterpriseDefault, currentSelectionInfo]);
 
   const applySelection = async () => {
     if (!selectedVendor) {
@@ -112,23 +125,58 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({
       </div>
 
       <div className="flex flex-col gap-2 mb-6">
-        {MODES.map((mode) => (
+        {hasEnterpriseDefault && enterpriseDefault?.vendor && (
           <label
-            key={mode.id}
-            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${selectedMode === mode.id ? "border-primary bg-primary/5" : "border-border"}`}
+            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${selectedTab === "default" ? "border-primary bg-primary/5" : "border-border"}`}
           >
             <input
               type="radio"
               name="model-mode"
               className="sr-only"
-              checked={selectedMode === mode.id}
-              onChange={() => setSelectedMode(mode.id)}
+              checked={selectedTab === "default"}
+              onChange={() => setSelectedTab("default")}
+            />
+            <span className="text-sm font-medium">
+              企业大模型
+            </span>
+          </label>
+        )}
+        {CUSTOM_MODES.map((mode) => (
+          <label
+            key={mode.id}
+            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${selectedTab === mode.id ? "border-primary bg-primary/5" : "border-border"}`}
+          >
+            <input
+              type="radio"
+              name="model-mode"
+              className="sr-only"
+              checked={selectedTab === mode.id}
+              onChange={() => setSelectedTab(mode.id)}
             />
             <span className="text-sm font-medium">{mode.label}</span>
           </label>
         ))}
       </div>
 
+      {selectedTab === "default" ? (
+        <div className="flex items-center justify-end">
+          <button
+            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+            disabled={loading || isRestarting}
+            onClick={async () => {
+              try {
+                await setMode("default");
+                onShowToast("已切换到企业大模型", "success");
+              } catch (error) {
+                onShowToast(`切换失败: ${error instanceof Error ? error.message : "未知错误"}`, "error");
+              }
+            }}
+          >
+            {loading || isRestarting ? "保存中..." : "应用模型"}
+          </button>
+        </div>
+      ) : (
+        <>
       <div className="space-y-4 mb-6">
         <div>
           <label className="text-sm font-medium text-muted-foreground">模型厂商</label>
@@ -236,6 +284,8 @@ export const AIModelSettings: React.FC<AIModelSettingsProps> = ({
             : "保存并应用"}
         </button>
       </div>
+        </>
+      )}
     </div>
   );
 };

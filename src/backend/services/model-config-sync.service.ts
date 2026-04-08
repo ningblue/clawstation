@@ -156,15 +156,38 @@ export class ModelConfigSyncService {
     appConfig: AppModelConfig
   ): void {
     const modeId = appConfig.activeMode;
+
+    config.agents = config.agents ?? {};
+    config.agents.defaults = config.agents.defaults ?? {};
+    const defaultAgent = config.agents.list?.find((agent) => agent.default);
+
+    // 企业 default 模式：直接配置企业端点
+    if (modeId === "default") {
+      const vendor = appConfig.modes.default.vendor;
+      if (!vendor) return;
+      const providerId = vendor.vendorId;
+      config.models = config.models ?? { mode: "merge", providers: {} };
+      config.models.providers = config.models.providers ?? {};
+      config.models.providers[providerId] = {
+        baseUrl: vendor.baseUrl,
+        apiKey: vendor.apiKey,
+        ...(vendor.api ? { api: vendor.api } : {}),
+        ...(vendor.authHeader ? { authHeader: true } : {}),
+        models: [{ id: vendor.model, name: vendor.modelName }],
+      };
+      const modelString = `${providerId}/${vendor.model}`;
+      config.agents.defaults.model = modelString;
+      if (defaultAgent) {
+        defaultAgent.model = modelString;
+      }
+      return;
+    }
+
     if (!isConfigurableMode(modeId)) {
       return;
     }
 
     const modelString = this.resolveDefaultModelString(appConfig, modeId);
-    config.agents = config.agents ?? {};
-    config.agents.defaults = config.agents.defaults ?? {};
-
-    const defaultAgent = config.agents.list?.find((agent) => agent.default);
 
     if (!modelString) {
       delete config.agents.defaults.model;

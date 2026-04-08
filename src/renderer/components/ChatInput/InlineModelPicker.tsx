@@ -32,6 +32,7 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const {
+    appConfig,
     activeMode,
     currentSelection,
     currentSelectionInfo,
@@ -39,7 +40,11 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
     isRestarting,
     providerGroupList,
     selectModel,
+    setMode,
   } = useModels();
+
+  const enterpriseDefault = appConfig?.modes.default;
+  const hasEnterpriseDefault = enterpriseDefault?.enabled === true;
 
   useEffect(() => {
     if (activeMode === "model-api" || activeMode === "coding-plan") {
@@ -129,9 +134,11 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
     null;
   const currentSubCategory = selectedGroup?.subCategories[0] ?? null;
 
-  const currentLabel = currentSelectionInfo
-    ? `${currentSelectionInfo.modelName} / ${currentSelectionInfo.providerLabel}`
-    : "选择模型";
+  const currentLabel = activeMode === "default" && hasEnterpriseDefault
+    ? "企业大模型"
+    : currentSelectionInfo
+      ? `${currentSelectionInfo.modelName} / ${currentSelectionInfo.providerLabel}`
+      : "选择模型";
 
   const handleModelSelect = async (providerId: string, modelId: string) => {
     try {
@@ -198,6 +205,28 @@ export const InlineModelPicker: React.FC<InlineModelPickerProps> = ({
 
           <div className="grid min-h-[260px] max-h-[min(68vh,460px)] grid-cols-1 overflow-hidden md:grid-cols-[182px_minmax(0,1fr)]">
             <div className="max-h-[180px] overflow-y-auto border-b border-border p-2 md:max-h-none md:border-b-0 md:border-r">
+              {hasEnterpriseDefault && enterpriseDefault?.vendor && (
+                <button
+                  className={cn(
+                    "mb-2 w-full rounded-lg border px-2.5 py-2 text-left",
+                    activeMode === "default"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted"
+                  )}
+                  onClick={async () => {
+                    try {
+                      await setMode("default");
+                      setIsOpen(false);
+                    } catch (error) {
+                      console.error("Failed to switch to default mode:", error);
+                    }
+                  }}
+                >
+                  <div className="text-[13px] font-medium leading-4">
+                    企业大模型
+                  </div>
+                </button>
+              )}
               {filteredGroups.map((group) => {
                 const subcategory = group.subCategories[0];
                 const isConfigured = Boolean(subcategory?.hasApiKey);
